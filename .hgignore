@@ -1,0 +1,6 @@
+syntax: glob
+.classpath
+.project
+osm-routing-app/.settings
+osm-routing-app/target/classes
+osm-routing-app/target
