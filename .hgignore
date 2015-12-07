@@ -4,3 +4,7 @@ syntax: glob
 osm-routing-app/.settings
 osm-routing-app/target/classes
 osm-routing-app/target
+.svn
+.settings/
+bin/
+JMapViewer/releases

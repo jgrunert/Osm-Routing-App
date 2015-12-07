@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -14,6 +16,7 @@ import org.openstreetmap.osmosis.core.domain.v0_6.Node;
 import org.openstreetmap.osmosis.core.domain.v0_6.Relation;
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 import org.openstreetmap.osmosis.core.domain.v0_6.Way;
+import org.openstreetmap.osmosis.core.domain.v0_6.WayNode;
 import org.openstreetmap.osmosis.core.task.v0_6.RunnableSource;
 import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 
@@ -60,6 +63,8 @@ public class OsmAppPreAnalyzer2 {
 
 		Map<String, Integer> types = new HashMap<>();
 		Map<String, Integer> maxSpeeds = new HashMap<>();
+		
+		Map<Long, Integer> wayNodesRefs = new HashMap<>();
 
 		Sink sinkImplementation = new Sink() {
 
@@ -74,6 +79,16 @@ public class OsmAppPreAnalyzer2 {
 				} 
 				else if (entity instanceof Way) {
 					Way way = (Way) entity;
+					
+					for(WayNode node : way.getWayNodes()) {
+						long id = node.getNodeId();
+						Integer refs = wayNodesRefs.get(id);
+						if(refs == null) {
+							refs = 0;
+						}
+						refs++;
+						wayNodesRefs.put(id, refs);
+					}
 					
 					boolean isHighway = false;
 					String highwayType = "";
@@ -175,6 +190,21 @@ public class OsmAppPreAnalyzer2 {
 		for(Entry<String, Integer> type : maxSpeeds.entrySet()) {
 			waysHighwayMaxWriter.println(type.getKey() + ";" + type.getValue() + ";");
 		}
+		
+		
+		int nodesOneRef = 0;
+		int nodesMultiRef = 0;
+		for(Integer refs : wayNodesRefs.values()) {
+			if(refs == 1) {
+				nodesOneRef++;
+			} else {
+				nodesMultiRef++;
+			}
+		}
+		
+		System.out.println("nodesOneRef: " + nodesOneRef);
+		System.out.println("nodesMultiRef: " + nodesMultiRef);
+		
 
 		System.out.println("Nodes: " + nodes);
 		System.out.println("ways: " + ways);
