@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -62,8 +63,8 @@ public class OsmAppPreprocessor {
 		
 		
 	private static void preprocess() throws Exception {
-		String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
-		//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
+		//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
+		String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
 		//String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
 		
 		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed-all.csv"));
@@ -75,6 +76,7 @@ public class OsmAppPreprocessor {
 		
 		// List of all highways, Int32-index in this array will later be their index
 		List<HighwayInfos> highways = new LinkedList<>();
+		List<Long> waypointIds = new ArrayList<>();
 		
 		// Pass 1 - read highways
 		{
@@ -135,7 +137,8 @@ public class OsmAppPreprocessor {
 									//System.out.println(ways);
 									//maxWaysPerNode = Math.max(maxWaysPerNode, ways);
 									//waysPerNode.put(waynode.getNodeId(), ways);
-									//waynodes.add(waynode.getNodeId());																		
+									//waynodes.add(waynode.getNodeId());		
+									waypointIds.add(waynode.getNodeId());
 								}
 								
 								hw.wayNodes = way.getWayNodes();
@@ -200,6 +203,50 @@ public class OsmAppPreprocessor {
 		highwayCsvWriter.close();
 		highwayBinWriter.close();
 		}
+		
+		
+		
+		// Between pass 1 and 2
+		// Sort waypointIds
+		System.out.println("Start sorting waypointIds with size " + waypointIds.size());
+		Collections.sort(waypointIds);
+		System.out.println("Sorted waypointIds");
+				
+		// Create sorted waypointIdsSet. It maps old to new indices: newIndex == waypointIdsSet.indexOf(oldIndex)
+		System.out.println("Start creating waypointIdsSet");
+		List<Long> waypointIdsSet = new ArrayList<>();
+		long lastIndex = waypointIds.get(0);
+		waypointIdsSet.add(lastIndex);
+		for(int i = 1; i < waypointIds.size(); i++) {
+			if(waypointIds.get(i) != lastIndex) {
+				lastIndex = waypointIds.get(i);
+				waypointIdsSet.add(lastIndex);
+			}
+		}
+		System.out.println("Finished creating waypointIdsSet with size " + waypointIdsSet.size());
+		
+		// TODO Sort by location? Sort by ways (in next step)? Are ways sorted?
+		
+		
+				
+		// List of Lists for each node with indices of all ways he is involved in
+		System.out.println("Start finding waysOfNodes");
+		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waypointIdsSet.size());
+		for(int i = 0; i < waypointIdsSet.size(); i++) {
+			waysOfNodes.add(new LinkedList<Integer>());
+		}		
+		int percAmnt = highways.size() / 100;
+		for(int i = 0; i < highways.size(); i++) {
+			for(WayNode wnode : highways.get(i).wayNodes) {
+				int nodeIndex = Collections.binarySearch(waypointIdsSet, wnode.getNodeId());
+				waysOfNodes.get(nodeIndex).add(i);
+			}
+			if(i % percAmnt == 0) {
+				System.out.println((i / percAmnt) + "%  finding waysOfNodes");
+			}
+		}
+		System.out.println("Finished finding waysOfNodes");
+		
 		
 		
 		// Pass 2: 
