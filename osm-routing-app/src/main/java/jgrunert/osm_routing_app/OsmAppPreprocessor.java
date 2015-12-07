@@ -32,16 +32,20 @@ public class OsmAppPreprocessor {
 	
 	
 	public static void main(String[] args) throws Exception {
-		File file = new File("D:\\Jonas\\OSM\\germany-latest.osm.pbf");
-		//File file = new File("D:\\Jonas\\OSM\\hamburg-latest.osm.pbf");
+		//File file = new File("D:\\Jonas\\OSM\\germany-latest.osm.pbf");
+		File file = new File("D:\\Jonas\\OSM\\hamburg-latest.osm.pbf");
 		
-		PrintWriter highwayCsvAllWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed-all.csv"));
-		PrintWriter highwayCsvWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed.csv"));
-		DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\highways-processed.bin"));
+		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed-all.csv"));
 
 		long startTime = System.currentTimeMillis();
 		
-		System.out.println("Start reading");
+		
+		
+		// Pass 1 - read highways
+		System.out.println("Start reading pass 1");
+		
+		PrintWriter highwayCsvWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed.csv"));
+		DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\highways-processed.bin"));
 
 		Sink sinkImplementation = new Sink() {
 
@@ -75,19 +79,22 @@ public class OsmAppPreprocessor {
 							HighwayInfos hw = evaluateHighway(highway,
 									maxspeed, sidewalk, oneway);
 							if (hw != null) {
-								highwayCsvAllWriter.println(highway + ";"
-										+ maxspeed + ";" + sidewalk + ";"
-										+ oneway + ";" + hw.getCsvString());
+//								highwayCsvAllWriter.println(highway + ";"
+//										+ maxspeed + ";" + sidewalk + ";"
+//										+ oneway + ";" + hw.getCsvString());
+								// Write csv
 								highwayCsvWriter.println(hw.getCsvString());
+								// Write binary
 								highwayBinWriter.writeBoolean(hw.Car);
 								highwayBinWriter.writeBoolean(hw.Pedestrian);
 								highwayBinWriter.writeBoolean(hw.Oneway);
 								highwayBinWriter.writeByte((byte)hw.MaxSpeed);
-							} else {
-								highwayCsvAllWriter.println(highway + ";"
-										+ maxspeed + ";" + sidewalk + ";"
-										+ oneway + ";Ignored;");
-							}
+							} 
+//							else {
+//								highwayCsvAllWriter.println(highway + ";"
+//										+ maxspeed + ";" + sidewalk + ";"
+//										+ oneway + ";Ignored;");
+//							}
 						}
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -140,11 +147,19 @@ public class OsmAppPreprocessor {
 			}
 		}
 		
+		System.out.println("Pass 1 finished");
 		System.out.println("ways: " + ways);
-		System.out.println("Finished in "
-				+ (System.currentTimeMillis() - startTime) + "ms");
 		
 		highwayCsvWriter.close();
+		highwayBinWriter.close();
+		
+		
+		// Pass 2: 
+		
+		
+
+		System.out.println("Finished in "
+				+ (System.currentTimeMillis() - startTime) + "ms");
 	}
 	
 	
@@ -170,6 +185,7 @@ public class OsmAppPreprocessor {
 	}
 	
 
+	
 	static final int SPEED_WALK = 0;
 	static final int SPEED_LIVINGSTREET = 5;
 	static final int SPEED_UNLIMITED = 255;
