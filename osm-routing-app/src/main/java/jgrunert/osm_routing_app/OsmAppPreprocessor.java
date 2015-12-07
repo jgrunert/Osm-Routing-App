@@ -7,8 +7,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.domain.v0_6.Entity;
@@ -16,6 +19,7 @@ import org.openstreetmap.osmosis.core.domain.v0_6.Node;
 import org.openstreetmap.osmosis.core.domain.v0_6.Relation;
 import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
 import org.openstreetmap.osmosis.core.domain.v0_6.Way;
+import org.openstreetmap.osmosis.core.domain.v0_6.WayNode;
 import org.openstreetmap.osmosis.core.task.v0_6.RunnableSource;
 import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 
@@ -24,29 +28,38 @@ import org.openstreetmap.osmosis.core.task.v0_6.Sink;
  *
  */
 public class OsmAppPreprocessor {
-	static int ways = 0;
 
+	static int relevantWays = 0;
+	static int ways = 0;
+	static int maxNodesPerWay = 0;
+	static int maxWaysPerNode = 0;
+	
 	static int totalElements = 267101283;
 	static int totalLoaded = 0;
+	
+	static int BUFFER_MAX_WAYNODES = 100000000;
+	static int BUFFER_MAX_WAYSPERNODE = 20;
 	
 	
 	
 	public static void main(String[] args) throws Exception {
 		//File file = new File("D:\\Jonas\\OSM\\germany-latest.osm.pbf");
 		File file = new File("D:\\Jonas\\OSM\\hamburg-latest.osm.pbf");
+		//File file = new File("D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf");
 		
 		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed-all.csv"));
 
 		long startTime = System.currentTimeMillis();
 		
 		
+		Map<Long, Short> waysPerNode = new HashMap<>();
 		
 		// Pass 1 - read highways
 		System.out.println("Start reading pass 1");
 		
 		PrintWriter highwayCsvWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed.csv"));
 		DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\highways-processed.bin"));
-
+		
 		Sink sinkImplementation = new Sink() {
 
 			public void process(EntityContainer entityContainer) {
@@ -85,10 +98,24 @@ public class OsmAppPreprocessor {
 								// Write csv
 								highwayCsvWriter.println(hw.getCsvString());
 								// Write binary
-								highwayBinWriter.writeBoolean(hw.Car);
-								highwayBinWriter.writeBoolean(hw.Pedestrian);
-								highwayBinWriter.writeBoolean(hw.Oneway);
+								//highwayBinWriter.writeBoolean(hw.Car);
+								//highwayBinWriter.writeBoolean(hw.Pedestrian);
+								//highwayBinWriter.writeBoolean(hw.Oneway);
+								highwayBinWriter.writeByte((byte)hw.getInfoBits());
 								highwayBinWriter.writeByte((byte)hw.MaxSpeed);
+								relevantWays++;
+								
+								for(WayNode waynode : way.getWayNodes()) {									
+									Short ways = waysPerNode.get(waynode.getNodeId());
+									if(ways == null) { ways = 0; }
+									ways++;
+									//System.out.println(ways);
+									maxWaysPerNode = Math.max(maxWaysPerNode, ways);
+									waysPerNode.put(waynode.getNodeId(), ways);
+									//waynodes.add(waynode.getNodeId());																		
+								}
+								
+								maxNodesPerWay = Math.max(maxNodesPerWay, way.getWayNodes().size());
 							} 
 //							else {
 //								highwayCsvAllWriter.println(highway + ";"
@@ -148,7 +175,9 @@ public class OsmAppPreprocessor {
 		}
 		
 		System.out.println("Pass 1 finished");
-		System.out.println("ways: " + ways);
+		System.out.println("Relevant ways: " + relevantWays + ", total ways: " + ways);
+		System.out.println("Max nodes per way: " + maxNodesPerWay);
+		System.out.println("Max ways per node: " + maxWaysPerNode);
 		
 		highwayCsvWriter.close();
 		highwayBinWriter.close();
@@ -181,6 +210,16 @@ public class OsmAppPreprocessor {
 		
 		public String getCsvString() {
 			return Car + ";" + Pedestrian + ";" + Oneway + ";" + MaxSpeed + ";";
+		}
+		
+		public byte getInfoBits() {
+			byte bits = Car ? (byte)1 : (byte)0;
+			bits = (byte)(bits << 1);
+			bits += Pedestrian ? (byte)1 : (byte)0;
+			bits = (byte)(bits << 1);
+			bits += Oneway ? (byte)1 : (byte)0;
+			bits = (byte)(bits << 1);
+			return bits;
 		}
 	}
 	
@@ -237,7 +276,7 @@ public class OsmAppPreprocessor {
 						maxSpeed = (short)(maxSpeed * 1.60934);
 					}
 				} catch (Exception e) {
-					System.err.println(originalMaxSpeed);
+					System.err.println("Illegal maxspeed: " + originalMaxSpeed);
 					maxSpeed = null;
 				}
 			}
