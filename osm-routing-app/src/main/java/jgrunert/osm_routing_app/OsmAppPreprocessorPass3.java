@@ -22,10 +22,18 @@ import java.util.List;
 
 import java.util.Set;
 
+import net.sf.geographiclib.Geodesic;
+import net.sf.geographiclib.GeodesicData;
+
 import org.openstreetmap.osmosis.core.domain.v0_6.WayNode;
 
 public class OsmAppPreprocessorPass3 {
 
+
+	private static double[] lats;
+	private static double[] lons;
+	
+	
 	public static void main(String[] args) {
 		try {
 			process();
@@ -73,6 +81,35 @@ public class OsmAppPreprocessorPass3 {
 		}
 		highwayReader.close();
 		System.out.println("Finished reading highways: " + highwayCount);
+		
+		
+		
+		// Load node coords
+		// Load and process waynodes
+		{
+			System.out.println("Start loading node coords");
+			DataInputStream nodeReader = new DataInputStream(
+					new FileInputStream(outDir + "\\pass2-waynodes.bin"));
+			int nodeCount = nodeReader.readInt();
+
+			lats = new double[nodeCount];
+			lons = new double[nodeCount];
+
+			int edgeCounter = 0;
+			perc100 = nodeCount / 100;
+			for (int iNode = 0; iNode < nodeCount; iNode++) {
+				int nodeIndex = nodeReader.readInt();
+				if (nodeIndex != iNode) {
+					System.err.println("Wrong nodeIndex: " + nodeIndex
+							+ " instead of " + iNode);
+				}
+
+				lats[iNode] = nodeReader.readDouble();
+				lons[iNode] = nodeReader.readDouble();
+				nodeReader.readLong(); // Ignore old id
+			}
+			System.out.println("Finished loading node coords");
+		}
 		
 		
 		
@@ -137,6 +174,9 @@ public class OsmAppPreprocessorPass3 {
 				HighwayInfos2 highway = highways.get(wayInvolved);
 				boolean containsNode = false;
 				
+				// Infobits with oneway bit
+				byte highwayBits = (byte)(highway.InfoBits << 1);
+				
 				// Find ways this node is involved in
 				for(int iWp = 0; iWp < highway.wayNodes.size(); iWp++) 
 				{
@@ -145,16 +185,32 @@ public class OsmAppPreprocessorPass3 {
 						containsNode = true;	
 						
 						// Edge in direction of way (if not last point)
-						if(iWp + 1 < highway.wayNodes.size()) {
-							edgeWriter.writeInt(highway.wayNodes.get(iWp + 1)); // Target
-							// TODO Write edge properties
+						if(iWp + 1 < highway.wayNodes.size()) 
+						{
+							int targetWp = highway.wayNodes.get(iWp + 1);
+							edgeWriter.writeInt(targetWp); // Target
+							edgeWriter.writeByte(highwayBits); // Info bits: 0,0,0,0,0,[Car],[Ped],[Oneway]
+							edgeWriter.writeShort(calcGeoLength(nodeIndex, targetWp)); // Distance
+							edgeWriter.writeByte(highway.MaxSpeed); // MaxSpeed
+							
 							edgeCounter++;
 						}
 
 						// Edge in counter direction of way (if not oneway and not first point)
-						if(!highway.Oneway && iWp > 0) {
-							edgeWriter.writeInt(highway.wayNodes.get(iWp - 1)); // Target
-							// TODO Write edge properties
+						if(iWp > 0) 
+						{	
+							int targetWp = highway.wayNodes.get(iWp - 1);
+							edgeWriter.writeInt(targetWp); // Target
+							// Info bits: 0,0,0,0,0,[Car],[Ped],[Oneway]
+							if(highway.Oneway) {
+								// Oneway in counter direction (no cars)
+								edgeWriter.writeByte((byte)(highwayBits + 1));
+							} else {
+								edgeWriter.writeByte(highwayBits);
+							}
+							edgeWriter.writeShort(calcGeoLength(nodeIndex, targetWp)); // Distance
+							edgeWriter.writeByte(highway.MaxSpeed); // MaxSpeed
+							
 							edgeCounter++;
 						}
 					}
@@ -183,6 +239,9 @@ public class OsmAppPreprocessorPass3 {
 		perc100 = edgeCounter / 100;
 		for(int i = 0; i < edgeCounter; i++) {
 			edgeWriter2.writeInt(edgeReader.readInt());
+			edgeWriter2.writeByte(edgeReader.readByte());
+			edgeWriter2.writeShort(edgeReader.readShort());
+			edgeWriter2.writeByte(edgeReader.readByte());
 			if(i % perc100 == 0) {
 				System.out.println((i / perc100) + "%  writing final edges");
 			}
@@ -194,6 +253,16 @@ public class OsmAppPreprocessorPass3 {
 		System.out.println("Finished");		
 		System.out.println("Nodes: " + nodeCount);
 		System.out.println("Edges: " + edgeCounter);
+	}
+	
+	
+	private static short calcGeoLength(int i1, int i2) {
+		 GeodesicData g = Geodesic.WGS84.Inverse(lats[i1], lons[i1], lats[i2], lons[i2]);
+		 if(g.s12 > Short.MAX_VALUE) {
+			 System.err.println("calcGeoLength > Short.MAX_VALUE");
+			 throw new RuntimeException("calcGeoLength > Short.MAX_VALUE");
+		 }
+	     return (short)g.s12;
 	}
 
 	

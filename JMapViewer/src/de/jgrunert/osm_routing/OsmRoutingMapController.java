@@ -64,14 +64,18 @@ MouseWheelListener {
     private List<MapPolygonImpl> routeLines = new ArrayList<>();
     
     int nodeCount = 0;
-    double[] nodesLat = null;
-    double[] nodesLon = null;
-    int[] nodesEdgeOffset = null;
-    
-    int[] nodesPreBuffer = null;
+    double[] nodesLat;
+    double[] nodesLon;
+    int[] nodesEdgeOffset;
+   
+    // Buffer for predecessors when calculating routes
+    int[] nodesPreBuffer;
     
     int edgeCount = 0;
-    int[] edgesTarget = null;
+    int[] edgesTarget;
+    byte[] edgesInfobits;
+    short[] edgeLengths;
+    byte[] edgeMaxSpeeds;
         
         
    
@@ -113,12 +117,18 @@ MouseWheelListener {
         DataInputStream edgeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass3-edges.bin"));
         edgeCount = edgeReader.readInt();
         edgesTarget = new int[edgeCount];
+        edgesInfobits = new byte[edgeCount];
+        edgeLengths = new short[edgeCount];
+        edgeMaxSpeeds = new byte[edgeCount];
 
         for(int i = 0; i < edgeCount; i++) {
             edgesTarget[i] = edgeReader.readInt();
             if(edgesTarget[i] == 0) {
                 System.out.println(i);
             }
+            edgesInfobits[i] = edgeReader.readByte();
+            edgeLengths[i] = edgeReader.readShort();
+            edgeMaxSpeeds[i] = edgeReader.readByte();
         }
         
         edgeReader.close();
@@ -280,7 +290,7 @@ MouseWheelListener {
 
         
         Random rd = new Random(123);
-        double debugDispProp = 10.998;
+        double debugDispProp = 0.998;
         
         if(startLoc != null && targetLoc != null) {
                // BFS uses Queue data structure 
@@ -308,8 +318,8 @@ MouseWheelListener {
 //                  System.out.println(nextIndex);
                   
                   for(int iTarg = nodesEdgeOffset[nextIndex]; 
-                          //nextIndex+1 < nodesEdgeOffset.length && TODO last node
-                          iTarg < nodesEdgeOffset[nextIndex+1]; 
+                          (nextIndex+1 < nodesEdgeOffset.length && iTarg < nodesEdgeOffset[nextIndex+1]) || 
+                          (nextIndex+1 == nodesEdgeOffset.length && iTarg < edgesTarget.length); // Last node in offset array
                           iTarg++) {
                       int targ = edgesTarget[iTarg];
                       if(!visited.contains(targ)) {
