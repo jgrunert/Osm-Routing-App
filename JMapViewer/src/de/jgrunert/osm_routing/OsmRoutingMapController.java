@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Random;
 import java.util.Set;
 
 import net.sf.geographiclib.Geodesic;
@@ -71,7 +72,7 @@ MouseWheelListener {
     
     int edgeCount = 0;
     int[] edgesTarget = null;
-    
+        
         
    
     public OsmRoutingMapController(JMapViewer map) {
@@ -276,7 +277,10 @@ MouseWheelListener {
 //            routeLines.add(routPoly);
 //            map.addMapPolygon(routPoly);
 //        }
+
         
+        Random rd = new Random(123);
+        double debugDispProp = 10.998;
         
         if(startLoc != null && targetLoc != null) {
                // BFS uses Queue data structure 
@@ -296,9 +300,11 @@ MouseWheelListener {
                   visited.add(nextIndex);
                   
                   // Display
-//                  MapMarkerDot targetDot = new MapMarkerDot(new Coordinate(nodesLat[nextIndex], nodesLon[nextIndex]));
-//                  map.addMapMarker(targetDot);
-//                  routeDots.add(targetDot);
+                if (rd.nextDouble() > debugDispProp) {
+                    MapMarkerDot targetDot = new MapMarkerDot(new Coordinate(nodesLat[nextIndex], nodesLon[nextIndex]));
+                    map.addMapMarker(targetDot);
+                    routeDots.add(targetDot);
+                }
 //                  System.out.println(nextIndex);
                   
                   for(int iTarg = nodesEdgeOffset[nextIndex]; 

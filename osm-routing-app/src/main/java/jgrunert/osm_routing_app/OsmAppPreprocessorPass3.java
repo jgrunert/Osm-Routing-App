@@ -37,9 +37,15 @@ public class OsmAppPreprocessorPass3 {
 	
 	
 	private static void process() throws Exception {
+
+		//String outDir = "D:\\Jonas\\OSM\\germany";
+		String outDir = "D:\\Jonas\\OSM\\hamburg";
+		
+		System.out.println("OSM Preprocessor Pass3 v02");
+		
 		
 		// Load highways
-		DataInputStream highwayReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass1-highways.bin"));	
+		DataInputStream highwayReader = new DataInputStream(new FileInputStream(outDir + "\\pass1-highways.bin"));	
 		int highwayCount = highwayReader.readInt();
 		List<HighwayInfos2> highways = new ArrayList<>(highwayCount);
 		
@@ -71,7 +77,7 @@ public class OsmAppPreprocessorPass3 {
 		
 		
 		// Load waysOfNodes
-		DataInputStream waysOfNodesReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass1-waysOfNodes.bin"));
+		DataInputStream waysOfNodesReader = new DataInputStream(new FileInputStream(outDir + "\\pass1-waysOfNodes.bin"));
 		int waynodeCount = waysOfNodesReader.readInt();
 		System.out.println("Start reading waysOfNodes: " + waynodeCount);
 		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waynodeCount);
@@ -95,15 +101,15 @@ public class OsmAppPreprocessorPass3 {
 
 		// Load and process waynodes
 		System.out.println("Start processing nodes");
-		DataInputStream nodeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass1-waynodes.bin"));
+		DataInputStream nodeReader = new DataInputStream(new FileInputStream(outDir + "\\pass2-waynodes.bin"));
 		int nodeCount = nodeReader.readInt();
 		
 		if(nodeCount != waysOfNodes.size()) {
 			System.err.println("nodeCount != waysOfNodes.size(): " + nodeCount + " and " + waysOfNodes.size());
 		}
 		
-		DataOutputStream edgeWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges_tmp.bin"));
-		DataOutputStream nodeWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\hamburg\\pass2-nodes.bin"));
+		DataOutputStream edgeWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-edges_tmp.bin"));
+		DataOutputStream nodeWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-nodes.bin"));
 				
 		int edgeCounter = 0;
 		nodeWriter.writeInt(nodeCount);
@@ -171,8 +177,8 @@ public class OsmAppPreprocessorPass3 {
 		
 		// Write edges again to file with number of edges at beginning (TODO Better way?)
 		System.out.println("Start writing edges to final file");
-		DataOutputStream edgeWriter2 = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges.bin"));
-		DataInputStream edgeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges_tmp.bin"));
+		DataOutputStream edgeWriter2 = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-edges.bin"));
+		DataInputStream edgeReader = new DataInputStream(new FileInputStream(outDir + "\\pass3-edges_tmp.bin"));
 		edgeWriter2.writeInt(edgeCounter);
 		perc100 = edgeCounter / 100;
 		for(int i = 0; i < edgeCounter; i++) {

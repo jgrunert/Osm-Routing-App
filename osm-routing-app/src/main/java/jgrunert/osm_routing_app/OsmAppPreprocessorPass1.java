@@ -65,12 +65,15 @@ public class OsmAppPreprocessorPass1 {
 		
 		
 	private static void preprocess() throws Exception {
-		String outDir = "D:\\Jonas\\OSM";
-		String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
-		//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
+		
+		String outDir = "D:\\Jonas\\OSM\\germany";
+		//String outDir = "D:\\Jonas\\OSM\\hamburg";
+		
+		//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
+		String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
 		//String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
 		
-		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed-all.csv"));
+		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File(outDir + "\\highways-processed-all.csv"));
 
 		long startTime = System.currentTimeMillis();
 		
@@ -86,7 +89,7 @@ public class OsmAppPreprocessorPass1 {
 		{
 		System.out.println("Starting Pass 1");
 		
-		//PrintWriter highwayCsvWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed.csv"));
+		//PrintWriter highwayCsvWriter = new PrintWriter(new File(outDir + "\\highways-processed.csv"));
 		
 		Sink sinkImplementation = new Sink() {
 
@@ -233,7 +236,7 @@ public class OsmAppPreprocessorPass1 {
 				
 		// Save waypointIdsSet	
 		System.out.println("Start saving waypointIdsSet");
-		DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waynodeIds.bin"));
+		DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass1-waynodeIds.bin"));
 		waypointIdsWriter.writeInt(waypointIdsSet.size());
 		int percTmp10 = waypointIdsSet.size() / 10;
 		int percTmp100 = waypointIdsSet.size() / 100;
@@ -252,7 +255,7 @@ public class OsmAppPreprocessorPass1 {
 		
 		// Evaluate and save waypoint highway relations
 		// List of Lists for each node with indices of all ways he is involved in
-		DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-highways.bin"));	
+		DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass1-highways.bin"));	
 		highwayBinWriter.writeInt(highways.size());
 		
 		System.out.println("Start finding waysOfNodes");
@@ -300,7 +303,7 @@ public class OsmAppPreprocessorPass1 {
 		
 		// Save waysOfNodes
 		System.out.println("Start saving waysOfNodes");
-		DataOutputStream waysOfNodesWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waysOfNodes.bin"));
+		DataOutputStream waysOfNodesWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass1-waysOfNodes.bin"));
 		waysOfNodesWriter.writeInt(waysOfNodes.size());
 		percTmp100 = waysOfNodes.size() / 100;
 		for(int i = 0; i < waysOfNodes.size(); i++) {
@@ -324,100 +327,6 @@ public class OsmAppPreprocessorPass1 {
 		System.gc();
 		System.out.println("Finished clean up waysOfNodes");
 		
-		
-		// Pass 1.2: 
-		{
-			System.out.println("Starting Pass 2");
-			
-			DataOutputStream connectionWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waynodes.bin"));
-			connectionWriter.writeInt(waypointIdsSet.size());
-						
-			Sink sinkImplementation = new Sink() {
-
-				public void process(EntityContainer entityContainer) {
-					Entity entity = entityContainer.getEntity();
-					
-					if (entity instanceof Node) {
-						Node node = (Node) entity;
-
-						int nodeIndex = Collections.binarySearch(waypointIdsSet, node.getId());
-						
-						if(nodeIndex >= 0) {
-							if(nodeIndex != relevantWayNodeCounter) {
-								System.err.println("Invalid nodeIndex: " + nodeIndex + " instead of " + relevantWayNodeCounter);
-							}
-								
-							try {
-								connectionWriter.writeInt(nodeIndex);
-								connectionWriter.writeDouble(node.getLatitude());	
-								connectionWriter.writeDouble(node.getLongitude());	
-								connectionWriter.writeLong(node.getId());							
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-							relevantWayNodeCounter++;	
-						}
-						
-						nodes++;
-					} 
-					
-					elementsPass2++;
-					if ((elementsPass2 % 100000) == 0) {
-						System.out
-								.println("Loaded " + elementsPass2 + " elements ("
-										+ (int) (((float) elementsPass2 / totalElements) * 100) + "%)");
-						System.out.println(relevantWayNodeCounter);
-					}
-				}
-
-				public void release() {
-				}
-
-				public void complete() {
-				}
-
-				@Override
-				public void initialize(Map<String, Object> arg0) {
-
-				}
-			};
-
-			RunnableSource reader;
-			try {
-				reader = new crosby.binary.osmosis.OsmosisReader(
-						new FileInputStream(new File(inFile)));
-			} catch (FileNotFoundException e1) {
-				e1.printStackTrace();
-				return;
-			}
-			reader.setSink(sinkImplementation);
-
-			Thread readerThread = new Thread(reader);
-			readerThread.start();
-
-			while (readerThread.isAlive()) {
-				try {
-					readerThread.join();
-				} catch (InterruptedException e) {
-					e.printStackTrace();	
-					return;
-				}
-			}			
-			
-			
-			if(relevantWayNodeCounter < waypointIdsSet.size()) {
-				System.err.println("Not all relevantWayNodes have nodes in file: " + 
-						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
-			}
-			if(relevantWayNodeCounter > waypointIdsSet.size()) {
-				System.err.println("Duplicate nodes for relevantWayNodes in file: " + 
-						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
-			}
-			
-			System.out.println("Pass 2 finished");
-
-			connectionWriter.close();
-		}
 		
 		
 		System.out.println("Pass 1 finished");

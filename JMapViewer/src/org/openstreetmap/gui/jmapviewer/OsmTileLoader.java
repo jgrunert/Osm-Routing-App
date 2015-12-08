@@ -1,6 +1,9 @@
 // License: GPL. For details, see Readme.txt file.
 package org.openstreetmap.gui.jmapviewer;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -11,6 +14,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+
+import javax.imageio.ImageIO;
 
 import org.openstreetmap.gui.jmapviewer.interfaces.TileJob;
 import org.openstreetmap.gui.jmapviewer.interfaces.TileLoader;
@@ -23,7 +28,10 @@ import org.openstreetmap.gui.jmapviewer.interfaces.TileLoaderListener;
  */
 public class OsmTileLoader implements TileLoader {
     private static final Executor jobDispatcher = Executors.newSingleThreadExecutor();
-
+    
+    private final String PngCache;
+    private final boolean DoCaching;
+    
     private final class OsmTileJob implements TileJob {
         private final Tile tile;
         private InputStream input = null;
@@ -43,22 +51,67 @@ public class OsmTileLoader implements TileLoader {
                 tile.loading = true;
             }
             try {
-                URLConnection conn = loadTileFromOsm(tile);
-                if (force) {
-                    conn.setUseCaches(false);
-                }
-                loadTileMetadata(tile, conn);
-                if ("no-tile".equals(tile.getValue("tile-info"))) {
-                    tile.setError("No tile at this zoom level");
+                String tileFileName = tile.toString().replace('/', '_') + ".png";
+                File imageFile = new File(PngCache + "\\" + tileFileName);
+                
+                if (DoCaching) {
+                    // Try to load and cache
+                    if (!imageFile.exists()) {
+                        // Load if not cached
+                        URLConnection conn = loadTileFromOsm(tile);
+                        if (force) {
+                            conn.setUseCaches(false);
+                        }
+                        loadTileMetadata(tile, conn);
+                        if ("no-tile".equals(tile.getValue("tile-info"))) {
+                            tile.setError("No tile at this zoom level");
+                        } else {
+                            input = conn.getInputStream();
+                            try {
+                                BufferedImage image = ImageIO.read(input);
+                                ImageIO.write(image, "png", imageFile.getCanonicalFile());
+                                System.out.println("Cached " + tileFileName);
+                            } finally {
+                                input.close();
+                                input = null;
+                            }
+                        }
+                    }
+
+                    // Read from cache
+                    if (!imageFile.exists()) {
+                        tile.setError("No tile at this zoom level");
+                    } else {
+                        input = new FileInputStream(imageFile);
+                        try {
+                            tile.loadImage(input);
+                        } finally {
+                            input.close();
+                            input = null;
+                        }
+                    }
                 } else {
-                    input = conn.getInputStream();
-                    try {
-                        tile.loadImage(input);
-                    } finally {
-                        input.close();
-                        input = null;
+                    // Load png
+                    URLConnection conn = loadTileFromOsm(tile);
+                    if (force) {
+                        conn.setUseCaches(false);
+                    }
+                    loadTileMetadata(tile, conn);
+                    if ("no-tile".equals(tile.getValue("tile-info"))) {
+                        tile.setError("No tile at this zoom level");
+                    } else {
+                        input = conn.getInputStream();
+                        try {
+                            tile.loadImage(input);
+                        } finally {
+                            input.close();
+                            input = null;
+                        }
                     }
                 }
+                
+                
+                
                 tile.setLoaded(true);
                 listener.tileLoadingFinished(tile, true);
             } catch (Exception e) {
@@ -105,18 +158,27 @@ public class OsmTileLoader implements TileLoader {
 
     protected TileLoaderListener listener;
 
-    public OsmTileLoader(TileLoaderListener listener) {
-        this(listener, null);
+    public OsmTileLoader(TileLoaderListener listener, String cacheFolder, boolean doCaching) {
+        this(listener, null, cacheFolder, doCaching);
     }
 
-    public OsmTileLoader(TileLoaderListener listener, Map<String, String> headers) {
+    public OsmTileLoader(TileLoaderListener listener, Map<String, String> headers, String cacheFolder, boolean doCaching) {
         this.headers.put("Accept", "text/html, image/png, image/jpeg, image/gif, */*");
         if (headers != null) {
             this.headers.putAll(headers);
         }
         this.listener = listener;
+        
+        PngCache = cacheFolder + "\\Png";
+        this.DoCaching = doCaching;
+        
+        File pngCacheDir = new File(PngCache);
+        if (!pngCacheDir.exists()) {
+            pngCacheDir.mkdirs();
+        }
     }
-
+    
+    
     @Override
     public TileJob createTileLoaderJob(final Tile tile) {
         return new OsmTileJob(tile);

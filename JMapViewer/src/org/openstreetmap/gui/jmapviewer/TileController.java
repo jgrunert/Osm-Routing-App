@@ -11,9 +11,9 @@ public class TileController {
     protected TileCache tileCache;
     protected TileSource tileSource;
 
-    public TileController(TileSource source, TileCache tileCache, TileLoaderListener listener) {
+    public TileController(TileSource source, TileCache tileCache, TileLoaderListener listener, String cacheFolder, boolean doCaching) {
         this.tileSource = source;
-        this.tileLoader = new OsmTileLoader(listener);
+        this.tileLoader = new OsmTileLoader(listener, cacheFolder, doCaching);
         this.tileCache = tileCache;
     }
 

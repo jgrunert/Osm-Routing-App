@@ -53,7 +53,7 @@ public class Demo extends JFrame implements JMapViewerEventListener  {
         super("JMapViewer Demo");
         setSize(400, 400);
 
-        treeMap = new JMapViewerTree("Zones");
+        treeMap = new JMapViewerTree("Zones", "", false);
 
         // Listen to the map viewer for user operations so components will
         // receive events and update
@@ -101,7 +101,7 @@ public class Demo extends JFrame implements JMapViewerEventListener  {
             }
         });
         JComboBox<TileLoader> tileLoaderSelector;
-        tileLoaderSelector = new JComboBox<>(new TileLoader[] {new OsmTileLoader(map())});
+        tileLoaderSelector = new JComboBox<>(new TileLoader[] {new OsmTileLoader(map(), "", false)});
         tileLoaderSelector.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {

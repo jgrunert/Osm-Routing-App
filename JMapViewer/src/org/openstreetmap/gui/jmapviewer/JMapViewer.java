@@ -103,8 +103,8 @@ public class JMapViewer extends JPanel implements TileLoaderListener {
      * {@link MemoryTileCache} and the tile loader uses 4 parallel threads for
      * retrieving the tiles.
      */
-    public JMapViewer() {
-        this(new MemoryTileCache());
+    public JMapViewer(String cacheFolder, boolean doCaching) {
+        this(new MemoryTileCache(), cacheFolder, doCaching);
         //new DefaultMapController(this);
         new OsmRoutingMapController(this);
     }
@@ -115,8 +115,8 @@ public class JMapViewer extends JPanel implements TileLoaderListener {
      * @deprecated @param downloadThreadCount not used anymore
      */
     @Deprecated
-    public JMapViewer(TileCache tileCache, int downloadThreadCount) {
-        this(tileCache);
+    public JMapViewer(TileCache tileCache, int downloadThreadCount, String cacheFolder, boolean doCaching) {
+        this(tileCache, cacheFolder, doCaching);
     }
 
     /**
@@ -124,9 +124,9 @@ public class JMapViewer extends JPanel implements TileLoaderListener {
      * @param tileCache The cache where to store tiles
      *
      */
-    public JMapViewer(TileCache tileCache) {
+    public JMapViewer(TileCache tileCache, String cacheFolder, boolean doCaching) {
         tileSource = new OsmTileSource.Mapnik();
-        tileController = new TileController(tileSource, tileCache, this);
+        tileController = new TileController(tileSource, tileCache, this, cacheFolder, doCaching);
         mapMarkerList = Collections.synchronizedList(new LinkedList<MapMarker>());
         mapPolygonList = Collections.synchronizedList(new LinkedList<MapPolygon>());
         mapRectangleList = Collections.synchronizedList(new LinkedList<MapRectangle>());
