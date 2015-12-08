@@ -11,7 +11,14 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+
+import net.sf.geographiclib.Geodesic;
+import net.sf.geographiclib.GeodesicData;
 
 import org.openstreetmap.gui.jmapviewer.Coordinate;
 import org.openstreetmap.gui.jmapviewer.JMapController;
@@ -47,16 +54,22 @@ MouseWheelListener {
     private boolean wheelZoomEnabled = true;
     private boolean doubleClickZoomEnabled = true;
     
+    private int startIndex;
     private Coordinate startLoc = null;
+    private int targetIndex;
     private Coordinate targetLoc = null;
 
     private List<MapMarkerDot> routeDots = new ArrayList<>();
     private List<MapPolygonImpl> routeLines = new ArrayList<>();
     
+    int nodeCount = 0;
     double[] nodesLat = null;
     double[] nodesLon = null;
     int[] nodesEdgeOffset = null;
     
+    int[] nodesPreBuffer = null;
+    
+    int edgeCount = 0;
     int[] edgesTarget = null;
     
         
@@ -77,12 +90,13 @@ MouseWheelListener {
     private void loadOsmData() throws Exception {
 
         System.out.println("Start reading nodes");
-        DataInputStream nodeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass2-nodes.bin"));
+        DataInputStream nodeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass3-nodes.bin"));
         
-        int nodeCount = nodeReader.readInt();
+        nodeCount = nodeReader.readInt();
         nodesLat = new double[nodeCount];
         nodesLon = new double[nodeCount];
         nodesEdgeOffset = new int[nodeCount];
+        nodesPreBuffer = new int[nodeCount];
         
         for(int i = 0; i < nodeCount; i++) {
             nodesLat[i] = nodeReader.readDouble();
@@ -95,40 +109,72 @@ MouseWheelListener {
         
 
         System.out.println("Start reading edges");
-        DataInputStream edgeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges.bin"));
-        int edgeCount = edgeReader.readInt();
+        DataInputStream edgeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass3-edges.bin"));
+        edgeCount = edgeReader.readInt();
         edgesTarget = new int[edgeCount];
 
         for(int i = 0; i < edgeCount; i++) {
             edgesTarget[i] = edgeReader.readInt();
+            if(edgesTarget[i] == 0) {
+                System.out.println(i);
+            }
         }
         
         edgeReader.close();
         System.out.println("Finished reading edges");
         
 
-        for(int i = 0; i < 1; i++) {
-            double lat = nodesLat[i];
-            double lon = nodesLon[i];
-            int edgeOffs = nodesEdgeOffset[i];            
-            MapMarkerDot targetDot = new MapMarkerDot("Point " + i, new Coordinate(lat, lon));
-            map.addMapMarker(targetDot);
-            
-            for(int iTarg = edgeOffs; iTarg < nodesEdgeOffset[i+1]; iTarg++) {
-                mapPointDfs(edgesTarget[edgeOffs], lat, lon, 1, 20);
-            }
-        }
+//        for(int i = 4; i < 5; i++) {
+//            double lat = nodesLat[i];
+//            double lon = nodesLon[i];
+//            Coordinate coord = new Coordinate(lat, lon);
+//            int edgeOffs = nodesEdgeOffset[i];            
+//            MapMarkerDot targetDot = new MapMarkerDot("Start", coord);
+//            map.addMapMarker(targetDot);
+//            Set<Integer> visited = new HashSet<>();
+//            visited.add(i);
+//            
+//            for(int iTarg = edgeOffs; iTarg < nodesEdgeOffset[i+1]; iTarg++) {
+//                mapPointDfs(edgesTarget[iTarg],coord, 1, 300, visited);
+//            }
+//        }
     }
     
     
-    private void mapPointDfs(int i, double lastLat, double lastLon, int depth, int maxDepth) {
+    private void mapPointDfs(int i, Coordinate lastCoord, int depth, int maxDepth, Set<Integer> visited) {
         if(depth < maxDepth) {
             double lat = nodesLat[i];
             double lon = nodesLon[i];
+            Coordinate coord = new Coordinate(lat, lon);
             int edgeOffs = nodesEdgeOffset[i];            
-            MapMarkerDot targetDot = new MapMarkerDot("DFS " + i, new Coordinate(lat, lon));
-            map.addMapMarker(targetDot);
-            mapPointDfs(edgesTarget[edgeOffs], lat, lon, depth + 1, 20);
+            
+            if (depth == maxDepth - 1) {
+                //MapMarkerDot targetDot = new MapMarkerDot("End", coord);
+                //map.addMapMarker(targetDot);
+            }
+            
+            MapPolygonImpl routPoly = new MapPolygonImpl(lastCoord, coord, coord);
+            routeLines.add(routPoly);
+            map.addMapPolygon(routPoly);
+            visited.add(i);
+            
+
+            boolean hasWay = false;
+            for(int iTarg = edgeOffs; iTarg < nodesEdgeOffset[i+1]; iTarg++) {
+                int targ = edgesTarget[iTarg];
+                if(!visited.contains(targ)) {
+                    hasWay = true;
+                    mapPointDfs(edgesTarget[iTarg], coord, depth + 1, maxDepth, visited);
+                    //break;
+                } else {
+                    System.out.println("Already visited");
+                }
+            }
+            
+            if(!hasWay) {
+                //MapMarkerDot targetDot = new MapMarkerDot("Sack", coord);
+                //map.addMapMarker(targetDot);                
+            }
         }
     }
     
@@ -156,13 +202,23 @@ MouseWheelListener {
         if (e.getClickCount() == 1) {
             // Waypoint selection
             ICoordinate clickPt = map.getPosition(e.getPoint());
-            Coordinate clickLoc = new Coordinate(clickPt.getLat(), clickPt.getLon());
+            Coordinate clickCoord = new Coordinate(clickPt.getLat(), clickPt.getLon());
+            
+            int clickNextPt = findNextPoint(clickCoord);            
+            if(clickNextPt == -1) {
+                System.err.println("No point found");
+                return;
+            }
+            
+            Coordinate clickNextPtCoord = new Coordinate(nodesLat[clickNextPt], nodesLon[clickNextPt]);
 
             if(e.getButton() == MouseEvent.BUTTON1) {
-                startLoc = clickLoc;
+                startIndex = clickNextPt;
+                startLoc = clickNextPtCoord;
             } 
             else if(e.getButton() == MouseEvent.BUTTON3) {
-                targetLoc = clickLoc;
+                targetIndex = clickNextPt;
+                targetLoc = clickNextPtCoord;
             } 
 
             updateRoute();
@@ -171,6 +227,24 @@ MouseWheelListener {
             // Zoom on doubleclick
             map.zoomIn(e.getPoint());
         } 
+    }
+    
+    /**
+     * Tries to find out index of next point to given coordinate
+     * @param coord
+     * @return Index of next point
+     */
+    private int findNextPoint(Coordinate coord) {
+        int nextIndex = -1;
+        double smallestDist = Double.MAX_VALUE;
+        for(int i = 0; i < nodeCount; i++) {
+            GeodesicData g = Geodesic.WGS84.Inverse(coord.getLat(), coord.getLon(), nodesLat[i], nodesLon[i]);
+            if(g.s12 < smallestDist) {
+                smallestDist = g.s12;
+                nextIndex = i;
+            }
+        }
+        return nextIndex;
     }
     
     
@@ -197,10 +271,71 @@ MouseWheelListener {
             routeDots.add(targetDot);
         }
         
+//        if(startLoc != null && targetLoc != null) {
+//            MapPolygonImpl routPoly = new MapPolygonImpl("Route", startLoc, targetLoc, targetLoc);
+//            routeLines.add(routPoly);
+//            map.addMapPolygon(routPoly);
+//        }
+        
+        
         if(startLoc != null && targetLoc != null) {
-            MapPolygonImpl routPoly = new MapPolygonImpl("Route", startLoc, targetLoc, targetLoc);
-            routeLines.add(routPoly);
-            map.addMapPolygon(routPoly);
+               // BFS uses Queue data structure 
+               Queue<Integer> queue = new LinkedList<>(); 
+               Set<Integer> visited = new HashSet<>();
+               queue.add(startIndex); 
+               while(!queue.isEmpty()) { 
+                  int nextIndex = queue.remove(); 
+                  
+                  if(nextIndex == targetIndex) {
+                      System.out.println("Found!");
+                      break;
+                  } else {
+                      //System.out.println("Not found");
+                  }
+
+                  visited.add(nextIndex);
+                  
+                  // Display
+//                  MapMarkerDot targetDot = new MapMarkerDot(new Coordinate(nodesLat[nextIndex], nodesLon[nextIndex]));
+//                  map.addMapMarker(targetDot);
+//                  routeDots.add(targetDot);
+//                  System.out.println(nextIndex);
+                  
+                  for(int iTarg = nodesEdgeOffset[nextIndex]; 
+                          //nextIndex+1 < nodesEdgeOffset.length && TODO last node
+                          iTarg < nodesEdgeOffset[nextIndex+1]; 
+                          iTarg++) {
+                      int targ = edgesTarget[iTarg];
+                      if(!visited.contains(targ)) {
+                          nodesPreBuffer[targ] = nextIndex;
+                          queue.add(targ);
+                      } else {
+                          //System.out.println("Already visited");
+                      }
+                  }
+              } 
+               
+               
+            int i = targetIndex;
+            while (i != startIndex) {
+                int pre = nodesPreBuffer[i];
+//                if (pre == targetIndex) {
+//                    continue;
+//                }
+                
+                Coordinate c1 = new Coordinate(nodesLat[pre], nodesLon[pre]);
+                Coordinate c2 = new Coordinate(nodesLat[i], nodesLon[i]);
+                
+                MapPolygonImpl routPoly = new MapPolygonImpl(c1, c2, c2);
+                routeLines.add(routPoly);
+                map.addMapPolygon(routPoly);
+                
+//                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[i], nodesLon[i]));
+//                map.addMapMarker(dot);
+//                routeDots.add(dot);
+                
+                i = pre;
+            }
         }
     }
     

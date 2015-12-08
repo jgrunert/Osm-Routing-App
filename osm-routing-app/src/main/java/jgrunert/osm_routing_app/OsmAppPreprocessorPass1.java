@@ -49,7 +49,9 @@ public class OsmAppPreprocessorPass1 {
 	
 	static int BUFFER_MAX_WAYNODES = 100000000;
 	static int BUFFER_MAX_WAYSPERNODE = 20;
-	
+
+	static List<HighwayInfos> highways = new ArrayList<>();
+	static List<Long> waypointIds = new ArrayList<>();
 	
 	
 	public static void main(String[] args) {
@@ -63,7 +65,8 @@ public class OsmAppPreprocessorPass1 {
 		
 		
 	private static void preprocess() throws Exception {
-		String inFile = "D:\\Jonas\\OSM\\germany-latest.osm - Kopie.pbf";
+		String outDir = "D:\\Jonas\\OSM";
+		String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
 		//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
 		//String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
 		
@@ -72,11 +75,12 @@ public class OsmAppPreprocessorPass1 {
 		long startTime = System.currentTimeMillis();
 		
 		
+		System.out.println("OSM Preprocessor Pass1 v03");
+		
+		
 		//Map<Long, Short> waysPerNode = new HashMap<>();
 		
 		// List of all highways, Int32-index in this array will later be their index
-		List<HighwayInfos> highways = new ArrayList<>();
-		List<Long> waypointIds = new ArrayList<>();
 		
 		// Pass 1 - read highways
 		{
@@ -275,6 +279,8 @@ public class OsmAppPreprocessorPass1 {
 					highwayBinWriter.writeInt(-1);					
 				}
 			}
+			hw.wayNodes.clear();
+			hw.wayNodes = null;
 			if(i % percAmnt == 0) {
 				System.out.println((i / percAmnt) + "%  finding waysOfNodes");
 			}
@@ -282,6 +288,14 @@ public class OsmAppPreprocessorPass1 {
 		highwayBinWriter.close();
 		System.out.println("Finished finding waysOfNodes");
 		System.out.println("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
+
+		
+		// Clean up highways
+		System.out.println("Start clean up highways");
+		highways.clear();
+		highways = null;
+		System.gc();
+		System.out.println("Finished clean up highways");
 		
 		
 		// Save waysOfNodes
@@ -303,12 +317,12 @@ public class OsmAppPreprocessorPass1 {
 		System.out.println("Finished saving waysOfNodesWriter");
 		
 
-		// Clean up waysOfNodes and highways
-		System.out.println("Start clean up waysOfNodes and highways");
-		highways.clear();
-		//waysOfNodes.clear();
+		// Clean up waysOfNodes
+		System.out.println("Start clean up waysOfNodes");
+		waysOfNodes.clear();
+		waysOfNodes = null;
 		System.gc();
-		System.out.println("Finished clean up waysOfNodes and highways");
+		System.out.println("Finished clean up waysOfNodes");
 		
 		
 		// Pass 1.2: 
