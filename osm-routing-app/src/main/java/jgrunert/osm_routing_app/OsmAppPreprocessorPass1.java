@@ -33,7 +33,7 @@ import org.openstreetmap.osmosis.core.task.v0_6.Sink;
  * Hello world!
  *
  */
-public class OsmAppPreprocessor {
+public class OsmAppPreprocessorPass1 {
 
 	static int relevantWays = 0;
 	static int ways = 0;
@@ -63,8 +63,8 @@ public class OsmAppPreprocessor {
 		
 		
 	private static void preprocess() throws Exception {
-		//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
-		String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
+		String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
+		//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
 		//String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
 		
 		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed-all.csv"));
@@ -75,15 +75,14 @@ public class OsmAppPreprocessor {
 		//Map<Long, Short> waysPerNode = new HashMap<>();
 		
 		// List of all highways, Int32-index in this array will later be their index
-		List<HighwayInfos> highways = new LinkedList<>();
+		List<HighwayInfos> highways = new ArrayList<>();
 		List<Long> waypointIds = new ArrayList<>();
 		
 		// Pass 1 - read highways
 		{
 		System.out.println("Starting Pass 1");
 		
-		PrintWriter highwayCsvWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed.csv"));
-		DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\highways-processed.bin"));		
+		//PrintWriter highwayCsvWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed.csv"));
 		
 		Sink sinkImplementation = new Sink() {
 
@@ -121,13 +120,11 @@ public class OsmAppPreprocessor {
 //										+ maxspeed + ";" + sidewalk + ";"
 //										+ oneway + ";" + hw.getCsvString());
 								// Write csv
-								highwayCsvWriter.println(hw.getCsvString());
+								//highwayCsvWriter.println(hw.getCsvString());
 								// Write binary
 								//highwayBinWriter.writeBoolean(hw.Car);
 								//highwayBinWriter.writeBoolean(hw.Pedestrian);
 								//highwayBinWriter.writeBoolean(hw.Oneway);
-								highwayBinWriter.writeByte((byte)hw.InfoBits);
-								highwayBinWriter.writeByte((byte)hw.MaxSpeed);
 								relevantWays++;
 								
 								for(WayNode waynode : way.getWayNodes()) {									
@@ -200,8 +197,10 @@ public class OsmAppPreprocessor {
 			}
 		}
 		
-		highwayCsvWriter.close();
-		highwayBinWriter.close();
+		//highwayCsvWriter.close();
+		
+		System.out.println("Finised pass 1");
+		System.out.println("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
 		}
 		
 		
@@ -224,12 +223,27 @@ public class OsmAppPreprocessor {
 			}
 		}
 		System.out.println("Finished creating waypointIdsSet with size " + waypointIdsSet.size());
+		System.out.println("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
 		
 		// TODO Sort by location? Sort by ways (in next step)? Are ways sorted?
-		
-		
 				
+		// Save waypointIdsSet	
+		System.out.println("Start saving waypointIdsSet");
+		DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waynodeIds.bin"));
+		waypointIdsWriter.writeInt(waypointIdsSet.size());
+		for(long id : waypointIdsSet) {
+			waypointIdsWriter.writeLong(id);
+		}
+		waypointIdsWriter.close();
+		System.out.println("Finished saving waypointIdsSet");
+		
+		
+		
+		// Evaluate and save waypoint highway relations
 		// List of Lists for each node with indices of all ways he is involved in
+		DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-highways.bin"));	
+		highwayBinWriter.writeInt(highways.size());
+		
 		System.out.println("Start finding waysOfNodes");
 		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waypointIdsSet.size());
 		for(int i = 0; i < waypointIdsSet.size(); i++) {
@@ -237,23 +251,56 @@ public class OsmAppPreprocessor {
 		}		
 		int percAmnt = highways.size() / 100;
 		for(int i = 0; i < highways.size(); i++) {
-			for(WayNode wnode : highways.get(i).wayNodes) {
+			HighwayInfos hw = highways.get(i);
+
+			highwayBinWriter.writeByte(hw.InfoBits);
+			highwayBinWriter.writeBoolean(hw.Oneway);
+			highwayBinWriter.writeByte((byte)hw.MaxSpeed);
+			highwayBinWriter.writeInt(hw.wayNodes.size());
+			
+			for(WayNode wnode : hw.wayNodes) {
 				int nodeIndex = Collections.binarySearch(waypointIdsSet, wnode.getNodeId());
+				highwayBinWriter.writeInt(nodeIndex);
 				waysOfNodes.get(nodeIndex).add(i);
 			}
 			if(i % percAmnt == 0) {
 				System.out.println((i / percAmnt) + "%  finding waysOfNodes");
 			}
 		}
+		highwayBinWriter.close();
 		System.out.println("Finished finding waysOfNodes");
+		System.out.println("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
 		
 		
+		// Save waysOfNodes
+		System.out.println("Start saving waysOfNodesWriter");
+		DataOutputStream waysOfNodesWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waysOfNodes.bin"));
+		waysOfNodesWriter.writeInt(waysOfNodes.size());
+		for(int i = 0; i < waysOfNodes.size(); i++) {
+			List<Integer> nodeWays = waysOfNodes.get(i);
+			waysOfNodesWriter.writeInt(nodeWays.size());
+			for(int id : nodeWays) {
+				waysOfNodesWriter.writeInt(id);				
+			}
+		}	
+		waysOfNodesWriter.close();
+		System.out.println("Finished saving waysOfNodesWriter");
 		
-		// Pass 2: 
+
+		// Clean up waysOfNodes and highways
+		System.out.println("Start clean up waysOfNodes and highways");
+		highways.clear();
+		waysOfNodes.clear();
+		System.gc();
+		System.out.println("Finished clean up waysOfNodes and highways");
+		
+		
+		// Pass 1.2: 
 		{
 			System.out.println("Starting Pass 2");
-
-			DataOutputStream connectionWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\highways-processed.bin"));
+			
+			DataOutputStream connectionWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waynodes.bin"));
+			connectionWriter.writeInt(waypointIdsSet.size());
 						
 			Sink sinkImplementation = new Sink() {
 
@@ -262,26 +309,22 @@ public class OsmAppPreprocessor {
 					
 					if (entity instanceof Node) {
 						Node node = (Node) entity;
-						boolean relevantNode = false;
+
+						int nodeIndex = Collections.binarySearch(waypointIdsSet, node.getId());
 						
-						for(HighwayInfos hw : highways) {
-							for(int i = 0; i < hw.wayNodes.size(); i++) {
-								if(hw.wayNodes.get(i).getNodeId() == node.getId()) {
-									relevantNode = true;
-									// Save
-									try {
-										connectionWriter.writeBoolean(true);
-									} catch (IOException e) {
-										e.printStackTrace();
-									}									
-								}
+						if(nodeIndex > 0) {
+							try {
+								connectionWriter.writeInt(nodeIndex);
+								connectionWriter.writeDouble(node.getLatitude());	
+								connectionWriter.writeDouble(node.getLongitude());	
+								connectionWriter.writeLong(node.getId());							
+							} catch (IOException e) {
+								e.printStackTrace();
 							}
+							relevantWayNodes++;	
 						}
 						
 						nodes++;
-						if(relevantNode) {
-							relevantWayNodes++;
-						}
 					} 
 					
 					elementsPass2++;
@@ -327,6 +370,16 @@ public class OsmAppPreprocessor {
 				}
 			}			
 			
+			
+			if(relevantWayNodes < waypointIdsSet.size()) {
+				System.err.println("Not all relevantWayNodes have nodes in file: " + 
+						relevantWayNodes + " insead of " + waypointIdsSet.size());
+			}
+			if(relevantWayNodes > waypointIdsSet.size()) {
+				System.err.println("Duplicate nodes for relevantWayNodes in file: " + 
+						relevantWayNodes + " insead of " + waypointIdsSet.size());
+			}
+			
 			System.out.println("Pass 2 finished");
 
 			connectionWriter.close();
@@ -363,9 +416,9 @@ public class OsmAppPreprocessor {
 		}
 		
 		
-		public String getCsvString() {
-			return InfoBits + ";" + Oneway + ";" + MaxSpeed + ";";
-		}
+//		public String getCsvString() {
+//			return InfoBits + ";" + Oneway + ";" + MaxSpeed + ";";
+//		}
 	}
 	
 
