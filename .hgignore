@@ -8,3 +8,4 @@ osm-routing-app/target
 .settings/
 bin/
 JMapViewer/releases
+*.log
