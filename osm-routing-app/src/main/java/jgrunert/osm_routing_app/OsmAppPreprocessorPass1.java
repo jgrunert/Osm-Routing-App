@@ -37,7 +37,7 @@ public class OsmAppPreprocessorPass1 {
 
 	static int relevantWays = 0;
 	static int ways = 0;
-	static int relevantWayNodes = 0;
+	static int relevantWayNodeCounter = 0;
 	static int nodes = 0;
 	
 	static int maxNodesPerWay = 0;
@@ -228,14 +228,14 @@ public class OsmAppPreprocessorPass1 {
 		// TODO Sort by location? Sort by ways (in next step)? Are ways sorted?
 				
 		// Save waypointIdsSet	
-		System.out.println("Start saving waypointIdsSet");
-		DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waynodeIds.bin"));
-		waypointIdsWriter.writeInt(waypointIdsSet.size());
-		for(long id : waypointIdsSet) {
-			waypointIdsWriter.writeLong(id);
-		}
-		waypointIdsWriter.close();
-		System.out.println("Finished saving waypointIdsSet");
+//		System.out.println("Start saving waypointIdsSet");
+//		DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waynodeIds.bin"));
+//		waypointIdsWriter.writeInt(waypointIdsSet.size());
+//		for(long id : waypointIdsSet) {
+//			waypointIdsWriter.writeLong(id);
+//		}
+//		waypointIdsWriter.close();
+//		System.out.println("Finished saving waypointIdsSet");
 		
 		
 		
@@ -260,8 +260,13 @@ public class OsmAppPreprocessorPass1 {
 			
 			for(WayNode wnode : hw.wayNodes) {
 				int nodeIndex = Collections.binarySearch(waypointIdsSet, wnode.getNodeId());
-				highwayBinWriter.writeInt(nodeIndex);
-				waysOfNodes.get(nodeIndex).add(i);
+				if(nodeIndex > 0) {
+					highwayBinWriter.writeInt(nodeIndex);
+					waysOfNodes.get(nodeIndex).add(i);
+				} else {
+					// Cannot find node with this ID
+					highwayBinWriter.writeInt(-1);					
+				}
 			}
 			if(i % percAmnt == 0) {
 				System.out.println((i / percAmnt) + "%  finding waysOfNodes");
@@ -312,7 +317,11 @@ public class OsmAppPreprocessorPass1 {
 
 						int nodeIndex = Collections.binarySearch(waypointIdsSet, node.getId());
 						
-						if(nodeIndex > 0) {
+						if(nodeIndex >= 0) {
+							if(nodeIndex != relevantWayNodeCounter) {
+								System.err.println("Invalid nodeIndex: " + nodeIndex + " instead of " + relevantWayNodeCounter);
+							}
+								
 							try {
 								connectionWriter.writeInt(nodeIndex);
 								connectionWriter.writeDouble(node.getLatitude());	
@@ -321,7 +330,7 @@ public class OsmAppPreprocessorPass1 {
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
-							relevantWayNodes++;	
+							relevantWayNodeCounter++;	
 						}
 						
 						nodes++;
@@ -332,7 +341,7 @@ public class OsmAppPreprocessorPass1 {
 						System.out
 								.println("Loaded " + elementsPass2 + " elements ("
 										+ (int) (((float) elementsPass2 / totalElements) * 100) + "%)");
-						System.out.println(relevantWayNodes);
+						System.out.println(relevantWayNodeCounter);
 					}
 				}
 
@@ -371,13 +380,13 @@ public class OsmAppPreprocessorPass1 {
 			}			
 			
 			
-			if(relevantWayNodes < waypointIdsSet.size()) {
+			if(relevantWayNodeCounter < waypointIdsSet.size()) {
 				System.err.println("Not all relevantWayNodes have nodes in file: " + 
-						relevantWayNodes + " insead of " + waypointIdsSet.size());
+						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
 			}
-			if(relevantWayNodes > waypointIdsSet.size()) {
+			if(relevantWayNodeCounter > waypointIdsSet.size()) {
 				System.err.println("Duplicate nodes for relevantWayNodes in file: " + 
-						relevantWayNodes + " insead of " + waypointIdsSet.size());
+						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
 			}
 			
 			System.out.println("Pass 2 finished");
@@ -388,7 +397,7 @@ public class OsmAppPreprocessorPass1 {
 		
 		System.out.println("Pass 1 finished");
 		System.out.println("Relevant ways: " + relevantWays + ", total ways: " + ways);
-		System.out.println("Relevant waynodes: " + relevantWayNodes + ", total nodes: " + nodes);
+		System.out.println("Relevant waynodes: " + relevantWayNodeCounter + ", total nodes: " + nodes);
 		System.out.println("Max nodes per way: " + maxNodesPerWay);
 		System.out.println("Max ways per node: " + maxWaysPerNode);
 		
