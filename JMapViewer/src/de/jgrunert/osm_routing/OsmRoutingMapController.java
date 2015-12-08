@@ -10,7 +10,9 @@ import java.awt.event.MouseWheelListener;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -55,6 +57,10 @@ MouseWheelListener {
     private boolean wheelZoomEnabled = true;
     private boolean doubleClickZoomEnabled = true;
     
+    
+    private static final short CAR_MAXSPEED = 150;
+    private static final short PED_MAXSPEED = 5;
+    
     private int startIndex;
     private Coordinate startLoc = null;
     private int targetIndex;
@@ -70,6 +76,10 @@ MouseWheelListener {
    
     // Buffer for predecessors when calculating routes
     int[] nodesPreBuffer;
+    // Buffer for node distances when calculating routes
+    int[] nodesDistBuffer;
+    // Buffer for node visisted when calculating routes
+    boolean[] nodesVisitedBuffer;
     
     int edgeCount = 0;
     int[] edgesTarget;
@@ -83,7 +93,11 @@ MouseWheelListener {
         super(map);
         
         try {
-            loadOsmData();
+            loadOsmData();    
+            
+            nodesPreBuffer = new int[nodeCount];
+            nodesDistBuffer = new int[nodeCount];
+            nodesVisitedBuffer = new boolean[nodeCount];
         } catch (Exception e) {
             System.err.println("Error at loadOsmData");
             e.printStackTrace();
@@ -94,45 +108,31 @@ MouseWheelListener {
     @SuppressWarnings("resource")
     private void loadOsmData() throws Exception {
 
+        {
         System.out.println("Start reading nodes");
-        DataInputStream nodeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass3-nodes.bin"));
+        ObjectInputStream nodeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\nodes-final.bin"));
         
-        nodeCount = nodeReader.readInt();
-        nodesLat = new double[nodeCount];
-        nodesLon = new double[nodeCount];
-        nodesEdgeOffset = new int[nodeCount];
-        nodesPreBuffer = new int[nodeCount];
-        
-        for(int i = 0; i < nodeCount; i++) {
-            nodesLat[i] = nodeReader.readDouble();
-            nodesLon[i] = nodeReader.readDouble();
-            nodesEdgeOffset[i] = nodeReader.readInt();
-        }
+        nodeCount = (Integer)nodeReader.readObject();
+        nodesLat = (double[])nodeReader.readObject();
+        nodesLon = (double[])nodeReader.readObject();
+        nodesEdgeOffset = (int[])nodeReader.readObject();
         
         nodeReader.close();
         System.out.println("Finished reading nodes");
-        
-
-        System.out.println("Start reading edges");
-        DataInputStream edgeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass3-edges.bin"));
-        edgeCount = edgeReader.readInt();
-        edgesTarget = new int[edgeCount];
-        edgesInfobits = new byte[edgeCount];
-        edgeLengths = new short[edgeCount];
-        edgeMaxSpeeds = new byte[edgeCount];
-
-        for(int i = 0; i < edgeCount; i++) {
-            edgesTarget[i] = edgeReader.readInt();
-            if(edgesTarget[i] == 0) {
-                System.out.println(i);
-            }
-            edgesInfobits[i] = edgeReader.readByte();
-            edgeLengths[i] = edgeReader.readShort();
-            edgeMaxSpeeds[i] = edgeReader.readByte();
         }
         
+        {
+        System.out.println("Start reading edges");
+        ObjectInputStream edgeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\edges-final.bin"));
+        edgeCount = (Integer)edgeReader.readObject();
+        edgesTarget = (int[])edgeReader.readObject();
+        edgesInfobits =(byte[])edgeReader.readObject();
+        edgeLengths = (short[])edgeReader.readObject();
+        edgeMaxSpeeds = (byte[])edgeReader.readObject();
+
         edgeReader.close();
         System.out.println("Finished reading edges");
+        }
         
 
 //        for(int i = 4; i < 5; i++) {
@@ -292,7 +292,14 @@ MouseWheelListener {
         Random rd = new Random(123);
         double debugDispProp = 0.998;
         
+        
         if(startLoc != null && targetLoc != null) {
+
+            System.out.println("Start reset buffers");
+            Arrays.fill(nodesDistBuffer, Integer.MAX_VALUE);
+            Arrays.fill(nodesVisitedBuffer, false);
+            System.out.println("Buffers reseted");
+            
                // BFS uses Queue data structure 
                Queue<Integer> queue = new LinkedList<>(); 
                Set<Integer> visited = new HashSet<>();
