@@ -88,7 +88,10 @@ MouseWheelListener {
     byte[] edgeMaxSpeeds;
         
         
-   
+   /**
+    * Constructor
+    * @param map JMapViewer
+    */
     public OsmRoutingMapController(JMapViewer map) {
         super(map);
         
@@ -134,60 +137,8 @@ MouseWheelListener {
         System.out.println("Finished reading edges");
         }
         
-
-//        for(int i = 4; i < 5; i++) {
-//            double lat = nodesLat[i];
-//            double lon = nodesLon[i];
-//            Coordinate coord = new Coordinate(lat, lon);
-//            int edgeOffs = nodesEdgeOffset[i];            
-//            MapMarkerDot targetDot = new MapMarkerDot("Start", coord);
-//            map.addMapMarker(targetDot);
-//            Set<Integer> visited = new HashSet<>();
-//            visited.add(i);
-//            
-//            for(int iTarg = edgeOffs; iTarg < nodesEdgeOffset[i+1]; iTarg++) {
-//                mapPointDfs(edgesTarget[iTarg],coord, 1, 300, visited);
-//            }
-//        }
     }
     
-    
-    private void mapPointDfs(int i, Coordinate lastCoord, int depth, int maxDepth, Set<Integer> visited) {
-        if(depth < maxDepth) {
-            double lat = nodesLat[i];
-            double lon = nodesLon[i];
-            Coordinate coord = new Coordinate(lat, lon);
-            int edgeOffs = nodesEdgeOffset[i];            
-            
-            if (depth == maxDepth - 1) {
-                //MapMarkerDot targetDot = new MapMarkerDot("End", coord);
-                //map.addMapMarker(targetDot);
-            }
-            
-            MapPolygonImpl routPoly = new MapPolygonImpl(lastCoord, coord, coord);
-            routeLines.add(routPoly);
-            map.addMapPolygon(routPoly);
-            visited.add(i);
-            
-
-            boolean hasWay = false;
-            for(int iTarg = edgeOffs; iTarg < nodesEdgeOffset[i+1]; iTarg++) {
-                int targ = edgesTarget[iTarg];
-                if(!visited.contains(targ)) {
-                    hasWay = true;
-                    mapPointDfs(edgesTarget[iTarg], coord, depth + 1, maxDepth, visited);
-                    //break;
-                } else {
-                    System.out.println("Already visited");
-                }
-            }
-            
-            if(!hasWay) {
-                //MapMarkerDot targetDot = new MapMarkerDot("Sack", coord);
-                //map.addMapMarker(targetDot);                
-            }
-        }
-    }
     
 
     @Override
@@ -290,73 +241,70 @@ MouseWheelListener {
 
         
         Random rd = new Random(123);
-        double debugDispProp = 0.998;
+        double debugDispProp = 0.99999;
         
-        
-        if(startLoc != null && targetLoc != null) {
+        if (startLoc != null && targetLoc != null) {
 
-            System.out.println("Start reset buffers");
+            // Reset buffers
             Arrays.fill(nodesDistBuffer, Integer.MAX_VALUE);
             Arrays.fill(nodesVisitedBuffer, false);
-            System.out.println("Buffers reseted");
             
-               // BFS uses Queue data structure 
-               Queue<Integer> queue = new LinkedList<>(); 
-               Set<Integer> visited = new HashSet<>();
-               queue.add(startIndex); 
-               while(!queue.isEmpty()) { 
-                  int nextIndex = queue.remove(); 
-                  
-                  if(nextIndex == targetIndex) {
-                      System.out.println("Found!");
-                      break;
-                  } else {
-                      //System.out.println("Not found");
-                  }
+            
 
-                  visited.add(nextIndex);
-                  
-                  // Display
+            // BFS uses Queue data structure 
+            Queue<Integer> queue = new LinkedList<>();
+            queue.add(startIndex);
+            while (!queue.isEmpty()) {
+                int nextIndex = queue.remove();
+
+                if (nextIndex == targetIndex) {
+                    System.out.println("Found!");
+                    break;
+                } else {
+                    //System.out.println("Not found");
+                }
+
+                nodesVisitedBuffer[nextIndex] = true;
+
+                // Display
                 if (rd.nextDouble() > debugDispProp) {
                     MapMarkerDot targetDot = new MapMarkerDot(new Coordinate(nodesLat[nextIndex], nodesLon[nextIndex]));
                     map.addMapMarker(targetDot);
                     routeDots.add(targetDot);
                 }
-//                  System.out.println(nextIndex);
-                  
-                  for(int iTarg = nodesEdgeOffset[nextIndex]; 
-                          (nextIndex+1 < nodesEdgeOffset.length && iTarg < nodesEdgeOffset[nextIndex+1]) || 
-                          (nextIndex+1 == nodesEdgeOffset.length && iTarg < edgesTarget.length); // Last node in offset array
-                          iTarg++) {
-                      int targ = edgesTarget[iTarg];
-                      if(!visited.contains(targ)) {
-                          nodesPreBuffer[targ] = nextIndex;
-                          queue.add(targ);
-                      } else {
-                          //System.out.println("Already visited");
-                      }
-                  }
-              } 
-               
-               
+                //                  System.out.println(nextIndex);
+
+                for (int iTarg = nodesEdgeOffset[nextIndex]; (nextIndex + 1 < nodesEdgeOffset.length && iTarg < nodesEdgeOffset[nextIndex + 1])
+                        || (nextIndex + 1 == nodesEdgeOffset.length && iTarg < edgesTarget.length); // Last node in offset array
+                iTarg++) {
+                    int targ = edgesTarget[iTarg];
+                    if (!nodesVisitedBuffer[targ]) {
+                        nodesPreBuffer[targ] = nextIndex;
+                        queue.add(targ);
+                    } else {
+                        //System.out.println("Already visited");
+                    }
+                }
+            }
+
             int i = targetIndex;
             while (i != startIndex) {
                 int pre = nodesPreBuffer[i];
-//                if (pre == targetIndex) {
-//                    continue;
-//                }
-                
+                //                if (pre == targetIndex) {
+                //                    continue;
+                //                }
+
                 Coordinate c1 = new Coordinate(nodesLat[pre], nodesLon[pre]);
                 Coordinate c2 = new Coordinate(nodesLat[i], nodesLon[i]);
-                
+
                 MapPolygonImpl routPoly = new MapPolygonImpl(c1, c2, c2);
                 routeLines.add(routPoly);
                 map.addMapPolygon(routPoly);
-                
-//                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[i], nodesLon[i]));
-//                map.addMapMarker(dot);
-//                routeDots.add(dot);
-                
+
+                //                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[i], nodesLon[i]));
+                //                map.addMapMarker(dot);
+                //                routeDots.add(dot);
+
                 i = pre;
             }
         }
@@ -387,6 +335,7 @@ MouseWheelListener {
         }
     }
 
+    @SuppressWarnings("javadoc")
     public boolean isMovementEnabled() {
         return movementEnabled;
     }
@@ -400,6 +349,7 @@ MouseWheelListener {
         this.movementEnabled = movementEnabled;
     }
 
+    @SuppressWarnings("javadoc")
     public int getMovementMouseButton() {
         return movementMouseButton;
     }
@@ -431,18 +381,22 @@ MouseWheelListener {
         }
     }
 
+    @SuppressWarnings("javadoc")
     public boolean isWheelZoomEnabled() {
         return wheelZoomEnabled;
     }
 
+    @SuppressWarnings("javadoc")
     public void setWheelZoomEnabled(boolean wheelZoomEnabled) {
         this.wheelZoomEnabled = wheelZoomEnabled;
     }
 
+    @SuppressWarnings("javadoc")
     public boolean isDoubleClickZoomEnabled() {
         return doubleClickZoomEnabled;
     }
 
+    @SuppressWarnings("javadoc")
     public void setDoubleClickZoomEnabled(boolean doubleClickZoomEnabled) {
         this.doubleClickZoomEnabled = doubleClickZoomEnabled;
     }
