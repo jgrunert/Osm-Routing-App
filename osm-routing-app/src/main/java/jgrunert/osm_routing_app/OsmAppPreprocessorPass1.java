@@ -63,8 +63,8 @@ public class OsmAppPreprocessorPass1 {
 		
 		
 	private static void preprocess() throws Exception {
-		String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
-		//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
+		//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
+		String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
 		//String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
 		
 		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed-all.csv"));
@@ -228,14 +228,21 @@ public class OsmAppPreprocessorPass1 {
 		// TODO Sort by location? Sort by ways (in next step)? Are ways sorted?
 				
 		// Save waypointIdsSet	
-//		System.out.println("Start saving waypointIdsSet");
-//		DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waynodeIds.bin"));
-//		waypointIdsWriter.writeInt(waypointIdsSet.size());
-//		for(long id : waypointIdsSet) {
-//			waypointIdsWriter.writeLong(id);
-//		}
-//		waypointIdsWriter.close();
-//		System.out.println("Finished saving waypointIdsSet");
+		System.out.println("Start saving waypointIdsSet");
+		DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waynodeIds.bin"));
+		waypointIdsWriter.writeInt(waypointIdsSet.size());
+		int percTmp10 = waypointIdsSet.size() / 10;
+		int percTmp100 = waypointIdsSet.size() / 100;
+		int percCounter = 0;
+		for(long id : waypointIdsSet) {
+			waypointIdsWriter.writeLong(id);
+			percCounter++;
+			if(percCounter % percTmp10 == 0) {
+				System.out.println(percCounter / percTmp100 + "% save waypointIdsSet");
+			}
+		}
+		waypointIdsWriter.close();
+		System.out.println("Finished saving waypointIdsSet");
 		
 		
 		
@@ -278,14 +285,18 @@ public class OsmAppPreprocessorPass1 {
 		
 		
 		// Save waysOfNodes
-		System.out.println("Start saving waysOfNodesWriter");
+		System.out.println("Start saving waysOfNodes");
 		DataOutputStream waysOfNodesWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\pass1-waysOfNodes.bin"));
 		waysOfNodesWriter.writeInt(waysOfNodes.size());
+		percTmp100 = waysOfNodes.size() / 100;
 		for(int i = 0; i < waysOfNodes.size(); i++) {
 			List<Integer> nodeWays = waysOfNodes.get(i);
 			waysOfNodesWriter.writeInt(nodeWays.size());
 			for(int id : nodeWays) {
 				waysOfNodesWriter.writeInt(id);				
+			}
+			if(i % percTmp100 == 0) {
+				System.out.println(i / percTmp100 + "% save waysOfNodes");
 			}
 		}	
 		waysOfNodesWriter.close();
