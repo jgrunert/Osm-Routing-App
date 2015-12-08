@@ -105,6 +105,20 @@ MouseWheelListener {
             System.err.println("Error at loadOsmData");
             e.printStackTrace();
         }
+        
+        
+        BinaryHeap<Integer> beap = new BinaryHeap<>();
+        beap.add(1);
+        beap.add(2);
+        beap.add(3);
+        beap.add(4);
+        beap.add(5);
+        System.out.println(beap.remove());
+        System.out.println(beap.remove());
+        System.out.println(beap.remove());
+        System.out.println(beap.remove());
+        System.out.println(beap.remove());
+        System.out.println(beap.remove());
     }
     
     
@@ -250,8 +264,12 @@ MouseWheelListener {
             Arrays.fill(nodesVisitedBuffer, false);
             
             
+            // Start node
+            nodesDistBuffer[startIndex] = 0;
+            nodesVisitedBuffer[startIndex] = true;
+            
 
-            // BFS uses Queue data structure 
+            // Find route with Dijkstra
             Queue<Integer> queue = new LinkedList<>();
             queue.add(startIndex);
             while (!queue.isEmpty()) {
@@ -286,7 +304,10 @@ MouseWheelListener {
                     }
                 }
             }
+            
+            // TODO: What when not found?
 
+            // Reconstruct route
             int i = targetIndex;
             while (i != startIndex) {
                 int pre = nodesPreBuffer[i];
