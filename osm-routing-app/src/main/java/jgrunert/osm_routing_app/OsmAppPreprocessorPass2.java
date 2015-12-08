@@ -84,6 +84,7 @@ public class OsmAppPreprocessorPass2 {
 		
 
 		// Load and process waynodes
+		System.out.println("Start processing nodes");
 		DataInputStream nodeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass1-waynodes.bin"));
 		int nodeCount = nodeReader.readInt();
 		
@@ -91,7 +92,7 @@ public class OsmAppPreprocessorPass2 {
 			System.err.println("nodeCount != waysOfNodes.size(): " + nodeCount + " and " + waysOfNodes.size());
 		}
 		
-		DataOutputStream edgeWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges.bin"));
+		DataOutputStream edgeWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges_tmp.bin"));
 		DataOutputStream nodeWriter = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\hamburg\\pass2-nodes.bin"));
 				
 		int edgeCounter = 0;
@@ -106,11 +107,11 @@ public class OsmAppPreprocessorPass2 {
 			
 			double lat = nodeReader.readDouble();
 			double lon = nodeReader.readDouble();
-			nodeReader.readLong();
+			nodeReader.readLong(); // Ignore old id
 			
 			nodeWriter.writeDouble(lat);
 			nodeWriter.writeDouble(lon);
-			nodeWriter.writeDouble(edgeCounter); // Edge offset
+			nodeWriter.writeInt(edgeCounter); // Edge offset
 			
 			// Remove duplicate ways (eg. circles with multiple usages of node)
 			List<Integer> waysInvolvedList = waysOfNodes.get(iNode);
@@ -129,7 +130,6 @@ public class OsmAppPreprocessorPass2 {
 						
 						// Edge in direction of way (if not last point)
 						if(iWp + 1 < highway.wayNodes.size()) {
-							edgeWriter.writeBoolean(true); // Next edge in file
 							edgeWriter.writeInt(highway.wayNodes.get(iWp + 1)); // Target
 							// TODO Write edge properties
 							edgeCounter++;
@@ -137,7 +137,6 @@ public class OsmAppPreprocessorPass2 {
 
 						// Edge in counter direction of way (if not oneway and not first point)
 						if(!highway.Oneway && iWp > 0) {
-							edgeWriter.writeBoolean(true); // Next edge in file
 							edgeWriter.writeInt(highway.wayNodes.get(iWp - 1)); // Target
 							// TODO Write edge properties
 							edgeCounter++;
@@ -154,15 +153,27 @@ public class OsmAppPreprocessorPass2 {
 				System.out.println((iNode / percAmnt) + "%  processing nodes");
 			}
 		}		
+
+		nodeReader.close();
+		nodeWriter.close();
+		edgeWriter.close();
+		System.out.println("Finished processing nodes");
 		
-		edgeWriter.writeBoolean(true); // End of nodes in file
-		
+		// Write edges again to file with number of edges at beginning (TODO Better way?)
+		System.out.println("Start writing edges to final file");
+		DataOutputStream edgeWriter2 = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges.bin"));
+		DataInputStream edgeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges_tmp.bin"));
+		edgeWriter2.writeInt(edgeCounter);
+		for(int i = 0; i < edgeCounter; i++) {
+			edgeWriter2.writeInt(edgeReader.readInt());
+		}
+		edgeReader.close();
+		edgeWriter2.close();
+		System.out.println("Finished writing edges to final file");
+
+		System.out.println("Finished");		
 		System.out.println("Nodes: " + nodeCount);
 		System.out.println("Edges: " + edgeCounter);
-		
-		nodeReader.close();
-		edgeWriter.close();
-		nodeWriter.close();
 	}
 
 	
