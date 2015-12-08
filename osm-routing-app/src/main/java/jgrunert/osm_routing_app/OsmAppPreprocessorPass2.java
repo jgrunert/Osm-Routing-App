@@ -44,6 +44,7 @@ public class OsmAppPreprocessorPass2 {
 		List<HighwayInfos2> highways = new ArrayList<>(highwayCount);
 		
 		System.out.println("Start reading highways: " + highwayCount);
+		int perc100 = highwayCount / 100;
 		for(int i = 0; i < highwayCount; i++) {
 
 			byte infoBits = highwayReader.readByte();
@@ -59,6 +60,10 @@ public class OsmAppPreprocessorPass2 {
 			}
 			
 			highways.add(new HighwayInfos2(infoBits, oneway, maxSpeed, wayNodes));
+			
+			if(i % perc100 == 0) {
+				System.out.println(i / perc100 + "% reading highways");
+			}
 		}
 		highwayReader.close();
 		System.out.println("Finished reading highways: " + highwayCount);
@@ -68,8 +73,9 @@ public class OsmAppPreprocessorPass2 {
 		// Load waysOfNodes
 		DataInputStream waysOfNodesReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass1-waysOfNodes.bin"));
 		int waynodeCount = waysOfNodesReader.readInt();
-		System.out.println("Start reading waysOfNodesWriter: " + waynodeCount);
+		System.out.println("Start reading waysOfNodes: " + waynodeCount);
 		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waynodeCount);
+		perc100 = waynodeCount / 100;
 		for(int i = 0; i < waynodeCount; i++) {
 			int waysCount = waysOfNodesReader.readInt();
 			List<Integer> nodeWays = new ArrayList<Integer>(waysCount);			
@@ -77,9 +83,13 @@ public class OsmAppPreprocessorPass2 {
 				nodeWays.add(waysOfNodesReader.readInt());
 			}
 			waysOfNodes.add(nodeWays);
+			
+			if(i % perc100 == 0) {
+				System.out.println(i / perc100 + "% reading waysOfNodes");
+			}
 		}	
 		waysOfNodesReader.close();
-		System.out.println("Finished reading waysOfNodesWriter");
+		System.out.println("Finished reading waysOfNodes");
 		
 		
 
@@ -97,7 +107,7 @@ public class OsmAppPreprocessorPass2 {
 				
 		int edgeCounter = 0;
 		nodeWriter.writeInt(nodeCount);
-		int percAmnt = nodeCount / 100;
+		perc100 = nodeCount / 100;
 		for(int iNode = 0; iNode < nodeCount; iNode++) {
 
 			int nodeIndex = nodeReader.readInt();
@@ -149,8 +159,8 @@ public class OsmAppPreprocessorPass2 {
 				}
 			}
 			
-			if(iNode % percAmnt == 0) {
-				System.out.println((iNode / percAmnt) + "%  processing nodes");
+			if(iNode % perc100 == 0) {
+				System.out.println((iNode / perc100) + "%  processing nodes");
 			}
 		}		
 
@@ -164,8 +174,12 @@ public class OsmAppPreprocessorPass2 {
 		DataOutputStream edgeWriter2 = new DataOutputStream(new FileOutputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges.bin"));
 		DataInputStream edgeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges_tmp.bin"));
 		edgeWriter2.writeInt(edgeCounter);
+		perc100 = edgeCounter / 100;
 		for(int i = 0; i < edgeCounter; i++) {
 			edgeWriter2.writeInt(edgeReader.readInt());
+			if(i % perc100 == 0) {
+				System.out.println((i / perc100) + "%  writing final edges");
+			}
 		}
 		edgeReader.close();
 		edgeWriter2.close();

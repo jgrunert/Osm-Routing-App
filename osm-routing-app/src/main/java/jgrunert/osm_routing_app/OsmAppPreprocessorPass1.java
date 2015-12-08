@@ -63,8 +63,8 @@ public class OsmAppPreprocessorPass1 {
 		
 		
 	private static void preprocess() throws Exception {
-		//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
-		String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
+		String inFile = "D:\\Jonas\\OSM\\germany-latest.osm - Kopie.pbf";
+		//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
 		//String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
 		
 		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-processed-all.csv"));
@@ -306,7 +306,7 @@ public class OsmAppPreprocessorPass1 {
 		// Clean up waysOfNodes and highways
 		System.out.println("Start clean up waysOfNodes and highways");
 		highways.clear();
-		waysOfNodes.clear();
+		//waysOfNodes.clear();
 		System.gc();
 		System.out.println("Finished clean up waysOfNodes and highways");
 		

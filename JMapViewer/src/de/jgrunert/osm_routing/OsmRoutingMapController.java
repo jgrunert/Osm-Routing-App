@@ -7,6 +7,9 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,11 +53,85 @@ MouseWheelListener {
     private List<MapMarkerDot> routeDots = new ArrayList<>();
     private List<MapPolygonImpl> routeLines = new ArrayList<>();
     
+    double[] nodesLat = null;
+    double[] nodesLon = null;
+    int[] nodesEdgeOffset = null;
+    
+    int[] edgesTarget = null;
+    
         
    
     public OsmRoutingMapController(JMapViewer map) {
         super(map);
+        
+        try {
+            loadOsmData();
+        } catch (Exception e) {
+            System.err.println("Error at loadOsmData");
+            e.printStackTrace();
+        }
     }
+    
+    
+    @SuppressWarnings("resource")
+    private void loadOsmData() throws Exception {
+
+        System.out.println("Start reading nodes");
+        DataInputStream nodeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass2-nodes.bin"));
+        
+        int nodeCount = nodeReader.readInt();
+        nodesLat = new double[nodeCount];
+        nodesLon = new double[nodeCount];
+        nodesEdgeOffset = new int[nodeCount];
+        
+        for(int i = 0; i < nodeCount; i++) {
+            nodesLat[i] = nodeReader.readDouble();
+            nodesLon[i] = nodeReader.readDouble();
+            nodesEdgeOffset[i] = nodeReader.readInt();
+        }
+        
+        nodeReader.close();
+        System.out.println("Finished reading nodes");
+        
+
+        System.out.println("Start reading edges");
+        DataInputStream edgeReader = new DataInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\pass2-edges.bin"));
+        int edgeCount = edgeReader.readInt();
+        edgesTarget = new int[edgeCount];
+
+        for(int i = 0; i < edgeCount; i++) {
+            edgesTarget[i] = edgeReader.readInt();
+        }
+        
+        edgeReader.close();
+        System.out.println("Finished reading edges");
+        
+
+        for(int i = 0; i < 1; i++) {
+            double lat = nodesLat[i];
+            double lon = nodesLon[i];
+            int edgeOffs = nodesEdgeOffset[i];            
+            MapMarkerDot targetDot = new MapMarkerDot("Point " + i, new Coordinate(lat, lon));
+            map.addMapMarker(targetDot);
+            
+            for(int iTarg = edgeOffs; iTarg < nodesEdgeOffset[i+1]; iTarg++) {
+                mapPointDfs(edgesTarget[edgeOffs], lat, lon, 1, 20);
+            }
+        }
+    }
+    
+    
+    private void mapPointDfs(int i, double lastLat, double lastLon, int depth, int maxDepth) {
+        if(depth < maxDepth) {
+            double lat = nodesLat[i];
+            double lon = nodesLon[i];
+            int edgeOffs = nodesEdgeOffset[i];            
+            MapMarkerDot targetDot = new MapMarkerDot("DFS " + i, new Coordinate(lat, lon));
+            map.addMapMarker(targetDot);
+            mapPointDfs(edgesTarget[edgeOffs], lat, lon, depth + 1, 20);
+        }
+    }
+    
 
     @Override
     public void mouseDragged(MouseEvent e) {
