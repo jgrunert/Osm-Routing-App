@@ -32,6 +32,9 @@ public class OsmTileLoader implements TileLoader {
     private final String PngCache;
     private final boolean DoCaching;
     
+    private static final int MaxCachingZoom = 12;
+    
+    
     private final class OsmTileJob implements TileJob {
         private final Tile tile;
         private InputStream input = null;
@@ -54,7 +57,7 @@ public class OsmTileLoader implements TileLoader {
                 String tileFileName = tile.toString().replace('/', '_') + ".png";
                 File imageFile = new File(PngCache + "\\" + tileFileName);
                 
-                if (DoCaching) {
+                if (DoCaching && tile.zoom <= MaxCachingZoom) {
                     // Try to load and cache
                     if (!imageFile.exists()) {
                         // Load if not cached
