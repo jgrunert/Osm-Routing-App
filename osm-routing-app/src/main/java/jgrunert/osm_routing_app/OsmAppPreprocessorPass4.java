@@ -5,15 +5,16 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
 
-public class OsmAppPreprocessorArrayer {
-
+public class OsmAppPreprocessorPass4 {
+	
 	
 	public static void main(String[] args) {
 		try {
-			//String dir = "D:\\Jonas\\OSM\\germany";
-			String dir = "D:\\Jonas\\OSM\\hamburg";
+			//String outDir = "D:\\Jonas\\OSM\\germany";
+			//String outDir = "D:\\Jonas\\OSM\\hamburg";
+			String outDir = "D:\\Jonas\\OSM\\bawue";
 			
-			arrayify(dir + "\\pass3-nodes.bin", dir + "\\pass3-edges.bin", dir);
+			arrayify(outDir + "\\pass3-nodes.bin", outDir + "\\pass3-edges.bin", outDir);
 		} catch (Exception e) {
 			System.err.println("Error in main");
 			e.printStackTrace();
@@ -22,8 +23,7 @@ public class OsmAppPreprocessorArrayer {
 	
 	
 	private static void arrayify(String nodeFile, String edgeFile, String outDir) throws Exception {
-		
-		{
+	{
 		System.out.println("Start reading nodes");
         DataInputStream nodeReader = new DataInputStream(new FileInputStream(nodeFile));
         
@@ -38,7 +38,7 @@ public class OsmAppPreprocessorArrayer {
             nodesLon[i] = nodeReader.readDouble();
             nodesEdgeOffset[i] = nodeReader.readInt();
 			if(i % perc100 == 0) {
-				System.out.println((i / perc100) + "%  writing final edges");
+				System.out.println((i / perc100) + "%  reading nodes");
 			}
         }
         
@@ -47,7 +47,7 @@ public class OsmAppPreprocessorArrayer {
         
 
         System.out.println("Start serializing nodes");    
-        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\nodes-final.bin"));
+        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\pass4-nodes.bin"));
         os.writeObject(nodeCount);
         os.writeObject(nodesLat);   
         os.writeObject(nodesLon);        
@@ -76,7 +76,7 @@ public class OsmAppPreprocessorArrayer {
             edgeLengths[i] = edgeReader.readShort();
             edgeMaxSpeeds[i] = edgeReader.readByte();
 			if(i % perc100 == 0) {
-				System.out.println((i / perc100) + "%  writing final edges");
+				System.out.println((i / perc100) + "% reading edges");
 			}
         }
         
@@ -85,7 +85,7 @@ public class OsmAppPreprocessorArrayer {
         
 
         System.out.println("Start serializing edges");    
-        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\edges-final.bin"));
+        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\pass4-edges.bin"));
         os.writeObject(edgeCount);
         os.writeObject(edgesTarget);   
         os.writeObject(edgesInfobits);        

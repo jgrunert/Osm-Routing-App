@@ -47,7 +47,8 @@ public class OsmAppPreprocessorPass3 {
 	private static void process() throws Exception {
 
 		//String outDir = "D:\\Jonas\\OSM\\germany";
-		String outDir = "D:\\Jonas\\OSM\\hamburg";
+		//String outDir = "D:\\Jonas\\OSM\\hamburg";
+		String outDir = "D:\\Jonas\\OSM\\bawue";
 		
 		System.out.println("OSM Preprocessor Pass3 v02");
 		
