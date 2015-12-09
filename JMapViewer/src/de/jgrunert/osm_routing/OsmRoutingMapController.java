@@ -107,21 +107,14 @@ MouseWheelListener {
         }
         
         
-        int[] distBuffer = new int[5];
-        distBuffer[0] = 9;
-        distBuffer[1] = 1;
-        distBuffer[2] = 8;
-        distBuffer[3] = 3;
-        distBuffer[4] = 2;
-        
-        BinaryHeap beap = new BinaryHeap();    
+        NodeDistHeap beap = new NodeDistHeap(5);    
         beap.add(9, 0);
         beap.add(8, 1);
         beap.add(2, 2);
         beap.add(3, 4);
         beap.add(4, 3);
+        beap.decreaseKey(0, 3);
         
-        System.out.println(beap.peekValue() + " " + beap.remove());
         System.out.println(beap.peekValue() + " " + beap.remove());
         System.out.println(beap.peekValue() + " " + beap.remove());
         System.out.println(beap.peekValue() + " " + beap.remove());
@@ -129,25 +122,6 @@ MouseWheelListener {
         System.out.println(beap.peekValue() + " " + beap.remove());
         
         System.out.println("---");
-        
-        NodeDistHeap neap = new NodeDistHeap(5);
-//        beap.decreaseDist(0, 9);       
-//        beap.decreaseDist(1, 8);  
-//        beap.decreaseDist(2, 2);   
-//        beap.decreaseDist(3, 3);  
-//        beap.decreaseDist(4, 4);      
-        neap.add(9);
-        neap.add(8);
-        neap.add(2);
-        neap.add(3);
-        neap.add(4);
-        
-        System.out.println(neap.peekNodeDist() + " " + neap.remove());
-        System.out.println(neap.peekNodeDist() + " " + neap.remove());
-        System.out.println(neap.peekNodeDist() + " " + neap.remove());
-        System.out.println(neap.peekNodeDist() + " " + neap.remove());
-        System.out.println(neap.peekNodeDist() + " " + neap.remove());
-        System.out.println(neap.peekNodeDist() + " " + neap.remove());
     }
     
     

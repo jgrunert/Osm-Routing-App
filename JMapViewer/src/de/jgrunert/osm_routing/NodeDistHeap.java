@@ -1,158 +1,134 @@
 package de.jgrunert.osm_routing;
 
+
 import java.util.Arrays;
 
+/**
+ * Min heap for map nodes
+ * @author Jonas Grunert
+ *
+ */
 @SuppressWarnings("javadoc")
 public class NodeDistHeap {
-    private final int nodeCount;
-    private int[] nodeHeap;
-    private int[] nodeHeapPos; // Node positions in heap
-    private int[] nodeDistBuffer;
-    private int size;
-    
+    protected int[] valuesArray;
+    protected int[] indexArray;
+    protected int[] nodeHeapIndices;
+    protected int size;
     
     /**
-     * Constructs a new BinaryHeap.
+     * Initializes heap
      */
     public NodeDistHeap (int nodeCount) {
-        this.nodeCount = nodeCount;
-        this.nodeHeap = new int[nodeCount+1];  
-        this.nodeHeapPos = new int[nodeCount+1];  
-        this.nodeDistBuffer = new int[nodeCount+1];
-        reset();
-    }
-    
-    private void reset() {
-        System.out.println("Start reset NodeDistHeap");
-        for(int i = 0; i < nodeCount; i++) {
-            //nodeHeap[i] = i;
-            //nodeHeapPos[i] = i;
-        }
-        Arrays.fill(nodeDistBuffer, Integer.MAX_VALUE);
-        //size = nodeCount;
-        System.out.println("Finished reset NodeDistHeap");
+        valuesArray = new int[nodeCount+1];  
+        indexArray = new int[nodeCount+1];  
+        nodeHeapIndices = new int[nodeCount]; 
+        size = 0;
     }
     
     
-    /**
-     * Adds a value to the min-heap.
-     */
-    public void add(int dist) {
+    public void add(int value, int nodeIndex) {
+        if (size >= valuesArray.length - 1) {
+            throw new IllegalStateException("Heap capacity exceeded");
+        }        
+        
         // place element into heap at bottom
         size++;
         int index = size;
-        nodeDistBuffer[index] = dist;
+        valuesArray[index] = value;
+        indexArray[index] = nodeIndex;
+        nodeHeapIndices[nodeIndex] = index;
         
-        bubbleUp();
+        bubbleUp(this.size);
+    }
+    
+    public void decreaseKey(int index, int newKey) {
+        int heapIndex = nodeHeapIndices[index];
+        valuesArray[heapIndex] = newKey;
+        bubbleUp(heapIndex);
     }
     
     
-    /**
-     * Returns true if the heap has no elements; false otherwise.
-     */
     public boolean isEmpty() {
         return size == 0;
     }
 
     
     /**
-     * Returns next node index
+     * Returns (but does not remove) the minimum element in the heap.
+     */
+    public int peekValue() {
+        if (this.isEmpty()) {
+            throw new IllegalStateException();
+        }
+        
+        return valuesArray[1];
+    }
+
+    /**
+     * Returns (but does not remove) the minimum element in the heap.
      */
     public int peekNodeIndex() {
-        if (size > 0) {
-            return nodeHeap[0];
-        } else {
-            throw new IllegalStateException("Heap is empty");
+        if (this.isEmpty()) {
+            throw new IllegalStateException();
         }
-    }
-    /**
-     * Returns next node distance
-     */
-    public int peekNodeDist() {
-        if (size > 0) {
-            return getNodeDist(0);
-        } else {
-            throw new IllegalStateException("Heap is empty");
-        }
-    }
-    
-    
-    
-    private int getNodeDist(int index) {
-        int i = nodeHeap[index];
-        if(i != -1) {
-            return nodeDistBuffer[i];
-        } else {
-            return Integer.MAX_VALUE;
-        }
+        
+        return indexArray[1];
     }
     
 
-    
-    /**
-     * Removes and returns the minimum element in the heap.
-     */
+
     public int remove() {
         // what do want return?
         int result = peekNodeIndex();
         
         // get rid of the last leaf/decrement
-        nodeHeap[1] = nodeHeap[size];
-        nodeHeap[size] = -1;
+        valuesArray[1] = valuesArray[size];
+        valuesArray[size] = -1;
+        indexArray[1] = indexArray[size];
+        indexArray[size] = -1;
         size--;
         
         bubbleDown();
         
         return result;
     }
-  
-
     
-    /**
-     * Performs the "bubble down" operation to place the element that is at the 
-     * root of the heap in its correct place so that the heap maintains the 
-     * min-heap order property.
-     */
-    protected void bubbleDown() {
-        int index = 1;
+    
+    protected void bubbleDown() 
+    {
+        
+        int i = 1;
         
         // bubble down
-        while (hasLeftChild(index)) {
+        while (hasLeftChild(i)) {
             // which of my children is smaller?
-            int smallerChild = leftIndex(index);
+            int smallerChild = leftIndex(i);
             
             // bubble with the smaller child, if I have a smaller child
-            if (hasRightChild(index)
-                && getNodeDist(leftIndex(index)) > getNodeDist(rightIndex(index))) {
-                smallerChild = rightIndex(index);
+            if (hasRightChild(i)
+                && valuesArray[leftIndex(i)] > valuesArray[rightIndex(i)]) {
+                smallerChild = rightIndex(i);
             } 
             
-            if (getNodeDist(index) > getNodeDist(smallerChild)) {
-                swap(index, smallerChild);
+            if (valuesArray[i] > valuesArray[smallerChild]) {
+                swap(i, smallerChild);
             } else {
                 // otherwise, get outta here!
                 break;
             }
             
             // make sure to update loop counter/index of where last el is put
-            index = smallerChild;
+            i = smallerChild;
         }        
     }
     
     
-    /**
-     * Performs the "bubble up" operation to place a newly inserted element 
-     * (i.e. the element that is at the size index) in its correct place so 
-     * that the heap maintains the min-heap order property.
-     */
-    protected void bubbleUp() {
-        int index = this.size;
-        
-        while (hasParent(index)
-                && (getNodeDist(parent(index)) > (getNodeDist(index)))) {
+    protected void bubbleUp(int i) {
+        while (hasParent(i)
+                && (parent(i) > valuesArray[i])) {
             // parent/child are out of order; swap them
-            swap(index, parentIndex(index));
-            index = parentIndex(index);
+            swap(i, parentIndex(i));
+            i = parentIndex(i);
         }        
     }
     
@@ -183,18 +159,26 @@ public class NodeDistHeap {
     
     
     protected int parent(int i) {
-        return nodeHeap[parentIndex(i)];
+        return valuesArray[parentIndex(i)];
     }
     
     
     protected int parentIndex(int i) {
         return i / 2;
     }
-    
+
+
     
     protected void swap(int index1, int index2) {
-        int tmp = nodeHeap[index1];
-        nodeHeap[index1] = nodeHeap[index2];
-        nodeHeap[index2] = tmp;        
+        int tmp = valuesArray[index1];
+        valuesArray[index1] = valuesArray[index2];
+        valuesArray[index2] = tmp;      
+        
+        tmp = indexArray[index1];
+        indexArray[index1] = indexArray[index2];
+        indexArray[index2] = tmp;   
+        
+        nodeHeapIndices[indexArray[index1]] = index1;
+        nodeHeapIndices[indexArray[index2]] = index2;
     }
 }
