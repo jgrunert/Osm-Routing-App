@@ -114,7 +114,13 @@ MouseWheelListener {
         distBuffer[3] = 3;
         distBuffer[4] = 2;
         
-        NodeDistHeap beap = new NodeDistHeap(5, distBuffer);
+        NodeDistHeap beap = new NodeDistHeap(5);
+        beap.decreaseDist(0, 9);       
+        beap.decreaseDist(1, 8);  
+        beap.decreaseDist(2, 2);   
+        beap.decreaseDist(3, 3);  
+        beap.decreaseDist(4, 4);      
+        
         System.out.println(beap.peekNodeDist() + " " + beap.removeMin());
         System.out.println(beap.peekNodeDist() + " " + beap.removeMin());
         System.out.println(beap.peekNodeDist() + " " + beap.removeMin());

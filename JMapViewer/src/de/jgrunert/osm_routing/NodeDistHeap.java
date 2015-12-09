@@ -1,5 +1,7 @@
 package de.jgrunert.osm_routing;
 
+import java.util.Arrays;
+
 
 
 @SuppressWarnings("javadoc")
@@ -11,26 +13,30 @@ public class NodeDistHeap {
     private int size;
 
 
-	public NodeDistHeap (int nodeCount, int[] distBuffer) {
+	public NodeDistHeap (int nodeCount) {
         this.nodeCount = nodeCount;
         this.nodeHeap = new int[nodeCount];  
         this.nodeHeapPos = new int[nodeCount];  
-        this.nodeDistBuffer = distBuffer;
+        this.nodeDistBuffer = new int[nodeCount];
         reset();
     }
 	
 	private void reset() {
+	    System.out.println("Start reset NodeDistHeap");
 	    for(int i = 0; i < nodeCount; i++) {
 	        nodeHeap[i] = i;
 	        nodeHeapPos[i] = i;
 	    }
+	    Arrays.fill(nodeDistBuffer, Integer.MAX_VALUE);
 	    size = nodeCount;
+        System.out.println("Finished reset NodeDistHeap");
 	}
 	
 	public void decreaseDist(int index, int newDist) {
 	    if (size > 0) {
-	        nodeHeapPos[nodeDistBuffer[nodeHeap[index]]] = newDist;
-	        bubbleUp();
+	        int nodeIndex = nodeHeapPos[index];
+	        nodeDistBuffer[index] = newDist;
+	        bubbleUp(nodeIndex);
         } else {
             throw new IllegalStateException("Heap is empty");
         }
@@ -93,6 +99,7 @@ public class NodeDistHeap {
     	
     	// get rid of the last leaf/decrement
     	nodeHeap[0] = nodeHeap[size-1];
+    	// TODO Node index
     	nodeHeap[size-1] = -1;
     	size--;
     	
@@ -201,7 +208,7 @@ public class NodeDistHeap {
         int tmp = nodeHeap[index1];
         nodeHeap[index1] = nodeHeap[index2];
         nodeHeap[index2] = tmp;        
-        nodeHeapPos[index1] = index2;
-        nodeHeapPos[index2] = index1;
+        nodeHeapPos[nodeHeap[index1]] = index1;
+        nodeHeapPos[nodeHeap[index2]] = index2;
     }
 }
