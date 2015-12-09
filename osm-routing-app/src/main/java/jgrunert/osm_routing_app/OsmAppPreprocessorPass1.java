@@ -66,8 +66,8 @@ public class OsmAppPreprocessorPass1 {
 		
 	private static void preprocess() throws Exception {
 		
-		String outDir = "D:\\Jonas\\OSM\\germany";
-		//String outDir = "D:\\Jonas\\OSM\\hamburg";
+		//String outDir = "D:\\Jonas\\OSM\\germany";
+		String outDir = "D:\\Jonas\\OSM\\hamburg";
 		
 		//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
 		String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
@@ -369,6 +369,8 @@ public class OsmAppPreprocessorPass1 {
 	static final int SPEED_WALK = 0;
 	static final int SPEED_LIVINGSTREET = 5;
 	static final int SPEED_UNLIMITED = 255;
+
+	enum SidwalkMode { Yes, No, Unspecified };
 	
 	private static HighwayInfos evaluateHighway(String highwayTag, String maxspeedTag, 
 			String sidewalkTag, String onewayTag) {
@@ -427,12 +429,13 @@ public class OsmAppPreprocessorPass1 {
 		
 		
 		// Try to find out if has sidewalk
-		boolean sidewalk;
+		SidwalkMode sidewalk = SidwalkMode.Unspecified;
 		if(sidewalkTag != null) {
-			sidewalk = !(sidewalkTag.equals("no") || sidewalkTag.equals("none"));
-		}
-		else {
-			sidewalk = false;
+			if(sidewalkTag.equals("no") || sidewalkTag.equals("none")) {
+				sidewalk = SidwalkMode.No;
+			} else {
+				sidewalk = SidwalkMode.Yes;
+			}
 		}
 		
 		
@@ -463,7 +466,8 @@ public class OsmAppPreprocessorPass1 {
 			if(oneway == null)
 				oneway = false;
 			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
+			// Residential by default with sideway
+			return new HighwayInfos(true, (sidewalk != SidwalkMode.No), oneway, maxSpeed);
 		}
 		else if(highwayTag.equals("service")) {
 			// service road
@@ -471,8 +475,9 @@ public class OsmAppPreprocessorPass1 {
 				maxSpeed = 30;
 			if(oneway == null)
 				oneway = false;
-			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
+
+			// Residential by default with sideway
+			return new HighwayInfos(true, (sidewalk != SidwalkMode.No), oneway, maxSpeed);
 		}
 		else if(highwayTag.equals("footway") || highwayTag.equals("path") || highwayTag.equals("steps") ||
 				highwayTag.equals("bridleway") || highwayTag.equals("pedestrian")) {
@@ -492,7 +497,7 @@ public class OsmAppPreprocessorPass1 {
 			if(oneway == null)
 				oneway = false;
 			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
+			return new HighwayInfos(true, (sidewalk == SidwalkMode.Yes), oneway, maxSpeed);
 		}
 		else if(highwayTag.equals("unclassified")) {
 			// unclassified (small road)
@@ -501,7 +506,7 @@ public class OsmAppPreprocessorPass1 {
 			if(oneway == null)
 				oneway = false;
 			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
+			return new HighwayInfos(true, (sidewalk != SidwalkMode.No), oneway, maxSpeed);
 		}
 		else if(highwayTag.equals("living_street")) {
 			// living street
@@ -519,7 +524,7 @@ public class OsmAppPreprocessorPass1 {
 			if(oneway == null)
 				oneway = true;
 			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
+			return new HighwayInfos(true, (sidewalk == SidwalkMode.Yes), oneway, maxSpeed);
 		}
 		else if(highwayTag.startsWith("trunk")) {
 			// trunk road
@@ -528,7 +533,7 @@ public class OsmAppPreprocessorPass1 {
 			if(oneway == null)
 				oneway = false;
 			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
+			return new HighwayInfos(true, (sidewalk == SidwalkMode.Yes), oneway, maxSpeed);
 		}
 		
 		// Ignore this road if no useful classification available

@@ -68,8 +68,8 @@ public class OsmAppPreprocessorPass2 {
 		
 	private static void preprocess() throws Exception {
 		
-		String outDir = "D:\\Jonas\\OSM\\germany";
-		//String outDir = "D:\\Jonas\\OSM\\hamburg";
+		//String outDir = "D:\\Jonas\\OSM\\germany";
+		String outDir = "D:\\Jonas\\OSM\\hamburg";
 		
 		//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
 		String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";

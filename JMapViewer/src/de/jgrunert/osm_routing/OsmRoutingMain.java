@@ -155,7 +155,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
                 map().setToolTipText(null);
             }
         });
-//        panelBottom.add(showToolTip);
+        panelTop.add(showToolTip);
         ///
         final JCheckBox showTileGrid = new JCheckBox("Tile grid visible");
         showTileGrid.setSelected(map().isTileGridVisible());
@@ -246,41 +246,10 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
 
         add(treeMap, BorderLayout.CENTER);
 
-        //
-        /*LayerGroup germanyGroup = new LayerGroup("Germany");
-        Layer germanyWestLayer = germanyGroup.addLayer("Germany West");
-        Layer germanyEastLayer = germanyGroup.addLayer("Germany East");
-        MapMarkerDot eberstadt = new MapMarkerDot(germanyEastLayer, "Eberstadt", 49.814284999, 8.642065999);
-        MapMarkerDot ebersheim = new MapMarkerDot(germanyWestLayer, "Ebersheim", 49.91, 8.24);
-        MapMarkerDot empty = new MapMarkerDot(germanyEastLayer, 49.71, 8.64);
-        MapMarkerDot darmstadt = new MapMarkerDot(germanyEastLayer, "Darmstadt", 49.8588, 8.643);
-        map().addMapMarker(eberstadt);
-        map().addMapMarker(ebersheim);
-        map().addMapMarker(empty);
-        Layer franceLayer = treeMap.addLayer("France");
-        map().addMapMarker(new MapMarkerDot(franceLayer, "La Gallerie", 48.71, -1));
-        map().addMapMarker(new MapMarkerDot(43.604, 1.444));
-        map().addMapMarker(new MapMarkerCircle(53.343, -6.267, 0.666));
-        map().addMapRectangle(new MapRectangleImpl(new Coordinate(53.343, -6.267), new Coordinate(43.604, 1.444)));
-        map().addMapMarker(darmstadt);
-        treeMap.addLayer(germanyWestLayer);
-        treeMap.addLayer(germanyEastLayer);
-
-        MapPolygon bermudas = new MapPolygonImpl(c(49, 1), c(45, 10), c(40, 5));
-        map().addMapPolygon(bermudas);
-        map().addMapPolygon(new MapPolygonImpl(germanyEastLayer, "Riedstadt", ebersheim, darmstadt, eberstadt, empty));
-
-        map().addMapMarker(new MapMarkerCircle(germanyWestLayer, "North of Suisse", new Coordinate(48, 7), .5));
-        Layer spain = treeMap.addLayer("Spain");
-        map().addMapMarker(new MapMarkerCircle(spain, "La Garena", new Coordinate(40.4838, -3.39), .002));
-        spain.setVisible(Boolean.FALSE);
-
-        Layer wales = treeMap.addLayer("UK");
-        map().addMapRectangle(new MapRectangleImpl(wales, "Wales", c(53.35, -4.57), c(51.64, -2.63)));*/
-
-        // map.setDisplayPosition(new Coordinate(49.807, 8.6), 11);
-        // map.setTileGridVisible(true);
-
+        // TODO Testing
+        map().addMapMarker(new MapMarkerDot("A", new Coordinate(53.60, 9.88)));
+        map().addMapMarker(new MapMarkerDot("B", new Coordinate(53.50, 10.10)));
+        
         map().addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {

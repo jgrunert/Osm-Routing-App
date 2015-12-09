@@ -62,10 +62,8 @@ MouseWheelListener {
     private static final short CAR_MAXSPEED = 150;
     private static final short PED_MAXSPEED = 5;
     
-    private int startIndex;
-    private Coordinate startLoc = null;
-    private int targetIndex;
-    private Coordinate targetLoc = null;
+    private int startIndex = -1;
+    private int targetIndex = -1;
 
     private List<MapMarkerDot> routeDots = new ArrayList<>();
     private List<MapPolygonImpl> routeLines = new ArrayList<>();
@@ -106,26 +104,6 @@ MouseWheelListener {
             System.err.println("Error at loadOsmData");
             e.printStackTrace();
         }
-        
-        
-        //NodeDistHeap beap = new NodeDistHeap(nodeCount);    
-//        beap.add(9, 0);
-//        beap.add(8, 1);
-//        beap.add(2, 2);
-//        beap.add(3, 4);
-//        beap.add(4, 3);
-//        System.out.println("1");
-//        beap.decreaseKey(4, 10);
-//        beap.decreaseKey(2, 5);
-//        beap.decreaseKey(3, 3);
-//        beap.decreaseKey(4, 2);
-//        System.out.println("2");
-//        
-//        System.out.println(beap.peekValue() + " " + beap.remove());
-//        System.out.println(beap.peekValue() + " " + beap.remove());
-//        System.out.println(beap.peekValue() + " " + beap.remove());
-//        System.out.println(beap.peekValue() + " " + beap.remove());
-//        System.out.println(beap.peekValue() + " " + beap.remove());
     }
     
     
@@ -189,7 +167,7 @@ MouseWheelListener {
             ICoordinate clickPt = map.getPosition(e.getPoint());
             Coordinate clickCoord = new Coordinate(clickPt.getLat(), clickPt.getLon());
             
-            int clickNextPt = findNextPoint(clickCoord);            
+            int clickNextPt = findNextNode(clickCoord, (byte)0, (byte)0);            
             if(clickNextPt == -1) {
                 System.err.println("No point found");
                 return;
@@ -199,21 +177,19 @@ MouseWheelListener {
 
             if(e.getButton() == MouseEvent.BUTTON1) {
                 startIndex = clickNextPt;
-                startLoc = clickNextPtCoord;
             } 
             else if(e.getButton() == MouseEvent.BUTTON3) {
                 targetIndex = clickNextPt;
-                targetLoc = clickNextPtCoord;
             } 
             
             clearMarkers();
-            if(startLoc != null) {
-                MapMarkerDot startDot = new MapMarkerDot("Start", startLoc);
+            if(startIndex != -1) {
+                MapMarkerDot startDot = new MapMarkerDot("Start", new Coordinate(nodesLat[startIndex], nodesLon[startIndex]));
                 map.addMapMarker(startDot);
                 routeDots.add(startDot);
             }        
-            if(targetLoc != null) {
-                MapMarkerDot targetDot = new MapMarkerDot("Target", targetLoc);
+            if(targetIndex != -1) {
+                MapMarkerDot targetDot = new MapMarkerDot("Target", new Coordinate(nodesLat[targetIndex], nodesLon[targetIndex]));
                 map.addMapMarker(targetDot);
                 routeDots.add(targetDot);
             }
@@ -224,16 +200,21 @@ MouseWheelListener {
         } 
     }
     
+    
     /**
      * Tries to find out index of next point to given coordinate
      * @param coord
      * @return Index of next point
      */
-    private int findNextPoint(Coordinate coord) {
+    private int findNextNode(Coordinate coord, byte filterBitMask, byte filterBitValue) {
         int nextIndex = -1;
         double smallestDist = Double.MAX_VALUE;
-        for(int i = 0; i < 100000; i++) {  // TODO TEST
-         // for(int i = 0; i < nodeCount; i++) {
+        // for(int i = 0; i < 100000; i++) {  // TODO TEST
+        for(int i = 0; i < nodeCount; i++) {                        
+            if(!checkNodeWithFilter(i, filterBitMask, filterBitValue)) {
+                continue;
+            }
+                        
             GeodesicData g = Geodesic.WGS84.Inverse(coord.getLat(), coord.getLon(), nodesLat[i], nodesLon[i]);
             if(g.s12 < smallestDist) {
                 smallestDist = g.s12;
@@ -241,6 +222,26 @@ MouseWheelListener {
             }
         }
         return nextIndex;
+    }
+    
+    private boolean checkNodeWithFilter(int i, byte filterBitMask, byte filterBitValue) {
+        if (filterBitMask == 0) {
+            return true;
+        }
+
+        boolean match = false;
+        for (int iEdge = nodesEdgeOffset[i]; (i + 1 < nodesEdgeOffset.length && iEdge < nodesEdgeOffset[i + 1])
+                || (i + 1 == nodesEdgeOffset.length && iEdge < edgesTarget.length); // Last node in offset array
+                iEdge++) {
+            // Skip if edge not accessible
+            if ((edgesInfobits[iEdge] & filterBitMask) == filterBitValue) {
+                match = true;
+                break;
+            }
+        }
+
+        // Skip if edge not accessible
+        return match;
     }
     
     private void clearMarkers() {        
@@ -269,7 +270,7 @@ MouseWheelListener {
     
     public void calculateRoute(TransportMode transportMode, RoutingMode routeMode) {
 
-        if (startLoc == null || targetLoc == null) {
+        if (startIndex == -1 || targetIndex == -1) {
             System.err.println("Cannot calculate route: Must select start and target");
             return;
         }
@@ -298,139 +299,149 @@ MouseWheelListener {
             break;
         }
         
+        
+        Coordinate startCoord = new Coordinate(nodesLat[startIndex], nodesLon[startIndex]);
+        Coordinate targetCoord = new Coordinate(nodesLat[targetIndex], nodesLon[targetIndex]);
+        
+        // Find better start and end points if not suitable
+        if(!checkNodeWithFilter(startIndex, edgeFilterBitMask, edgeFilterBitValue)) {
+            startIndex = findNextNode(startCoord, edgeFilterBitMask, edgeFilterBitValue);
+            startCoord = new Coordinate(nodesLat[startIndex], nodesLon[startIndex]);
+        }
+        if(!checkNodeWithFilter(targetIndex, edgeFilterBitMask, edgeFilterBitValue)) {
+            targetIndex = findNextNode(targetCoord, edgeFilterBitMask, edgeFilterBitValue);
+            targetCoord = new Coordinate(nodesLat[targetIndex], nodesLon[targetIndex]);
+        }   
 
         // Clear markers
         clearMarkers();
         // Draw start and target
         {
-        MapMarkerDot startDot = new MapMarkerDot("Start", startLoc);
-        map.addMapMarker(startDot);
-        routeDots.add(startDot);
-        MapMarkerDot targetDot = new MapMarkerDot("Target", targetLoc);
-        map.addMapMarker(targetDot);
-        routeDots.add(targetDot);
+            MapMarkerDot startDot =
+                    new MapMarkerDot("Start", startCoord);
+            map.addMapMarker(startDot);
+            routeDots.add(startDot);
+            MapMarkerDot targetDot =
+                    new MapMarkerDot("Target", targetCoord);
+            map.addMapMarker(targetDot);
+            routeDots.add(targetDot);
         }
 
         
         Random rd = new Random(123);
         double debugDispProp = 0.9999;
         int maxMarkerCountdown = 50;
+
         
+        // Reset buffers
+        routeDistHeap.reset();
+        Arrays.fill(nodesVisitedBuffer, false);
+        // TODO Add only relevant nodes?
 
-            // Reset buffers
-            routeDistHeap.reset();
-            Arrays.fill(nodesVisitedBuffer, false);
-            // TODO Add only relevant nodes?
-            
-            
-            // Start node
-            routeDistHeap.decreaseKey(startIndex, 0);
-            nodesVisitedBuffer[startIndex] = true;
-            
+        
+        // Start node
+        routeDistHeap.decreaseKey(startIndex, 0);
+        nodesVisitedBuffer[startIndex] = true;
 
-            int visitedCount = 0;
-            boolean found = false;
-            
-            // Find route with Dijkstra
-            while (!routeDistHeap.isEmpty()) 
-            {
-                // Get dist, remove and get index
-                int nodeDist = routeDistHeap.peekNodeValue();
-                
-                // Break if node not visited yet
-                if(nodeDist == Integer.MAX_VALUE) {
-                    System.err.println("Node with no distance set found, break after " + visitedCount + " nodes visited, " + 
-                                        routeDistHeap.getSize() + " nodes not visited");
-                    break;
-                }
-                
-                //System.out.println(nodeDist);
-                
-                // Remove and get index
-                int nodeIndex = routeDistHeap.remove();
+        int visitedCount = 0;
+        boolean found = false;
 
-                if (nodeIndex == targetIndex) {
-                    System.out.println("Found! Dist: " + nodeDist);
-                    found = true;
-                    break;
-                } else {
-                    //System.out.println("Not found");
-                }
-                
-                // Mark as visited
-                nodesVisitedBuffer[nodeIndex] = true;
-                visitedCount++;
+        // Find route with Dijkstra
+        while (!routeDistHeap.isEmpty()) {
+            // Get dist, remove and get index
+            int nodeDist = routeDistHeap.peekNodeValue();
 
-
-                // Display
-                if (maxMarkerCountdown > 0 && rd.nextDouble() > debugDispProp) {
-                    MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[nodeIndex], nodesLon[nodeIndex]));
-                    map.addMapMarker(dot);
-                    routeDots.add(dot);
-                    maxMarkerCountdown--;
-                }
-                //System.out.println(nextIndex);
-
-                // Iterate over edges to neighbors
-                for (int iEdge = nodesEdgeOffset[nodeIndex]; (nodeIndex + 1 < nodesEdgeOffset.length && iEdge < nodesEdgeOffset[nodeIndex + 1])
-                        || (nodeIndex + 1 == nodesEdgeOffset.length && iEdge < edgesTarget.length); // Last node in offset array
-                        iEdge++) 
-                {
-                    int nbIndex = edgesTarget[iEdge];
-
-                    // Skip if edge not accessible
-                    if((edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
-                        System.out.println(edgesInfobits[iEdge]);
-                        continue;
-                    }
-                    
-                    // Distance calculation, depending on routing mode
-                    int nbDist;
-                    if (routeMode == RoutingMode.Fastest) {
-                        int maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
-                        maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
-                        nbDist = (edgesLengths[iEdge] * 1000 / maxSpeed) + nodeDist;
-                    } else if(routeMode == RoutingMode.Shortest) {
-                        nbDist = edgesLengths[iEdge] + nodeDist;                        
-                    } else {
-                        throw new RuntimeException("Unsupported routing mode: " + routeMode);
-                    }
-                    
-                    if (!nodesVisitedBuffer[nbIndex]) {
-                        if(routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist)) {
-                            nodesPreBuffer[nbIndex] = nodeIndex;
-                        }
-                    } else {
-                        //System.out.println("Already visited");
-                    }
-                }
+            // Break if node not visited yet
+            if (nodeDist == Integer.MAX_VALUE) {
+                System.err.println("Node with no distance set found, break after " + visitedCount + " nodes visited, "
+                        + routeDistHeap.getSize() + " nodes not visited");
+                break;
             }
-            
-            if (found) {
-                // Reconstruct route
-                int i = targetIndex;
-                while (i != startIndex) {
-                    int pre = nodesPreBuffer[i];
-                    //                if (pre == targetIndex) {
-                    //                    continue;
-                    //                }
 
-                    Coordinate c1 = new Coordinate(nodesLat[pre], nodesLon[pre]);
-                    Coordinate c2 = new Coordinate(nodesLat[i], nodesLon[i]);
+            //System.out.println(nodeDist);
 
-                    MapPolygonImpl routPoly = new MapPolygonImpl(c1, c2, c2);
-                    routeLines.add(routPoly);
-                    map.addMapPolygon(routPoly);
+            // Remove and get index
+            int nodeIndex = routeDistHeap.remove();
 
-                    //                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[i], nodesLon[i]));
-                    //                map.addMapMarker(dot);
-                    //                routeDots.add(dot);
-
-                    i = pre;
-                }
+            if (nodeIndex == targetIndex) {
+                System.out.println("Found! Dist: " + nodeDist);
+                found = true;
+                break;
             } else {
-                System.err.println("No way found");
+                //System.out.println("Not found");
             }
+
+            // Mark as visited
+            nodesVisitedBuffer[nodeIndex] = true;
+            visitedCount++;
+
+            // Display
+            if (maxMarkerCountdown > 0 && rd.nextDouble() > debugDispProp) {
+                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[nodeIndex], nodesLon[nodeIndex]));
+                map.addMapMarker(dot);
+                routeDots.add(dot);
+                maxMarkerCountdown--;
+            }
+            //System.out.println(nextIndex);
+
+            // Iterate over edges to neighbors
+            for (int iEdge = nodesEdgeOffset[nodeIndex]; (nodeIndex + 1 < nodesEdgeOffset.length && iEdge < nodesEdgeOffset[nodeIndex + 1])
+                    || (nodeIndex + 1 == nodesEdgeOffset.length && iEdge < edgesTarget.length); // Last node in offset array
+                    iEdge++) {
+                int nbIndex = edgesTarget[iEdge];
+
+                // Skip if edge not accessible
+                if ((edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
+                    continue;
+                }
+
+                // Distance calculation, depending on routing mode
+                int nbDist;
+                if (routeMode == RoutingMode.Fastest) {
+                    int maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
+                    maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
+                    nbDist = (edgesLengths[iEdge] * 1000 / maxSpeed) + nodeDist;
+                } else if (routeMode == RoutingMode.Shortest) {
+                    nbDist = edgesLengths[iEdge] + nodeDist;
+                } else {
+                    throw new RuntimeException("Unsupported routing mode: " + routeMode);
+                }
+
+                if (!nodesVisitedBuffer[nbIndex]) {
+                    if (routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist)) {
+                        nodesPreBuffer[nbIndex] = nodeIndex;
+                    }
+                } else {
+                    //System.out.println("Already visited");
+                }
+            }
+        }
+
+        if (found) {
+            // Reconstruct route
+            int i = targetIndex;
+            while (i != startIndex) {
+                int pre = nodesPreBuffer[i];
+                //                if (pre == targetIndex) {
+                //                    continue;
+                //                }
+
+                Coordinate c1 = new Coordinate(nodesLat[pre], nodesLon[pre]);
+                Coordinate c2 = new Coordinate(nodesLat[i], nodesLon[i]);
+
+                MapPolygonImpl routPoly = new MapPolygonImpl(c1, c2, c2);
+                routeLines.add(routPoly);
+                map.addMapPolygon(routPoly);
+
+                //                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[i], nodesLon[i]));
+                //                map.addMapMarker(dot);
+                //                routeDots.add(dot);
+
+                i = pre;
+            }
+        } else {
+            System.err.println("No way found");
+        }
     }
     
     

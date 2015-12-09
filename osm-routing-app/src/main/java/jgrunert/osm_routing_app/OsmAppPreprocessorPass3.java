@@ -46,8 +46,8 @@ public class OsmAppPreprocessorPass3 {
 	
 	private static void process() throws Exception {
 
-		String outDir = "D:\\Jonas\\OSM\\germany";
-		//String outDir = "D:\\Jonas\\OSM\\hamburg";
+		//String outDir = "D:\\Jonas\\OSM\\germany";
+		String outDir = "D:\\Jonas\\OSM\\hamburg";
 		
 		System.out.println("OSM Preprocessor Pass3 v02");
 		
@@ -238,6 +238,7 @@ public class OsmAppPreprocessorPass3 {
 		edgeWriter2.writeInt(edgeCounter);
 		perc100 = edgeCounter / 100;
 		for(int i = 0; i < edgeCounter; i++) {
+			// TODO Make Faster
 			edgeWriter2.writeInt(edgeReader.readInt());
 			edgeWriter2.writeByte(edgeReader.readByte());
 			edgeWriter2.writeShort(edgeReader.readShort());

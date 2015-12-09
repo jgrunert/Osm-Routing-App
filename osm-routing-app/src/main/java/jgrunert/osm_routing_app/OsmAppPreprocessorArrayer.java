@@ -10,7 +10,10 @@ public class OsmAppPreprocessorArrayer {
 	
 	public static void main(String[] args) {
 		try {
-			arrayify("D:\\Jonas\\OSM\\germany\\pass3-nodes.bin", "D:\\Jonas\\OSM\\germany\\pass3-edges.bin", "D:\\Jonas\\OSM\\germany\\");
+			//String dir = "D:\\Jonas\\OSM\\germany";
+			String dir = "D:\\Jonas\\OSM\\hamburg";
+			
+			arrayify(dir + "\\pass3-nodes.bin", dir + "\\pass3-edges.bin", dir);
 		} catch (Exception e) {
 			System.err.println("Error in main");
 			e.printStackTrace();
@@ -44,7 +47,7 @@ public class OsmAppPreprocessorArrayer {
         
 
         System.out.println("Start serializing nodes");    
-        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "nodes-final.bin"));
+        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\nodes-final.bin"));
         os.writeObject(nodeCount);
         os.writeObject(nodesLat);   
         os.writeObject(nodesLon);        
@@ -82,7 +85,7 @@ public class OsmAppPreprocessorArrayer {
         
 
         System.out.println("Start serializing edges");    
-        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "edges-final.bin"));
+        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\edges-final.bin"));
         os.writeObject(edgeCount);
         os.writeObject(edgesTarget);   
         os.writeObject(edgesInfobits);        
