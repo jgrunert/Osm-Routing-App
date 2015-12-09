@@ -103,6 +103,7 @@ public class OsmAppPreprocessorPass1 {
 					String maxspeed = null;
 					String sidewalk = null;
 					String oneway = null;
+					String access = null;
 					for(Tag tag : way.getTags()) {
 						if(tag.getKey().equals("highway")) {
 							highway = tag.getValue();
@@ -116,10 +117,21 @@ public class OsmAppPreprocessorPass1 {
 						else if(tag.getKey().equals("oneway")) {
 							oneway = tag.getValue();
 						}
+						else if(tag.getKey().equals("access")) {
+							access = tag.getValue();
+						}
+					}
+					
+					boolean accessOk;
+					if(access != null && 
+							(access.equals("private") || access.equals("no") || access.equals("emergency") || access.equals("agricultural") || access.equals("bus"))) {
+						accessOk = false;
+					} else {
+						accessOk = true;
 					}
 					
 					try {
-						if (highway != null) {
+						if (highway != null && accessOk) {
 							HighwayInfos hw = evaluateHighway(highway,
 									maxspeed, sidewalk, oneway);
 							if (hw != null) {
