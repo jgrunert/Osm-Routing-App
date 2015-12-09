@@ -84,6 +84,8 @@ public class BinaryHeap {
     	// get rid of the last leaf/decrement
     	valuesArray[1] = valuesArray[size];
     	valuesArray[size] = -1;
+        indexArray[1] = indexArray[size];
+        indexArray[size] = -1;
     	size--;
     	
     	bubbleDown();

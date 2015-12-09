@@ -121,11 +121,12 @@ MouseWheelListener {
         beap.add(3, 4);
         beap.add(4, 3);
         
-        System.out.println(beap.remove() + " " + beap.peekValue());
-        System.out.println(beap.remove() + " " + beap.peekValue());
-        System.out.println(beap.remove() + " " + beap.peekValue());
-        System.out.println(beap.remove() + " " + beap.peekValue());
-        System.out.println(beap.remove() + " " + beap.peekValue());
+        System.out.println(beap.peekValue() + " " + beap.remove());
+        System.out.println(beap.peekValue() + " " + beap.remove());
+        System.out.println(beap.peekValue() + " " + beap.remove());
+        System.out.println(beap.peekValue() + " " + beap.remove());
+        System.out.println(beap.peekValue() + " " + beap.remove());
+        System.out.println(beap.peekValue() + " " + beap.remove());
         
         System.out.println("---");
         
