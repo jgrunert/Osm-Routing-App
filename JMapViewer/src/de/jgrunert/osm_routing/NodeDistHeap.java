@@ -10,37 +10,68 @@ import java.util.Arrays;
  */
 @SuppressWarnings("javadoc")
 public class NodeDistHeap {
-    protected int[] valuesArray;
-    protected int[] indexArray;
-    protected int[] nodeHeapIndices;
-    protected int size;
+    private final int nodeCount;
+    private final int[] valuesArray;
+    private final int[] indexArray;
+    private final int[] nodeHeapIndices;
+    private int size;
     
     /**
      * Initializes heap
      */
     public NodeDistHeap (int nodeCount) {
+        this.nodeCount = nodeCount;
         valuesArray = new int[nodeCount+1];  
         indexArray = new int[nodeCount+1];  
         nodeHeapIndices = new int[nodeCount]; 
-        size = 0;
+        //size = 0;
     }
     
-    
-    public void add(int value, int nodeIndex) {
-        if (size >= valuesArray.length - 1) {
-            throw new IllegalStateException("Heap capacity exceeded");
-        }        
-        
-        // place element into heap at bottom
-        size++;
-        int index = size;
-        valuesArray[index] = value;
-        indexArray[index] = nodeIndex;
-        nodeHeapIndices[nodeIndex] = index;
-        
-        bubbleUp(this.size);
+    public void reset() {
+
+        System.out.println("Start reset NodeDistHeap");
+        for(int i = 1; i <= nodeCount; i++) {
+            indexArray[i] = i-1;
+            nodeHeapIndices[i-1] = i;
+        }
+        Arrays.fill(valuesArray, Integer.MAX_VALUE);
+        size = nodeCount;
+        System.out.println("Finished reset NodeDistHeap");
     }
     
+//    public void add(int value, int nodeIndex) {
+//        if (size >= valuesArray.length - 1) {
+//            throw new IllegalStateException("Heap capacity exceeded");
+//        }        
+//        
+//        // place element into heap at bottom
+//        size++;
+//        int index = size;
+//        valuesArray[index] = value;
+//        indexArray[index] = nodeIndex;
+//        nodeHeapIndices[nodeIndex] = index;
+//        
+//        bubbleUp(this.size);
+//    }
+    
+    /**
+     * Decreases key if new key smaller than existing key
+     */
+    public boolean decreaseKeyIfSmaller(int index, int newKey) {
+        int heapIndex = nodeHeapIndices[index];
+        if (newKey < valuesArray[heapIndex]) {
+            valuesArray[heapIndex] = newKey;
+            bubbleUp(heapIndex);
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    /**
+     * Changes key, assumes that newKey<oldKey
+     */
     public void decreaseKey(int index, int newKey) {
         int heapIndex = nodeHeapIndices[index];
         valuesArray[heapIndex] = newKey;
@@ -56,7 +87,7 @@ public class NodeDistHeap {
     /**
      * Returns (but does not remove) the minimum element in the heap.
      */
-    public int peekValue() {
+    public int peekNodeValue() {
         if (this.isEmpty()) {
             throw new IllegalStateException();
         }
@@ -165,6 +196,10 @@ public class NodeDistHeap {
     
     protected int parentIndex(int i) {
         return i / 2;
+    }
+    
+    public int getSize() {
+        return size;
     }
 
 

@@ -76,16 +76,16 @@ MouseWheelListener {
    
     // Buffer for predecessors when calculating routes
     int[] nodesPreBuffer;
-    // Buffer for node distances when calculating routes
-    int[] nodesDistBuffer;
     // Buffer for node visisted when calculating routes
     boolean[] nodesVisitedBuffer;
+    // Heap for rout finding
+    NodeDistHeap routeDistHeap;
     
     int edgeCount = 0;
     int[] edgesTarget;
     byte[] edgesInfobits;
-    short[] edgeLengths;
-    byte[] edgeMaxSpeeds;
+    short[] edgesLengths;
+    byte[] edgesMaxSpeeds;
         
         
    /**
@@ -99,29 +99,32 @@ MouseWheelListener {
             loadOsmData();    
             
             nodesPreBuffer = new int[nodeCount];
-            nodesDistBuffer = new int[nodeCount];
             nodesVisitedBuffer = new boolean[nodeCount];
+            routeDistHeap = new NodeDistHeap(nodeCount);
         } catch (Exception e) {
             System.err.println("Error at loadOsmData");
             e.printStackTrace();
         }
         
         
-        NodeDistHeap beap = new NodeDistHeap(5);    
-        beap.add(9, 0);
-        beap.add(8, 1);
-        beap.add(2, 2);
-        beap.add(3, 4);
-        beap.add(4, 3);
-        beap.decreaseKey(0, 3);
-        
-        System.out.println(beap.peekValue() + " " + beap.remove());
-        System.out.println(beap.peekValue() + " " + beap.remove());
-        System.out.println(beap.peekValue() + " " + beap.remove());
-        System.out.println(beap.peekValue() + " " + beap.remove());
-        System.out.println(beap.peekValue() + " " + beap.remove());
-        
-        System.out.println("---");
+        //NodeDistHeap beap = new NodeDistHeap(nodeCount);    
+//        beap.add(9, 0);
+//        beap.add(8, 1);
+//        beap.add(2, 2);
+//        beap.add(3, 4);
+//        beap.add(4, 3);
+//        System.out.println("1");
+//        beap.decreaseKey(4, 10);
+//        beap.decreaseKey(2, 5);
+//        beap.decreaseKey(3, 3);
+//        beap.decreaseKey(4, 2);
+//        System.out.println("2");
+//        
+//        System.out.println(beap.peekValue() + " " + beap.remove());
+//        System.out.println(beap.peekValue() + " " + beap.remove());
+//        System.out.println(beap.peekValue() + " " + beap.remove());
+//        System.out.println(beap.peekValue() + " " + beap.remove());
+//        System.out.println(beap.peekValue() + " " + beap.remove());
     }
     
     
@@ -147,8 +150,8 @@ MouseWheelListener {
         edgeCount = (Integer)edgeReader.readObject();
         edgesTarget = (int[])edgeReader.readObject();
         edgesInfobits =(byte[])edgeReader.readObject();
-        edgeLengths = (short[])edgeReader.readObject();
-        edgeMaxSpeeds = (byte[])edgeReader.readObject();
+        edgesLengths = (short[])edgeReader.readObject();
+        edgesMaxSpeeds = (byte[])edgeReader.readObject();
 
         edgeReader.close();
         System.out.println("Finished reading edges");
@@ -258,50 +261,81 @@ MouseWheelListener {
 
         
         Random rd = new Random(123);
-        double debugDispProp = 0.99999;
+        double debugDispProp = 0.9995;
+        int maxMarkerCountdown = 200;
         
         if (startLoc != null && targetLoc != null) {
 
             // Reset buffers
-            Arrays.fill(nodesDistBuffer, Integer.MAX_VALUE);
+            routeDistHeap.reset();
             Arrays.fill(nodesVisitedBuffer, false);
+            // TODO Add only relevant nodes?
             
             
             // Start node
-            nodesDistBuffer[startIndex] = 0;
+            routeDistHeap.decreaseKey(startIndex, 0);
             nodesVisitedBuffer[startIndex] = true;
             
 
+            int visitedCount = 0;
+            
             // Find route with Dijkstra
-            Queue<Integer> queue = new LinkedList<>();
-            queue.add(startIndex);
-            while (!queue.isEmpty()) {
-                int nextIndex = queue.remove();
+            while (!routeDistHeap.isEmpty()) 
+            {
+                // Get dist, remove and get index
+                int nodeDist = routeDistHeap.peekNodeValue();
+                
+                // Break if node not 
+                if(nodeDist == Integer.MAX_VALUE) {
+                    System.err.println("Node with no distance set found, break after " + visitedCount + " nodes visited, " + 
+                                        routeDistHeap.getSize() + " nodes not visited");
+                    break;
+                }
+                
+                //System.out.println(nodeDist);
+                
+                // Remove and get index
+                int nodeIndex = routeDistHeap.remove();
 
-                if (nextIndex == targetIndex) {
-                    System.out.println("Found!");
+                if (nodeIndex == targetIndex) {
+                    System.out.println("Found! Dist: " + nodeDist);
                     break;
                 } else {
                     //System.out.println("Not found");
                 }
+                
+                // Mark as visited
+                nodesVisitedBuffer[nodeIndex] = true;
+                visitedCount++;
 
-                nodesVisitedBuffer[nextIndex] = true;
 
                 // Display
-                if (rd.nextDouble() > debugDispProp) {
-                    MapMarkerDot targetDot = new MapMarkerDot(new Coordinate(nodesLat[nextIndex], nodesLon[nextIndex]));
+                if (maxMarkerCountdown > 0 && rd.nextDouble() > debugDispProp) {
+                    MapMarkerDot targetDot = new MapMarkerDot(new Coordinate(nodesLat[nodeIndex], nodesLon[nodeIndex]));
                     map.addMapMarker(targetDot);
                     routeDots.add(targetDot);
+                    maxMarkerCountdown--;
                 }
-                //                  System.out.println(nextIndex);
+                //System.out.println(nextIndex);
 
-                for (int iTarg = nodesEdgeOffset[nextIndex]; (nextIndex + 1 < nodesEdgeOffset.length && iTarg < nodesEdgeOffset[nextIndex + 1])
-                        || (nextIndex + 1 == nodesEdgeOffset.length && iTarg < edgesTarget.length); // Last node in offset array
-                iTarg++) {
-                    int targ = edgesTarget[iTarg];
-                    if (!nodesVisitedBuffer[targ]) {
-                        nodesPreBuffer[targ] = nextIndex;
-                        queue.add(targ);
+                // Iterate over edges to neighbors
+                for (int iEdge = nodesEdgeOffset[nodeIndex]; (nodeIndex + 1 < nodesEdgeOffset.length && iEdge < nodesEdgeOffset[nodeIndex + 1])
+                        || (nodeIndex + 1 == nodesEdgeOffset.length && iEdge < edgesTarget.length); // Last node in offset array
+                        iEdge++) 
+                {
+                    //int nbIndex = edgesTarget[iEdge];
+                    int nbIndex = edgesTarget[iEdge];
+                    int maxSpeed = (int)Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]); // TODO Only for testing
+                    //System.out.println(maxSpeed);
+                    maxSpeed = Math.min(CAR_MAXSPEED, Math.max(PED_MAXSPEED, maxSpeed));
+                    
+                    //int nbDist = (edgesLengths[iEdge]) + nodeDist;
+                    int nbDist = (edgesLengths[iEdge] * 1000 / maxSpeed) + nodeDist;
+                    
+                    if (!nodesVisitedBuffer[nbIndex]) {
+                        if(routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist)) {
+                            nodesPreBuffer[nbIndex] = nodeIndex;
+                        }
                     } else {
                         //System.out.println("Already visited");
                     }
