@@ -1,47 +1,40 @@
 package de.jgrunert.osm_routing;
-
+/**
+ * CSE 373, Winter 2011, Jessica Miller
+ * The BinaryHeap is an -generic- implementation of the PriorityQueue interface.  
+ * This is a binary min-heap implementation of the priority queue ADT.
+ */
 import java.util.Arrays;
 
-@SuppressWarnings("javadoc")
-public class NodeDistHeap {
-    private final int nodeCount;
-    private int[] nodeHeap;
-    private int[] nodeHeapPos; // Node positions in heap
-    private int[] nodeDistBuffer;
-    private int size;
-    
+public class BinaryHeap {
+    private static final int DEFAULT_CAPACITY = 10;
+    protected int[] array;
+    protected int size;
     
     /**
      * Constructs a new BinaryHeap.
      */
-    public NodeDistHeap (int nodeCount) {
-        this.nodeCount = nodeCount;
-        this.nodeHeap = new int[nodeCount+1];  
-        this.nodeHeapPos = new int[nodeCount+1];  
-        this.nodeDistBuffer = new int[nodeCount+1];
-        reset();
-    }
-    
-    private void reset() {
-        System.out.println("Start reset NodeDistHeap");
-        for(int i = 0; i < nodeCount; i++) {
-            //nodeHeap[i] = i;
-            //nodeHeapPos[i] = i;
-        }
-        Arrays.fill(nodeDistBuffer, Integer.MAX_VALUE);
-        //size = nodeCount;
-        System.out.println("Finished reset NodeDistHeap");
+    @SuppressWarnings("unchecked")
+	public BinaryHeap () {
+        // Java doesn't allow construction of arrays of placeholder data types 
+        array = new int[DEFAULT_CAPACITY];  
+        size = 0;
     }
     
     
     /**
      * Adds a value to the min-heap.
      */
-    public void add(int dist) {
+    public void add(int value) {
+        // grow array if needed
+        if (size >= array.length - 1) {
+            array = this.resize();
+        }        
+        
         // place element into heap at bottom
         size++;
         int index = size;
-        nodeDistBuffer[index] = dist;
+        array[index] = value;
         
         bubbleUp();
     }
@@ -56,56 +49,42 @@ public class NodeDistHeap {
 
     
     /**
-     * Returns next node index
+     * Returns (but does not remove) the minimum element in the heap.
      */
-    public int peekNodeIndex() {
-        if (size > 0) {
-            return nodeHeap[0];
-        } else {
-            throw new IllegalStateException("Heap is empty");
+    public int peek() {
+        if (this.isEmpty()) {
+            throw new IllegalStateException();
         }
+        
+        return array[1];
     }
-    /**
-     * Returns next node distance
-     */
-    public int peekNodeDist() {
-        if (size > 0) {
-            return getNodeDist(0);
-        } else {
-            throw new IllegalStateException("Heap is empty");
-        }
-    }
-    
-    
-    
-    private int getNodeDist(int index) {
-        int i = nodeHeap[index];
-        if(i != -1) {
-            return nodeDistBuffer[i];
-        } else {
-            return Integer.MAX_VALUE;
-        }
-    }
-    
 
     
     /**
      * Removes and returns the minimum element in the heap.
      */
     public int remove() {
-        // what do want return?
-        int result = peekNodeIndex();
-        
-        // get rid of the last leaf/decrement
-        nodeHeap[1] = nodeHeap[size];
-        nodeHeap[size] = -1;
-        size--;
-        
-        bubbleDown();
-        
-        return result;
+    	// what do want return?
+        int result = peek();
+    	
+    	// get rid of the last leaf/decrement
+    	array[1] = array[size];
+    	array[size] = -1;
+    	size--;
+    	
+    	bubbleDown();
+    	
+    	return result;
     }
-  
+    
+    
+    /**
+     * Returns a String representation of BinaryHeap with values stored with 
+     * heap structure and order properties.
+     */
+    public String toString() {
+        return Arrays.toString(array);
+    }
 
     
     /**
@@ -123,11 +102,11 @@ public class NodeDistHeap {
             
             // bubble with the smaller child, if I have a smaller child
             if (hasRightChild(index)
-                && getNodeDist(leftIndex(index)) > getNodeDist(rightIndex(index))) {
+                && array[leftIndex(index)] > array[rightIndex(index)]) {
                 smallerChild = rightIndex(index);
             } 
             
-            if (getNodeDist(index) > getNodeDist(smallerChild)) {
+            if (array[index] > array[smallerChild]) {
                 swap(index, smallerChild);
             } else {
                 // otherwise, get outta here!
@@ -149,7 +128,7 @@ public class NodeDistHeap {
         int index = this.size;
         
         while (hasParent(index)
-                && (getNodeDist(parent(index)) > (getNodeDist(index)))) {
+                && (parent(index) > array[index])) {
             // parent/child are out of order; swap them
             swap(index, parentIndex(index));
             index = parentIndex(index);
@@ -183,7 +162,7 @@ public class NodeDistHeap {
     
     
     protected int parent(int i) {
-        return nodeHeap[parentIndex(i)];
+        return array[parentIndex(i)];
     }
     
     
@@ -192,9 +171,14 @@ public class NodeDistHeap {
     }
     
     
+    protected int[] resize() {
+        return Arrays.copyOf(array, array.length * 2);
+    }
+    
+    
     protected void swap(int index1, int index2) {
-        int tmp = nodeHeap[index1];
-        nodeHeap[index1] = nodeHeap[index2];
-        nodeHeap[index2] = tmp;        
+        int tmp = array[index1];
+        array[index1] = array[index2];
+        array[index2] = tmp;        
     }
 }
