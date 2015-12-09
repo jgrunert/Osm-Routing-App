@@ -133,6 +133,7 @@ MouseWheelListener {
 
         {
         System.out.println("Start reading nodes");
+        //ObjectInputStream nodeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\germany\\nodes-final.bin"));
         ObjectInputStream nodeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\nodes-final.bin"));
         
         nodeCount = (Integer)nodeReader.readObject();
@@ -146,6 +147,7 @@ MouseWheelListener {
         
         {
         System.out.println("Start reading edges");
+        //ObjectInputStream edgeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\germany\\edges-final.bin"));
         ObjectInputStream edgeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\edges-final.bin"));
         edgeCount = (Integer)edgeReader.readObject();
         edgesTarget = (int[])edgeReader.readObject();
@@ -203,7 +205,7 @@ MouseWheelListener {
                 targetLoc = clickNextPtCoord;
             } 
 
-            updateRoute();
+            updateRoute(TransportMode.Car, RoutingMode.Shortest);
         } 
         else if (doubleClickZoomEnabled && e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1) {
             // Zoom on doubleclick
@@ -219,7 +221,8 @@ MouseWheelListener {
     private int findNextPoint(Coordinate coord) {
         int nextIndex = -1;
         double smallestDist = Double.MAX_VALUE;
-        for(int i = 0; i < nodeCount; i++) {
+        for(int i = 0; i < 100000; i++) {  // TODO TEST
+         // for(int i = 0; i < nodeCount; i++) {
             GeodesicData g = Geodesic.WGS84.Inverse(coord.getLat(), coord.getLon(), nodesLat[i], nodesLon[i]);
             if(g.s12 < smallestDist) {
                 smallestDist = g.s12;
@@ -228,9 +231,47 @@ MouseWheelListener {
         }
         return nextIndex;
     }
+
     
+    // Info bits: 0,0,0,0,0,[Car],[Ped],[Oneway]
+    // TODO Zugangsbeschränkung
+    byte carBitMask = 5;
+    byte carBitValue = 4;
+    byte pedBitMask = 2;
+    byte pedBitValue = 2;
     
-    private void updateRoute() {
+    enum TransportMode { Car, Pedestrian, IDoWhatIWant }
+    enum RoutingMode { Fastest, Shortest }
+    // TODO Intelligent? costs for street switching
+    
+    private void updateRoute(TransportMode transportMode, RoutingMode routeMode) {
+                
+        // Edge bitfilter and speed
+        final byte edgeFilterBitMask;
+        final byte edgeFilterBitValue;  
+        final int allMaxSpeed;
+        final int allMinSpeed = PED_MAXSPEED;
+        
+        switch (transportMode) {
+        case Car:
+            edgeFilterBitMask = carBitMask;
+            edgeFilterBitValue = carBitValue;
+            allMaxSpeed = CAR_MAXSPEED;
+            break;
+        case Pedestrian:
+            edgeFilterBitMask = pedBitMask;
+            edgeFilterBitValue = pedBitValue;
+            allMaxSpeed = PED_MAXSPEED;
+            break;
+        default:
+            edgeFilterBitMask = 0;
+            edgeFilterBitValue = 0;
+            allMaxSpeed = CAR_MAXSPEED;
+            break;
+        }
+        
+        
+        
         // Remove old dots and lines
         for(MapMarkerDot dot : routeDots) {
             map.removeMapMarker(dot);
@@ -261,8 +302,8 @@ MouseWheelListener {
 
         
         Random rd = new Random(123);
-        double debugDispProp = 0.9995;
-        int maxMarkerCountdown = 200;
+        double debugDispProp = 0.9999;
+        int maxMarkerCountdown = 50;
         
         if (startLoc != null && targetLoc != null) {
 
@@ -278,6 +319,7 @@ MouseWheelListener {
             
 
             int visitedCount = 0;
+            boolean found = false;
             
             // Find route with Dijkstra
             while (!routeDistHeap.isEmpty()) 
@@ -299,6 +341,7 @@ MouseWheelListener {
 
                 if (nodeIndex == targetIndex) {
                     System.out.println("Found! Dist: " + nodeDist);
+                    found = true;
                     break;
                 } else {
                     //System.out.println("Not found");
@@ -323,14 +366,23 @@ MouseWheelListener {
                         || (nodeIndex + 1 == nodesEdgeOffset.length && iEdge < edgesTarget.length); // Last node in offset array
                         iEdge++) 
                 {
-                    //int nbIndex = edgesTarget[iEdge];
                     int nbIndex = edgesTarget[iEdge];
-                    int maxSpeed = (int)Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]); // TODO Only for testing
-                    //System.out.println(maxSpeed);
-                    maxSpeed = Math.min(CAR_MAXSPEED, Math.max(PED_MAXSPEED, maxSpeed));
                     
-                    //int nbDist = (edgesLengths[iEdge]) + nodeDist;
-                    int nbDist = (edgesLengths[iEdge] * 1000 / maxSpeed) + nodeDist;
+                    if((edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
+                        continue;
+                    }
+                    
+                    // Distance calculation, depending on routing mode
+                    int nbDist;
+                    if (routeMode == RoutingMode.Fastest) {
+                        int maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
+                        maxSpeed = Math.min(allMinSpeed, Math.max(allMaxSpeed, maxSpeed));
+                        nbDist = (edgesLengths[iEdge] * 1000 / maxSpeed) + nodeDist;
+                    } else if(routeMode == RoutingMode.Shortest) {
+                        nbDist = edgesLengths[iEdge] + nodeDist;                        
+                    } else {
+                        throw new RuntimeException("Unsupported routing mode: " + routeMode);
+                    }
                     
                     if (!nodesVisitedBuffer[nbIndex]) {
                         if(routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist)) {
@@ -342,28 +394,30 @@ MouseWheelListener {
                 }
             }
             
-            // TODO: What when not found?
+            if (found) {
+                // Reconstruct route
+                int i = targetIndex;
+                while (i != startIndex) {
+                    int pre = nodesPreBuffer[i];
+                    //                if (pre == targetIndex) {
+                    //                    continue;
+                    //                }
 
-            // Reconstruct route
-            int i = targetIndex;
-            while (i != startIndex) {
-                int pre = nodesPreBuffer[i];
-                //                if (pre == targetIndex) {
-                //                    continue;
-                //                }
+                    Coordinate c1 = new Coordinate(nodesLat[pre], nodesLon[pre]);
+                    Coordinate c2 = new Coordinate(nodesLat[i], nodesLon[i]);
 
-                Coordinate c1 = new Coordinate(nodesLat[pre], nodesLon[pre]);
-                Coordinate c2 = new Coordinate(nodesLat[i], nodesLon[i]);
+                    MapPolygonImpl routPoly = new MapPolygonImpl(c1, c2, c2);
+                    routeLines.add(routPoly);
+                    map.addMapPolygon(routPoly);
 
-                MapPolygonImpl routPoly = new MapPolygonImpl(c1, c2, c2);
-                routeLines.add(routPoly);
-                map.addMapPolygon(routPoly);
+                    //                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[i], nodesLon[i]));
+                    //                map.addMapMarker(dot);
+                    //                routeDots.add(dot);
 
-                //                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[i], nodesLon[i]));
-                //                map.addMapMarker(dot);
-                //                routeDots.add(dot);
-
-                i = pre;
+                    i = pre;
+                }
+            } else {
+                System.err.println("No way found");
             }
         }
     }
