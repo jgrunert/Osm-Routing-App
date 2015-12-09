@@ -56,7 +56,15 @@ public class OsmAppPreprocessorPass1 {
 	
 	public static void main(String[] args) {
 		try {
-			preprocess();
+			//String outDir = "D:\\Jonas\\OSM\\germany";
+			//String outDir = "D:\\Jonas\\OSM\\hamburg";
+			String outDir = "D:\\Jonas\\OSM\\bawue";
+			
+			//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
+					//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
+			String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
+			
+			doPass(inFile, outDir);
 		} catch (Exception e) {
 			System.err.println("Failure at main");
 			e.printStackTrace();
@@ -64,15 +72,8 @@ public class OsmAppPreprocessorPass1 {
 	}
 		
 		
-	private static void preprocess() throws Exception {
+	public static void doPass(String inFile, String outDir) throws Exception {
 		
-		//String outDir = "D:\\Jonas\\OSM\\germany";
-		//String outDir = "D:\\Jonas\\OSM\\hamburg";
-		String outDir = "D:\\Jonas\\OSM\\bawue";
-		
-		//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
-				//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
-		String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
 		
 		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File(outDir + "\\highways-processed-all.csv"));
 

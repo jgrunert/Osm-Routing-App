@@ -36,7 +36,11 @@ public class OsmAppPreprocessorPass3 {
 	
 	public static void main(String[] args) {
 		try {
-			process();
+			//String outDir = "D:\\Jonas\\OSM\\germany";
+			//String outDir = "D:\\Jonas\\OSM\\hamburg";
+			String outDir = "D:\\Jonas\\OSM\\bawue";
+			
+			doPass(outDir);
 		} catch (Exception e) {
 			System.err.println("Error in main");
 			e.printStackTrace();
@@ -44,12 +48,8 @@ public class OsmAppPreprocessorPass3 {
 	}
 	
 	
-	private static void process() throws Exception {
+	public static void doPass(String outDir) throws Exception {
 
-		//String outDir = "D:\\Jonas\\OSM\\germany";
-		//String outDir = "D:\\Jonas\\OSM\\hamburg";
-		String outDir = "D:\\Jonas\\OSM\\bawue";
-		
 		System.out.println("OSM Preprocessor Pass3 v02");
 		
 		

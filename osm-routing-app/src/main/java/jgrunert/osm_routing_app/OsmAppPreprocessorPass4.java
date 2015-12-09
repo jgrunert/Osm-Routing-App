@@ -14,7 +14,7 @@ public class OsmAppPreprocessorPass4 {
 			//String outDir = "D:\\Jonas\\OSM\\hamburg";
 			String outDir = "D:\\Jonas\\OSM\\bawue";
 			
-			arrayify(outDir + "\\pass3-nodes.bin", outDir + "\\pass3-edges.bin", outDir);
+			doPass(outDir);
 		} catch (Exception e) {
 			System.err.println("Error in main");
 			e.printStackTrace();
@@ -22,10 +22,10 @@ public class OsmAppPreprocessorPass4 {
 	}
 	
 	
-	private static void arrayify(String nodeFile, String edgeFile, String outDir) throws Exception {
+	public static void doPass(String outDir) throws Exception {
 	{
 		System.out.println("Start reading nodes");
-        DataInputStream nodeReader = new DataInputStream(new FileInputStream(nodeFile));
+        DataInputStream nodeReader = new DataInputStream(new FileInputStream(outDir + "\\pass3-nodes.bin"));
         
         int nodeCount = nodeReader.readInt();
         double[] nodesLat = new double[nodeCount];
@@ -59,7 +59,7 @@ public class OsmAppPreprocessorPass4 {
 
 		{
         System.out.println("Start reading edges");
-        DataInputStream edgeReader = new DataInputStream(new FileInputStream(edgeFile));
+        DataInputStream edgeReader = new DataInputStream(new FileInputStream(outDir + "\\pass3-edges.bin"));
         int edgeCount = edgeReader.readInt();
         int[] edgesTarget = new int[edgeCount];
         byte[] edgesInfobits = new byte[edgeCount];

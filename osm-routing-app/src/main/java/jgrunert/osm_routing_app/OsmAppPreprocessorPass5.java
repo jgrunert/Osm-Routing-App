@@ -17,7 +17,7 @@ public class OsmAppPreprocessorPass5 {
 			//String outDir = "D:\\Jonas\\OSM\\hamburg";
 			String outDir = "D:\\Jonas\\OSM\\bawue";
 			
-			pass5(outDir + "\\pass4-nodes.bin", outDir + "\\pass4-edges.bin", outDir);
+			doPass(outDir);
 		} catch (Exception e) {
 			System.err.println("Error in main");
 			e.printStackTrace();
@@ -25,7 +25,7 @@ public class OsmAppPreprocessorPass5 {
 	}
 	
 	
-	private static void pass5(String nodeFile, String edgeFile, String outDir) throws Exception
+	public static void doPass(String outDir) throws Exception
 	{
 
 	    int nodeCount = 0;
