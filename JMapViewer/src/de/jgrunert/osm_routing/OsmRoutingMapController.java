@@ -107,18 +107,20 @@ MouseWheelListener {
         }
         
         
-        BinaryHeap<Integer> beap = new BinaryHeap<>();
-        beap.add(1);
-        beap.add(2);
-        beap.add(3);
-        beap.add(4);
-        beap.add(5);
-        System.out.println(beap.remove());
-        System.out.println(beap.remove());
-        System.out.println(beap.remove());
-        System.out.println(beap.remove());
-        System.out.println(beap.remove());
-        System.out.println(beap.remove());
+        int[] distBuffer = new int[5];
+        distBuffer[0] = 9;
+        distBuffer[1] = 1;
+        distBuffer[2] = 8;
+        distBuffer[3] = 3;
+        distBuffer[4] = 2;
+        
+        NodeDistHeap beap = new NodeDistHeap(5, distBuffer);
+        System.out.println(beap.peekNodeDist() + " " + beap.removeMin());
+        System.out.println(beap.peekNodeDist() + " " + beap.removeMin());
+        System.out.println(beap.peekNodeDist() + " " + beap.removeMin());
+        System.out.println(beap.peekNodeDist() + " " + beap.removeMin());
+        System.out.println(beap.peekNodeDist() + " " + beap.removeMin());
+        System.out.println(beap.peekNodeDist() + " " + beap.removeMin());
     }
     
     

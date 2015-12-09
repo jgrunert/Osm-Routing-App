@@ -10,7 +10,7 @@ public class OsmAppPreprocessorArrayer {
 	
 	public static void main(String[] args) {
 		try {
-			arrayify("D:\\Jonas\\OSM\\hamburg\\pass3-nodes.bin", "D:\\Jonas\\OSM\\hamburg\\pass3-edges.bin", "D:\\Jonas\\OSM\\hamburg\\");
+			arrayify("D:\\Jonas\\OSM\\germany\\pass3-nodes.bin", "D:\\Jonas\\OSM\\germany\\pass3-edges.bin", "D:\\Jonas\\OSM\\germany\\");
 		} catch (Exception e) {
 			System.err.println("Error in main");
 			e.printStackTrace();
@@ -29,10 +29,14 @@ public class OsmAppPreprocessorArrayer {
         double[] nodesLon = new double[nodeCount];
         int[] nodesEdgeOffset = new int[nodeCount];
         
+        int perc100 = nodeCount / 100;
         for(int i = 0; i < nodeCount; i++) {
             nodesLat[i] = nodeReader.readDouble();
             nodesLon[i] = nodeReader.readDouble();
             nodesEdgeOffset[i] = nodeReader.readInt();
+			if(i % perc100 == 0) {
+				System.out.println((i / perc100) + "%  writing final edges");
+			}
         }
         
         nodeReader.close();
@@ -59,6 +63,7 @@ public class OsmAppPreprocessorArrayer {
         short[] edgeLengths = new short[edgeCount];
         byte[] edgeMaxSpeeds = new byte[edgeCount];
 
+        int perc100 = edgeCount / 100;
         for(int i = 0; i < edgeCount; i++) {
             edgesTarget[i] = edgeReader.readInt();
             if(edgesTarget[i] == 0) {
@@ -67,6 +72,9 @@ public class OsmAppPreprocessorArrayer {
             edgesInfobits[i] = edgeReader.readByte();
             edgeLengths[i] = edgeReader.readShort();
             edgeMaxSpeeds[i] = edgeReader.readByte();
+			if(i % perc100 == 0) {
+				System.out.println((i / perc100) + "%  writing final edges");
+			}
         }
         
         edgeReader.close();
