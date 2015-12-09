@@ -7,15 +7,15 @@ import java.io.ObjectOutputStream;
 
 public class OsmAppPreprocessorPass5 {
 
-	private static final double gridSize = 0.05;
+	private static final double gridRaster = 0.05;
 	
 	
 	
 	public static void main(String[] args) {
 		try {
 			//String outDir = "D:\\Jonas\\OSM\\germany";
-			String outDir = "D:\\Jonas\\OSM\\hamburg";
-			//String outDir = "D:\\Jonas\\OSM\\bawue";
+			//String outDir = "D:\\Jonas\\OSM\\hamburg";
+			String outDir = "D:\\Jonas\\OSM\\bawue";
 			
 			pass5(outDir + "\\pass4-nodes.bin", outDir + "\\pass4-edges.bin", outDir);
 		} catch (Exception e) {
@@ -93,15 +93,15 @@ public class OsmAppPreprocessorPass5 {
 				maxLon = lon;
 		}
 		
-		int minLatI = (int)(minLat / gridSize);
-		int maxLatI = (int)(maxLat / gridSize) + 1;
-		minLat = minLatI * gridSize;
-		maxLat = (maxLatI * gridSize);
+		int minLatI = (int)(minLat / gridRaster);
+		int maxLatI = (int)(maxLat / gridRaster) + 1;
+		minLat = minLatI * gridRaster;
+		maxLat = (maxLatI * gridRaster);
 		
-		int minLonI = (int)(minLon / gridSize);
-		int maxLonI = (int)(maxLon / gridSize) + 1;
-		minLon = minLonI * gridSize;
-		maxLon = (maxLonI * gridSize);
+		int minLonI = (int)(minLon / gridRaster);
+		int maxLonI = (int)(maxLon / gridRaster) + 1;
+		minLon = minLonI * gridRaster;
+		maxLon = (maxLonI * gridRaster);
 		
 		System.out.println("Finished finding min/max");
 		
@@ -116,10 +116,10 @@ public class OsmAppPreprocessorPass5 {
 				
 		for(int iLat = 0; iLat < (maxLatI - minLatI); iLat++) {
 			for(int iLon = 0; iLon < (maxLonI - minLonI); iLon++) {
-				double latMin = minLat + iLat * gridSize;
-				double latMax = minLat + (iLat+1) * gridSize;
-				double lonMin = minLon + iLon * gridSize;
-				double lonMax = minLon + (iLon+1) * gridSize;
+				double latMin = minLat + iLat * gridRaster;
+				double latMax = minLat + (iLat+1) * gridRaster;
+				double lonMin = minLon + iLon * gridRaster;
+				double lonMax = minLon + (iLon+1) * gridRaster;
 				
 				int gridNodes = 0;
 				gridNodeOffsets[iLat][iLon] = nodeCounter;
@@ -141,6 +141,8 @@ public class OsmAppPreprocessorPass5 {
 				
 				gridNodeCounts[iLat][iLon] = gridNodes;
 			}
+			
+			System.out.println(iLat * 100 / (maxLatI - minLatI) + "% finding grid nodes");
 		}		
 		
 		if(nodeCounter != nodeCount) {
@@ -150,6 +152,7 @@ public class OsmAppPreprocessorPass5 {
 		
 		
 		// Update node coordinates
+    	System.out.println("Start updating nodes");
 		{
 			double[] nodesLatNew = new double[nodeCount];
 			for (int iN = 0; iN < nodeCount; iN++) {
@@ -165,9 +168,11 @@ public class OsmAppPreprocessorPass5 {
 			}
 			nodesLon = nodesLonNew;
 		}
+    	System.out.println("Finished updating nodes");
 	    
 	    
 	    {
+	    	System.out.println("Start updating edges");
 		// Update node edge tagets and offsets
 	    int[] nodesEdgeOffsetNew = new int[nodeCount];
 	    int[] edgesTargetNew = new int[edgeCount];
@@ -196,6 +201,7 @@ public class OsmAppPreprocessorPass5 {
 	    edgesInfobits = edgesInfobitsNew;
 	    edgesLengths = edgesLengthsNew;
 	    edgesMaxSpeeds = edgesMaxSpeedsNew;
+    	System.out.println("Finshed updating edges");
 	    }
 		
 
@@ -204,10 +210,11 @@ public class OsmAppPreprocessorPass5 {
 			System.out.println("Start writing grid");
 			ObjectOutputStream os = new ObjectOutputStream(
 					new FileOutputStream(outDir + "\\grid-final.bin"));
-			os.writeObject(minLat);
-			os.writeObject(minLon);
-			os.writeObject(maxLatI - minLatI);
-			os.writeObject(maxLonI - minLonI);
+			os.writeDouble(gridRaster);
+			os.writeDouble(minLat);
+			os.writeDouble(minLon);
+			os.writeInt(maxLatI - minLatI);
+			os.writeInt(maxLonI - minLonI);
 			os.writeObject(gridNodeOffsets);
 	        os.writeObject(gridNodeCounts);
 			os.close();

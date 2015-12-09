@@ -247,8 +247,8 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
         add(treeMap, BorderLayout.CENTER);
 
         // TODO Testing
-        map().addMapMarker(new MapMarkerDot("A", new Coordinate(53.60, 9.88)));
-        map().addMapMarker(new MapMarkerDot("B", new Coordinate(53.50, 10.10)));
+        map().addMapMarker(new MapMarkerDot("A", new Coordinate(48.68, 9.00)));
+        map().addMapMarker(new MapMarkerDot("B", new Coordinate(48.84, 9.26)));
         
         map().addMouseListener(new MouseAdapter() {
             @Override

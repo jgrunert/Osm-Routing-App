@@ -10,7 +10,9 @@ import java.awt.event.MouseWheelListener;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -85,6 +87,14 @@ MouseWheelListener {
     byte[] edgesInfobits;
     short[] edgesLengths;
     byte[] edgesMaxSpeeds;
+
+    double gridRaster;
+    double gridMinLat;
+    double gridMinLon;
+    int gridLatCount;
+    int gridLonCount;
+    int[][] gridNodeOffsets;
+    int[][] gridNodeCounts;
         
         
    /**
@@ -109,11 +119,13 @@ MouseWheelListener {
     
     @SuppressWarnings("resource")
     private void loadOsmData() throws Exception {
+        
+        //String inDir = "D:\\Jonas\\OSM\\germany";
+        String inDir = "D:\\Jonas\\OSM\\bawue";
 
         {
         System.out.println("Start reading nodes");
-        //ObjectInputStream nodeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\germany\\nodes-final.bin"));
-        ObjectInputStream nodeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\nodes-final.bin"));
+        ObjectInputStream nodeReader = new ObjectInputStream(new FileInputStream(inDir + "\\nodes-final.bin"));
         
         nodeCount = (Integer)nodeReader.readObject();
         nodesLat = (double[])nodeReader.readObject();
@@ -126,8 +138,7 @@ MouseWheelListener {
         
         {
         System.out.println("Start reading edges");
-        //ObjectInputStream edgeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\germany\\edges-final.bin"));
-        ObjectInputStream edgeReader = new ObjectInputStream(new FileInputStream("D:\\Jonas\\OSM\\hamburg\\edges-final.bin"));
+        ObjectInputStream edgeReader = new ObjectInputStream(new FileInputStream(inDir + "\\edges-final.bin"));
         edgeCount = (Integer)edgeReader.readObject();
         edgesTarget = (int[])edgeReader.readObject();
         edgesInfobits =(byte[])edgeReader.readObject();
@@ -138,6 +149,21 @@ MouseWheelListener {
         System.out.println("Finished reading edges");
         }
         
+        // Output
+        {
+            System.out.println("Start reading grid");
+            ObjectInputStream gridReader = new ObjectInputStream(
+                    new FileInputStream(inDir + "\\grid-final.bin"));
+            gridRaster = gridReader.readDouble();
+            gridMinLat = gridReader.readDouble();
+            gridMinLon = gridReader.readDouble();
+            gridLatCount = gridReader.readInt();
+            gridLonCount = gridReader.readInt();
+            gridNodeOffsets = (int[][])gridReader.readObject();
+            gridNodeCounts = (int[][])gridReader.readObject();
+            gridReader.close();
+            System.out.println("Finished reading grid");
+        }
     }
     
     
@@ -173,8 +199,6 @@ MouseWheelListener {
                 return;
             }
             
-            Coordinate clickNextPtCoord = new Coordinate(nodesLat[clickNextPt], nodesLon[clickNextPt]);
-
             if(e.getButton() == MouseEvent.BUTTON1) {
                 startIndex = clickNextPt;
             } 
@@ -209,8 +233,18 @@ MouseWheelListener {
     private int findNextNode(Coordinate coord, byte filterBitMask, byte filterBitValue) {
         int nextIndex = -1;
         double smallestDist = Double.MAX_VALUE;
-        // for(int i = 0; i < 100000; i++) {  // TODO TEST
-        for(int i = 0; i < nodeCount; i++) {                        
+
+        
+        int latI = (int)((coord.getLat() - gridMinLat) / gridRaster);
+        int lonI = (int)((coord.getLon() - gridMinLon) / gridRaster);
+        
+        latI = Math.max(0, Math.min(gridLatCount-1, latI));
+        lonI = Math.max(0, Math.min(gridLonCount-1, lonI));
+        
+        int iMin = gridNodeOffsets[latI][lonI];
+        int iMax = iMin + gridNodeCounts[latI][lonI];
+        
+        for(int i = iMin; i < iMax; i++) {                        
             if(!checkNodeWithFilter(i, filterBitMask, filterBitValue)) {
                 continue;
             }
@@ -231,7 +265,7 @@ MouseWheelListener {
 
         boolean match = false;
         for (int iEdge = nodesEdgeOffset[i]; (i + 1 < nodesEdgeOffset.length && iEdge < nodesEdgeOffset[i + 1])
-                || (i + 1 == nodesEdgeOffset.length && iEdge < edgesTarget.length); // Last node in offset array
+                || (i + 1 == nodesEdgeOffset.length && iEdge < edgeCount); // Last node in offset array
                 iEdge++) {
             // Skip if edge not accessible
             if ((edgesInfobits[iEdge] & filterBitMask) == filterBitValue) {
@@ -386,7 +420,7 @@ MouseWheelListener {
 
             // Iterate over edges to neighbors
             for (int iEdge = nodesEdgeOffset[nodeIndex]; (nodeIndex + 1 < nodesEdgeOffset.length && iEdge < nodesEdgeOffset[nodeIndex + 1])
-                    || (nodeIndex + 1 == nodesEdgeOffset.length && iEdge < edgesTarget.length); // Last node in offset array
+                    || (nodeIndex + 1 == nodesEdgeOffset.length && iEdge < edgeCount); // Last node in offset array
                     iEdge++) {
                 int nbIndex = edgesTarget[iEdge];
 
