@@ -8,7 +8,8 @@ import java.util.Arrays;
 
 public class BinaryHeap {
     private static final int DEFAULT_CAPACITY = 10;
-    protected int[] array;
+    protected int[] valuesArray;
+    protected int[] indexArray;
     protected int size;
     
     /**
@@ -17,7 +18,8 @@ public class BinaryHeap {
     @SuppressWarnings("unchecked")
 	public BinaryHeap () {
         // Java doesn't allow construction of arrays of placeholder data types 
-        array = new int[DEFAULT_CAPACITY];  
+        valuesArray = new int[DEFAULT_CAPACITY];  
+        indexArray = new int[DEFAULT_CAPACITY];  
         size = 0;
     }
     
@@ -25,16 +27,17 @@ public class BinaryHeap {
     /**
      * Adds a value to the min-heap.
      */
-    public void add(int value) {
+    public void add(int value, int nodeIndex) {
         // grow array if needed
-        if (size >= array.length - 1) {
-            array = this.resize();
+        if (size >= valuesArray.length - 1) {
+            valuesArray = this.resize();
         }        
         
         // place element into heap at bottom
         size++;
         int index = size;
-        array[index] = value;
+        valuesArray[index] = value;
+        indexArray[index] = nodeIndex;
         
         bubbleUp();
     }
@@ -51,25 +54,36 @@ public class BinaryHeap {
     /**
      * Returns (but does not remove) the minimum element in the heap.
      */
-    public int peek() {
+    public int peekValue() {
         if (this.isEmpty()) {
             throw new IllegalStateException();
         }
         
-        return array[1];
+        return valuesArray[1];
     }
 
+    /**
+     * Returns (but does not remove) the minimum element in the heap.
+     */
+    public int peekNodeIndex() {
+        if (this.isEmpty()) {
+            throw new IllegalStateException();
+        }
+        
+        return indexArray[1];
+    }
+    
     
     /**
      * Removes and returns the minimum element in the heap.
      */
     public int remove() {
     	// what do want return?
-        int result = peek();
+        int result = peekNodeIndex();
     	
     	// get rid of the last leaf/decrement
-    	array[1] = array[size];
-    	array[size] = -1;
+    	valuesArray[1] = valuesArray[size];
+    	valuesArray[size] = -1;
     	size--;
     	
     	bubbleDown();
@@ -83,7 +97,7 @@ public class BinaryHeap {
      * heap structure and order properties.
      */
     public String toString() {
-        return Arrays.toString(array);
+        return Arrays.toString(valuesArray);
     }
 
     
@@ -102,11 +116,11 @@ public class BinaryHeap {
             
             // bubble with the smaller child, if I have a smaller child
             if (hasRightChild(index)
-                && array[leftIndex(index)] > array[rightIndex(index)]) {
+                && valuesArray[leftIndex(index)] > valuesArray[rightIndex(index)]) {
                 smallerChild = rightIndex(index);
             } 
             
-            if (array[index] > array[smallerChild]) {
+            if (valuesArray[index] > valuesArray[smallerChild]) {
                 swap(index, smallerChild);
             } else {
                 // otherwise, get outta here!
@@ -128,7 +142,7 @@ public class BinaryHeap {
         int index = this.size;
         
         while (hasParent(index)
-                && (parent(index) > array[index])) {
+                && (parent(index) > valuesArray[index])) {
             // parent/child are out of order; swap them
             swap(index, parentIndex(index));
             index = parentIndex(index);
@@ -162,7 +176,7 @@ public class BinaryHeap {
     
     
     protected int parent(int i) {
-        return array[parentIndex(i)];
+        return valuesArray[parentIndex(i)];
     }
     
     
@@ -172,13 +186,17 @@ public class BinaryHeap {
     
     
     protected int[] resize() {
-        return Arrays.copyOf(array, array.length * 2);
+        return Arrays.copyOf(valuesArray, valuesArray.length * 2);
     }
     
     
     protected void swap(int index1, int index2) {
-        int tmp = array[index1];
-        array[index1] = array[index2];
-        array[index2] = tmp;        
+        int tmp = valuesArray[index1];
+        valuesArray[index1] = valuesArray[index2];
+        valuesArray[index2] = tmp;      
+        
+        tmp = indexArray[index1];
+        indexArray[index1] = indexArray[index2];
+        indexArray[index2] = tmp;      
     }
 }
