@@ -21,6 +21,8 @@ import org.openstreetmap.gui.jmapviewer.checkBoxTree.CheckBoxNodePanel;
 import org.openstreetmap.gui.jmapviewer.checkBoxTree.CheckBoxTree;
 import org.openstreetmap.gui.jmapviewer.interfaces.MapObject;
 
+import de.jgrunert.osm_routing.OsmRoutingMapController;
+
 /**
  * Tree of layers for JMapViewer component
  * @author galo
@@ -33,6 +35,8 @@ public class JMapViewerTree extends JPanel{
     private CheckBoxTree tree;
     private JPanel treePanel;
     private JSplitPane splitPane;
+    
+    public final OsmRoutingMapController getMapController() { return map.MapController; }
 
     public JMapViewerTree(String name, String cacheFolder, boolean doCaching) {
         this(name, false, cacheFolder, doCaching);

@@ -37,6 +37,7 @@ import org.openstreetmap.gui.jmapviewer.interfaces.ICoordinate;
  * @author Jan Peter Stotz
  *
  */
+@SuppressWarnings("javadoc")
 public class OsmRoutingMapController extends JMapController implements MouseListener, MouseMotionListener,
 MouseWheelListener {
 
@@ -204,8 +205,18 @@ MouseWheelListener {
                 targetIndex = clickNextPt;
                 targetLoc = clickNextPtCoord;
             } 
-
-            updateRoute(TransportMode.Car, RoutingMode.Shortest);
+            
+            clearMarkers();
+            if(startLoc != null) {
+                MapMarkerDot startDot = new MapMarkerDot("Start", startLoc);
+                map.addMapMarker(startDot);
+                routeDots.add(startDot);
+            }        
+            if(targetLoc != null) {
+                MapMarkerDot targetDot = new MapMarkerDot("Target", targetLoc);
+                map.addMapMarker(targetDot);
+                routeDots.add(targetDot);
+            }
         } 
         else if (doubleClickZoomEnabled && e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1) {
             // Zoom on doubleclick
@@ -231,21 +242,38 @@ MouseWheelListener {
         }
         return nextIndex;
     }
+    
+    private void clearMarkers() {        
+        // Remove old dots and lines
+        for(MapMarkerDot dot : routeDots) {
+            map.removeMapMarker(dot);
+        }
+        routeDots.clear();
+        for(MapPolygonImpl line : routeLines) {
+            map.removeMapPolygon(line);
+        }
+        routeLines.clear();
+    }
 
     
     // Info bits: 0,0,0,0,0,[Car],[Ped],[Oneway]
     // TODO Zugangsbeschränkung
-    byte carBitMask = 5;
-    byte carBitValue = 4;
-    byte pedBitMask = 2;
-    byte pedBitValue = 2;
+    private byte carBitMask = 5;
+    private byte carBitValue = 4;
+    private byte pedBitMask = 2;
+    private byte pedBitValue = 2;
     
-    enum TransportMode { Car, Pedestrian, IDoWhatIWant }
-    enum RoutingMode { Fastest, Shortest }
+    public enum TransportMode { Car, Pedestrian, Maniac }
+    public enum RoutingMode { Fastest, Shortest }
     // TODO Intelligent? costs for street switching
     
-    private void updateRoute(TransportMode transportMode, RoutingMode routeMode) {
-                
+    public void calculateRoute(TransportMode transportMode, RoutingMode routeMode) {
+
+        if (startLoc == null || targetLoc == null) {
+            System.err.println("Cannot calculate route: Must select start and target");
+            return;
+        }
+         
         // Edge bitfilter and speed
         final byte edgeFilterBitMask;
         final byte edgeFilterBitValue;  
@@ -270,42 +298,24 @@ MouseWheelListener {
             break;
         }
         
-        
-        
-        // Remove old dots and lines
-        for(MapMarkerDot dot : routeDots) {
-            map.removeMapMarker(dot);
+
+        // Clear markers
+        clearMarkers();
+        // Draw start and target
+        {
+        MapMarkerDot startDot = new MapMarkerDot("Start", startLoc);
+        map.addMapMarker(startDot);
+        routeDots.add(startDot);
+        MapMarkerDot targetDot = new MapMarkerDot("Target", targetLoc);
+        map.addMapMarker(targetDot);
+        routeDots.add(targetDot);
         }
-        routeDots.clear();
-        for(MapPolygonImpl line : routeLines) {
-            map.removeMapPolygon(line);
-        }
-        routeLines.clear();
-        
-        // Add route points to map
-        if(startLoc != null) {
-            MapMarkerDot startDot = new MapMarkerDot("Start", startLoc);
-            map.addMapMarker(startDot);
-            routeDots.add(startDot);
-        }        
-        if(targetLoc != null) {
-            MapMarkerDot targetDot = new MapMarkerDot("Target", targetLoc);
-            map.addMapMarker(targetDot);
-            routeDots.add(targetDot);
-        }
-        
-//        if(startLoc != null && targetLoc != null) {
-//            MapPolygonImpl routPoly = new MapPolygonImpl("Route", startLoc, targetLoc, targetLoc);
-//            routeLines.add(routPoly);
-//            map.addMapPolygon(routPoly);
-//        }
 
         
         Random rd = new Random(123);
         double debugDispProp = 0.9999;
         int maxMarkerCountdown = 50;
         
-        if (startLoc != null && targetLoc != null) {
 
             // Reset buffers
             routeDistHeap.reset();
@@ -327,7 +337,7 @@ MouseWheelListener {
                 // Get dist, remove and get index
                 int nodeDist = routeDistHeap.peekNodeValue();
                 
-                // Break if node not 
+                // Break if node not visited yet
                 if(nodeDist == Integer.MAX_VALUE) {
                     System.err.println("Node with no distance set found, break after " + visitedCount + " nodes visited, " + 
                                         routeDistHeap.getSize() + " nodes not visited");
@@ -354,9 +364,9 @@ MouseWheelListener {
 
                 // Display
                 if (maxMarkerCountdown > 0 && rd.nextDouble() > debugDispProp) {
-                    MapMarkerDot targetDot = new MapMarkerDot(new Coordinate(nodesLat[nodeIndex], nodesLon[nodeIndex]));
-                    map.addMapMarker(targetDot);
-                    routeDots.add(targetDot);
+                    MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[nodeIndex], nodesLon[nodeIndex]));
+                    map.addMapMarker(dot);
+                    routeDots.add(dot);
                     maxMarkerCountdown--;
                 }
                 //System.out.println(nextIndex);
@@ -367,8 +377,10 @@ MouseWheelListener {
                         iEdge++) 
                 {
                     int nbIndex = edgesTarget[iEdge];
-                    
+
+                    // Skip if edge not accessible
                     if((edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
+                        System.out.println(edgesInfobits[iEdge]);
                         continue;
                     }
                     
@@ -376,7 +388,7 @@ MouseWheelListener {
                     int nbDist;
                     if (routeMode == RoutingMode.Fastest) {
                         int maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
-                        maxSpeed = Math.min(allMinSpeed, Math.max(allMaxSpeed, maxSpeed));
+                        maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
                         nbDist = (edgesLengths[iEdge] * 1000 / maxSpeed) + nodeDist;
                     } else if(routeMode == RoutingMode.Shortest) {
                         nbDist = edgesLengths[iEdge] + nodeDist;                        
@@ -419,7 +431,6 @@ MouseWheelListener {
             } else {
                 System.err.println("No way found");
             }
-        }
     }
     
     

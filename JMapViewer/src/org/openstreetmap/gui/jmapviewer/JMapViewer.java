@@ -95,6 +95,9 @@ public class JMapViewer extends JPanel implements TileLoaderListener {
     protected transient AttributionSupport attribution = new AttributionSupport();
 
     protected EventListenerList evtListenerList = new EventListenerList();
+    
+    public final OsmRoutingMapController MapController;
+    
 
     /**
      * Creates a standard {@link JMapViewer} instance that can be controlled via
@@ -106,7 +109,6 @@ public class JMapViewer extends JPanel implements TileLoaderListener {
     public JMapViewer(String cacheFolder, boolean doCaching) {
         this(new MemoryTileCache(), cacheFolder, doCaching);
         //new DefaultMapController(this);
-        new OsmRoutingMapController(this);
     }
 
     /**
@@ -139,6 +141,7 @@ public class JMapViewer extends JPanel implements TileLoaderListener {
         setMinimumSize(new Dimension(tileSource.getTileSize(), tileSource.getTileSize()));
         setPreferredSize(new Dimension(400, 400));
         setDisplayPosition(new Coordinate(50, 9), 3);
+        MapController = new OsmRoutingMapController(this);
     }
 
     @Override

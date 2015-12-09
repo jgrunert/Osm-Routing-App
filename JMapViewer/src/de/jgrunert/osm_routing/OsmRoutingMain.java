@@ -38,6 +38,9 @@ import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOpenAerialTileSource
 import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOsmTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
 
+import de.jgrunert.osm_routing.OsmRoutingMapController.RoutingMode;
+import de.jgrunert.osm_routing.OsmRoutingMapController.TransportMode;
+
 /**
  * Demonstrates the usage of {@link JMapViewer}
  *
@@ -49,6 +52,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
     private static final long serialVersionUID = 1L;
 
     private final JMapViewerTree treeMap;
+    private final OsmRoutingMapController mapController;
 
     private final JLabel zoomLabel;
     private final JLabel zoomValue;
@@ -67,6 +71,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
         boolean doCaching = true;
         
         treeMap = new JMapViewerTree("Zones", cacheFolder, doCaching);
+        mapController = treeMap.getMapController();
 
         // Listen to the map viewer for user operations so components will
         // receive events and update
@@ -94,8 +99,8 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
         JLabel helpLabel = new JLabel("Use right mouse button to move,\n "
                 + "left double click or mouse wheel to zoom.");
         helpPanel.add(helpLabel);
-        JButton button = new JButton("setDisplayToFitMapMarkers");
-        button.addActionListener(new ActionListener() {
+        JButton buttonFitMarkers = new JButton("Fit Markers");
+        buttonFitMarkers.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 map().setDisplayToFitMapMarkers();
@@ -132,16 +137,16 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
                 map().setMapMarkerVisible(showMapMarker.isSelected());
             }
         });
-        panelBottom.add(showMapMarker);
+        panelTop.add(showMapMarker);
         ///
-        final JCheckBox showTreeLayers = new JCheckBox("Tree Layers visible");
-        showTreeLayers.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                treeMap.setTreeVisible(showTreeLayers.isSelected());
-            }
-        });
-        panelBottom.add(showTreeLayers);
+//        final JCheckBox showTreeLayers = new JCheckBox("Tree Layers visible");
+//        showTreeLayers.addActionListener(new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                treeMap.setTreeVisible(showTreeLayers.isSelected());
+//            }
+//        });
+//        panelBottom.add(showTreeLayers);
         ///
         final JCheckBox showToolTip = new JCheckBox("ToolTip visible");
         showToolTip.addActionListener(new ActionListener() {
@@ -150,7 +155,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
                 map().setToolTipText(null);
             }
         });
-        panelBottom.add(showToolTip);
+//        panelBottom.add(showToolTip);
         ///
         final JCheckBox showTileGrid = new JCheckBox("Tile grid visible");
         showTileGrid.setSelected(map().isTileGridVisible());
@@ -160,30 +165,84 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
                 map().setTileGridVisible(showTileGrid.isSelected());
             }
         });
-        panelBottom.add(showTileGrid);
-        final JCheckBox showZoomControls = new JCheckBox("Show zoom controls");
-        showZoomControls.setSelected(map().getZoomControlsVisible());
-        showZoomControls.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                map().setZoomContolsVisible(showZoomControls.isSelected());
-            }
-        });
-        panelBottom.add(showZoomControls);
-        final JCheckBox scrollWrapEnabled = new JCheckBox("Scrollwrap enabled");
-        scrollWrapEnabled.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                map().setScrollWrapEnabled(scrollWrapEnabled.isSelected());
-            }
-        });
-        panelBottom.add(scrollWrapEnabled);
-        panelBottom.add(button);
+        panelTop.add(showTileGrid);
+//        final JCheckBox showZoomControls = new JCheckBox("Show zoom controls");
+//        showZoomControls.setSelected(map().getZoomControlsVisible());
+//        showZoomControls.addActionListener(new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                map().setZoomContolsVisible(showZoomControls.isSelected());
+//            }
+//        });
+//        panelBottom.add(showZoomControls);
+//        final JCheckBox scrollWrapEnabled = new JCheckBox("Scrollwrap enabled");
+//        scrollWrapEnabled.addActionListener(new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                map().setScrollWrapEnabled(scrollWrapEnabled.isSelected());
+//            }
+//        });
+//        panelBottom.add(scrollWrapEnabled);
+        panelTop.add(buttonFitMarkers);
 
         panelTop.add(zoomLabel);
         panelTop.add(zoomValue);
         panelTop.add(mperpLabelName);
         panelTop.add(mperpLabelValue);
+        
+        JButton buttonCalcCarFast = new JButton("Car: Fast");
+        buttonCalcCarFast.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapController.calculateRoute(TransportMode.Car, RoutingMode.Fastest);
+            }
+        });
+        panelBottom.add(buttonCalcCarFast);
+
+        JButton buttonCalcCarShort = new JButton("Car: Short");
+        buttonCalcCarShort.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapController.calculateRoute(TransportMode.Car, RoutingMode.Shortest);
+            }
+        });
+        panelBottom.add(buttonCalcCarShort);
+
+        JButton buttonCalcPedFast = new JButton("Pedestrian: Fast");
+        buttonCalcPedFast.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapController.calculateRoute(TransportMode.Pedestrian, RoutingMode.Shortest);
+            }
+        });
+        panelBottom.add(buttonCalcPedFast);
+
+        JButton buttonCalcPedShort = new JButton("Pedestrian: Short");
+        buttonCalcPedShort.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapController.calculateRoute(TransportMode.Pedestrian, RoutingMode.Shortest);
+            }
+        });
+        panelBottom.add(buttonCalcPedShort);
+
+        JButton buttonCalcManiacFast = new JButton("Maniac: Fast");
+        buttonCalcManiacFast.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapController.calculateRoute(TransportMode.Maniac, RoutingMode.Fastest);
+            }
+        });
+        panelBottom.add(buttonCalcManiacFast);
+
+        JButton buttonCalcManiacShort = new JButton("Maniac: Short");
+        buttonCalcManiacShort.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapController.calculateRoute(TransportMode.Maniac, RoutingMode.Shortest);
+            }
+        });
+        panelBottom.add(buttonCalcManiacShort);
 
         add(treeMap, BorderLayout.CENTER);
 
