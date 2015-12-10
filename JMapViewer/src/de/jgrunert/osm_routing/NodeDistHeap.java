@@ -41,11 +41,11 @@ public class NodeDistHeap {
         System.out.println("Finished reset NodeDistHeap");
     }
     
-    public void resetEmpty(int nodeCount) {
+    public void resetEmpty() {
         size = 0;
     }
     
-    public void add(int value, int nodeIndex) {
+    public void add(int nodeIndex, float value) {
         if (size >= maxSize) {
             throw new IllegalStateException("Heap capacity exceeded");
         }        
