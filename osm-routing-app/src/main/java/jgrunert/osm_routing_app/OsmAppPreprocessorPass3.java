@@ -231,6 +231,7 @@ public class OsmAppPreprocessorPass3 {
 		nodeWriter.close();
 		edgeWriter.close();
 		System.out.println("Finished processing nodes");
+		System.out.println("Longest edge: " + maxDist);
 		
 		// Write edges again to file with number of edges at beginning (TODO Better way?)
 		System.out.println("Start writing edges to final file");
@@ -258,11 +259,17 @@ public class OsmAppPreprocessorPass3 {
 	}
 	
 	
+	private static double maxDist = 0.0;
 	private static short calcGeoLength(int i1, int i2) {
 		 GeodesicData g = Geodesic.WGS84.Inverse(lats[i1], lons[i1], lats[i2], lons[i2]);
+		 if(g.s12 > maxDist) {
+			 maxDist = g.s12;
+			 System.out.println(maxDist);
+		 }
 		 if(g.s12 > Short.MAX_VALUE) {
-			 System.err.println("calcGeoLength > Short.MAX_VALUE");
-			 throw new RuntimeException("calcGeoLength > Short.MAX_VALUE");
+			 // TODO Longest length output, Float?
+			 System.err.println("calcGeoLength > Short.MAX_VALUE: " + g.s12);
+			 throw new RuntimeException("calcGeoLength > Short.MAX_VALUE: " + g.s12);
 		 }
 	     return (short)g.s12;
 	}

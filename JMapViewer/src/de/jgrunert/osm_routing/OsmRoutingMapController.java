@@ -114,6 +114,24 @@ MouseWheelListener {
             System.err.println("Error at loadOsmData");
             e.printStackTrace();
         }
+        
+
+        
+        
+        // Test
+        long startTime;
+        
+        startTime = System.currentTimeMillis();
+        startIndex = findNextNode(new Coordinate(48.68, 9.00), (byte)0, (byte)0);
+        targetIndex = findNextNode(new Coordinate(48.84, 9.26), (byte)0, (byte)0);
+        calculateRoute(TransportMode.Car, RoutingMode.Fastest);
+        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
+
+        startTime = System.currentTimeMillis();
+        startIndex = findNextNode(new Coordinate(47.8, 9.0), (byte)0, (byte)0);
+        targetIndex = findNextNode(new Coordinate(49.15, 9.22), (byte)0, (byte)0);
+        calculateRoute(TransportMode.Car, RoutingMode.Fastest);
+        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
     }
     
     
@@ -398,7 +416,8 @@ MouseWheelListener {
             int nodeIndex = routeDistHeap.remove();
 
             if (nodeIndex == targetIndex) {
-                System.out.println("Found! Dist: " + nodeDist);
+                System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize() + " nodes not visited");
+                System.out.println("Dist: " + nodeDist);
                 found = true;
                 break;
             } else {
@@ -431,12 +450,13 @@ MouseWheelListener {
 
                 // Distance calculation, depending on routing mode
                 int nbDist;
+                int edgeDist = Short.toUnsignedInt(edgesLengths[iEdge]);
                 if (routeMode == RoutingMode.Fastest) {
                     int maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
                     maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
-                    nbDist = (edgesLengths[iEdge] * 1000 / maxSpeed) + nodeDist;
+                    nbDist = nodeDist + (edgeDist * 1000 / maxSpeed);
                 } else if (routeMode == RoutingMode.Shortest) {
-                    nbDist = edgesLengths[iEdge] + nodeDist;
+                    nbDist = nodeDist + edgeDist;
                 } else {
                     throw new RuntimeException("Unsupported routing mode: " + routeMode);
                 }

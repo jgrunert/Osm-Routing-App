@@ -58,13 +58,13 @@ public class OsmAppPreprocessorPass2 {
 	
 	public static void main(String[] args) {
 		try {
-			//String outDir = "D:\\Jonas\\OSM\\germany";
+			String outDir = "D:\\Jonas\\OSM\\germany";
 			//String outDir = "D:\\Jonas\\OSM\\hamburg";
-			String outDir = "D:\\Jonas\\OSM\\bawue";
+			//String outDir = "D:\\Jonas\\OSM\\bawue";
 			
-			//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
+			String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
 			//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
-			String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
+			//String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
 			
 			doPass(inFile, outDir);
 		} catch (Exception e) {
