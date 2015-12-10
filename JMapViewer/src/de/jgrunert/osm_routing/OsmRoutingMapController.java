@@ -419,13 +419,13 @@ MouseWheelListener {
             // TODO ok?
             if (nodeDist == Integer.MAX_VALUE) {
                 System.err.println("Node with no distance set found, break after " + visitedCount + " nodes visited, "
-                        + routeDistHeap.getSize() + " nodes not visited");
+                        + routeDistHeap.getSize() + " still in heap");
                 break;
             }
             
             
             if (nodeIndex == targetNodeIndex) {
-                System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize() + " nodes not visited");
+                System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize() + " still in heap");
                 System.out.println("Dist: " + nodeDist);
                 found = true;
                 break;
@@ -464,21 +464,28 @@ MouseWheelListener {
                 
                 // Distance calculation, depending on routing mode
                 float nbDist;
+                float h;
                 float edgeDist = edgesLengths[iEdge];
                 if (routeMode == RoutingMode.Fastest) {
+                    // Fastest route
                     float maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
                     maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
                     nbDist = nodeDist + (edgeDist / maxSpeed);
+                    // Heuristic (distance to target)
+                    h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) / allMaxSpeed;
                 } else if (routeMode == RoutingMode.Shortest) {
+                    // Shortest route
                     nbDist = nodeDist + edgeDist;
+                    // Heuristic (distance to target)
+                    h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
                 } else {
                     throw new RuntimeException("Unsupported routing mode: " + routeMode);
                 }
                 
                 nodesRouteDists[nbIndex] = nbDist;
 
-                // Heuristic (distance to target)
-                float h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
+
+                //nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
                 
                 if (nodesRouteOpenList[nbIndex]) {
                     // Point open and not closed - update if necessary
