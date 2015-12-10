@@ -80,6 +80,7 @@ MouseWheelListener {
     // Buffer for node visisted when calculating routes
     boolean[] nodesRouteOpenList;
     boolean[] nodesRouteClosedList;
+    float[] nodesRouteDists; // TODO float precise enough?
     // Heap for rout finding
     NodeDistHeap routeDistHeap;
     
@@ -111,6 +112,7 @@ MouseWheelListener {
             nodesPreBuffer = new int[nodeCount];
             nodesRouteOpenList = new boolean[nodeCount];
             nodesRouteClosedList = new boolean[nodeCount];
+            nodesRouteDists = new float[nodeCount];
             routeDistHeap = new NodeDistHeap(nodeCount);
         } catch (Exception e) {
             System.err.println("Error at loadOsmData");
@@ -126,13 +128,15 @@ MouseWheelListener {
         startTime = System.currentTimeMillis();
         startNodeIndex = findNextNode(new Coordinate(48.68, 9.00), (byte)0, (byte)0);
         targetNodeIndex = findNextNode(new Coordinate(48.84, 9.26), (byte)0, (byte)0);
-        calculateRoute(TransportMode.Car, RoutingMode.Fastest);
+        //calculateRoute(TransportMode.Car, RoutingMode.Fastest);
+        calculateRoute(TransportMode.Car, RoutingMode.Shortest);
         System.out.println("Time: " + (System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
         startNodeIndex = findNextNode(new Coordinate(47.8, 9.0), (byte)0, (byte)0);
         targetNodeIndex = findNextNode(new Coordinate(49.15, 9.22), (byte)0, (byte)0);
-        calculateRoute(TransportMode.Car, RoutingMode.Fastest);
+        //calculateRoute(TransportMode.Car, RoutingMode.Fastest);
+        calculateRoute(TransportMode.Car, RoutingMode.Shortest);
         System.out.println("Time: " + (System.currentTimeMillis() - startTime));
     }
     
@@ -269,13 +273,18 @@ MouseWheelListener {
                 continue;
             }
                         
-            GeodesicData g = Geodesic.WGS84.Inverse(coord.getLat(), coord.getLon(), nodesLat[i], nodesLon[i]);
-            if(g.s12 < smallestDist) {
-                smallestDist = g.s12;
+           double dist = getNodeDist(coord.getLat(), coord.getLon(), nodesLat[i], nodesLon[i]);
+            if(dist < smallestDist) {
+                smallestDist = dist;
                 nextIndex = i;
             }
         }
         return nextIndex;
+    }
+    
+    private double getNodeDist(double lat1, double lon1, double lat2, double lon2) {
+        GeodesicData g = Geodesic.WGS84.Inverse(lat1, lon1, lat2, lon2);
+        return g.s12;
     }
     
     private boolean checkNodeWithFilter(int i, byte filterBitMask, byte filterBitValue) {
@@ -389,21 +398,9 @@ MouseWheelListener {
         
         // Reset buffers
         routeDistHeap.resetEmpty();
-        //routeDistHeap.add(0, startNodeIndex); TODO Test
+        routeDistHeap.add(startNodeIndex, 0.0f);
         Arrays.fill(nodesRouteOpenList, false);
         Arrays.fill(nodesRouteClosedList, false);
-        // TODO Add only relevant nodes?
-        
-        // TODO Test
-        for(int i = 0; i < nodeCount; i++) {
-            routeDistHeap.add(i, Integer.MAX_VALUE);
-            nodesRouteOpenList[i] = true;
-        }
-        routeDistHeap.decreaseKey(startNodeIndex, 0);
-
-        
-        // Start node
-        routeDistHeap.decreaseKey(startNodeIndex, 0);
         nodesRouteOpenList[startNodeIndex] = true;
 
         int visitedCount = 0;
@@ -411,21 +408,22 @@ MouseWheelListener {
 
         // Find route with Dijkstra
         while (!routeDistHeap.isEmpty()) {
-            // Get dist, remove and get index
-            float nodeDist = routeDistHeap.peekNodeValue();
+            // Remove and get index
+            int nodeIndex = routeDistHeap.remove();
+
+
+            // Get distance of node from start, remove and get index
+            float nodeDist = nodesRouteDists[nodeIndex];
 
             // Break if node not visited yet
+            // TODO ok?
             if (nodeDist == Integer.MAX_VALUE) {
                 System.err.println("Node with no distance set found, break after " + visitedCount + " nodes visited, "
                         + routeDistHeap.getSize() + " nodes not visited");
                 break;
             }
-
-            //System.out.println(nodeDist);
-
-            // Remove and get index
-            int nodeIndex = routeDistHeap.remove();
-
+            
+            
             if (nodeIndex == targetNodeIndex) {
                 System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize() + " nodes not visited");
                 System.out.println("Dist: " + nodeDist);
@@ -476,17 +474,22 @@ MouseWheelListener {
                 } else {
                     throw new RuntimeException("Unsupported routing mode: " + routeMode);
                 }
+                
+                nodesRouteDists[nbIndex] = nbDist;
 
+                // Heuristic (distance to target)
+                float h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
+                
                 if (nodesRouteOpenList[nbIndex]) {
                     // Point open and not closed - update if necessary
-                    if (routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist)) {
-                        nodesPreBuffer[nbIndex] = nodeIndex;
+                    if (routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist + h)) {
+                        nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
                     }
                 } else {
                     // Point not found yet - add to heap and open list
-                    routeDistHeap.add(nbIndex, nbDist);
+                    routeDistHeap.add(nbIndex, nbDist + h);
                     nodesRouteOpenList[nbIndex] = true;
-                    nodesPreBuffer[nbIndex] = nodeIndex;
+                    nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
                 }
             }
         }
@@ -543,7 +546,6 @@ MouseWheelListener {
         }
     }
 
-    @SuppressWarnings("javadoc")
     public boolean isMovementEnabled() {
         return movementEnabled;
     }
@@ -557,7 +559,6 @@ MouseWheelListener {
         this.movementEnabled = movementEnabled;
     }
 
-    @SuppressWarnings("javadoc")
     public int getMovementMouseButton() {
         return movementMouseButton;
     }
@@ -589,22 +590,18 @@ MouseWheelListener {
         }
     }
 
-    @SuppressWarnings("javadoc")
     public boolean isWheelZoomEnabled() {
         return wheelZoomEnabled;
     }
 
-    @SuppressWarnings("javadoc")
     public void setWheelZoomEnabled(boolean wheelZoomEnabled) {
         this.wheelZoomEnabled = wheelZoomEnabled;
     }
 
-    @SuppressWarnings("javadoc")
     public boolean isDoubleClickZoomEnabled() {
         return doubleClickZoomEnabled;
     }
 
-    @SuppressWarnings("javadoc")
     public void setDoubleClickZoomEnabled(boolean doubleClickZoomEnabled) {
         this.doubleClickZoomEnabled = doubleClickZoomEnabled;
     }
