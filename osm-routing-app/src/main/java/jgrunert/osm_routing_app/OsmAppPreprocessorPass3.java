@@ -37,8 +37,8 @@ public class OsmAppPreprocessorPass3 {
 	public static void main(String[] args) {
 		try {
 			//String outDir = "D:\\Jonas\\OSM\\germany";
-			//String outDir = "D:\\Jonas\\OSM\\hamburg";
-			String outDir = "D:\\Jonas\\OSM\\bawue";
+			String outDir = "D:\\Jonas\\OSM\\hamburg";
+			//String outDir = "D:\\Jonas\\OSM\\bawue";
 			
 			doPass(outDir);
 		} catch (Exception e) {
@@ -146,7 +146,7 @@ public class OsmAppPreprocessorPass3 {
 			System.err.println("nodeCount != waysOfNodes.size(): " + nodeCount + " and " + waysOfNodes.size());
 		}
 		
-		DataOutputStream edgeWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-edges_tmp.bin"));
+		DataOutputStream edgeWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-edges.bin"));
 		DataOutputStream nodeWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-nodes.bin"));
 				
 		int edgeCounter = 0;
@@ -191,7 +191,7 @@ public class OsmAppPreprocessorPass3 {
 							int targetWp = highway.wayNodes.get(iWp + 1);
 							edgeWriter.writeInt(targetWp); // Target
 							edgeWriter.writeByte(highwayBits); // Info bits: 0,0,0,0,0,[Car],[Ped],[Oneway]
-							edgeWriter.writeShort(calcGeoLength(nodeIndex, targetWp)); // Distance
+							edgeWriter.writeFloat(calcGeoLength(nodeIndex, targetWp)); // Distance
 							edgeWriter.writeByte(highway.MaxSpeed); // MaxSpeed
 							
 							edgeCounter++;
@@ -209,7 +209,7 @@ public class OsmAppPreprocessorPass3 {
 							} else {
 								edgeWriter.writeByte(highwayBits);
 							}
-							edgeWriter.writeShort(calcGeoLength(nodeIndex, targetWp)); // Distance
+							edgeWriter.writeFloat(calcGeoLength(nodeIndex, targetWp)); // Distance
 							edgeWriter.writeByte(highway.MaxSpeed); // MaxSpeed
 							
 							edgeCounter++;
@@ -235,21 +235,8 @@ public class OsmAppPreprocessorPass3 {
 		
 		// Write edges again to file with number of edges at beginning (TODO Better way?)
 		System.out.println("Start writing edges to final file");
-		DataOutputStream edgeWriter2 = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-edges.bin"));
-		DataInputStream edgeReader = new DataInputStream(new FileInputStream(outDir + "\\pass3-edges_tmp.bin"));
+		DataOutputStream edgeWriter2 = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-edges-count.bin"));
 		edgeWriter2.writeInt(edgeCounter);
-		perc100 = edgeCounter / 100;
-		for(int i = 0; i < edgeCounter; i++) {
-			// TODO Make Faster
-			edgeWriter2.writeInt(edgeReader.readInt());
-			edgeWriter2.writeByte(edgeReader.readByte());
-			edgeWriter2.writeShort(edgeReader.readShort());
-			edgeWriter2.writeByte(edgeReader.readByte());
-			if(i % perc100 == 0) {
-				System.out.println((i / perc100) + "%  writing final edges");
-			}
-		}
-		edgeReader.close();
 		edgeWriter2.close();
 		System.out.println("Finished writing edges to final file");
 
@@ -260,18 +247,18 @@ public class OsmAppPreprocessorPass3 {
 	
 	
 	private static double maxDist = 0.0;
-	private static short calcGeoLength(int i1, int i2) {
+	private static float calcGeoLength(int i1, int i2) {
 		 GeodesicData g = Geodesic.WGS84.Inverse(lats[i1], lons[i1], lats[i2], lons[i2]);
 		 if(g.s12 > maxDist) {
 			 maxDist = g.s12;
-			 System.out.println(maxDist);
+			 //System.out.println(maxDist);
 		 }
-		 if(g.s12 > Short.MAX_VALUE) {
+		 if(g.s12 > Float.MAX_VALUE) {
 			 // TODO Longest length output, Float?
-			 System.err.println("calcGeoLength > Short.MAX_VALUE: " + g.s12);
-			 throw new RuntimeException("calcGeoLength > Short.MAX_VALUE: " + g.s12);
+			 System.err.println("calcGeoLength > Float.MAX_VALUE: " + g.s12);
+			 throw new RuntimeException("calcGeoLength > Float.MAX_VALUE: " + g.s12);
 		 }
-	     return (short)g.s12;
+	     return (float)g.s12;
 	}
 
 	

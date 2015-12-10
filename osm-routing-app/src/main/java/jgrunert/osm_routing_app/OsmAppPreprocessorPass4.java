@@ -1,6 +1,7 @@
 package jgrunert.osm_routing_app;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
@@ -11,8 +12,8 @@ public class OsmAppPreprocessorPass4 {
 	public static void main(String[] args) {
 		try {
 			//String outDir = "D:\\Jonas\\OSM\\germany";
-			//String outDir = "D:\\Jonas\\OSM\\hamburg";
-			String outDir = "D:\\Jonas\\OSM\\bawue";
+			String outDir = "D:\\Jonas\\OSM\\hamburg";
+			//String outDir = "D:\\Jonas\\OSM\\bawue";
 			
 			doPass(outDir);
 		} catch (Exception e) {
@@ -58,41 +59,49 @@ public class OsmAppPreprocessorPass4 {
         
 
 		{
-        System.out.println("Start reading edges");
-        DataInputStream edgeReader = new DataInputStream(new FileInputStream(outDir + "\\pass3-edges.bin"));
-        int edgeCount = edgeReader.readInt();
-        int[] edgesTarget = new int[edgeCount];
-        byte[] edgesInfobits = new byte[edgeCount];
-        short[] edgeLengths = new short[edgeCount];
-        byte[] edgeMaxSpeeds = new byte[edgeCount];
+			// Read edge count from seperate file
+			DataInputStream edgeCountReader = new DataInputStream(
+					new FileInputStream(outDir + "\\pass3-edges-count.bin"));
+			int edgeCount = edgeCountReader.readInt();
+			edgeCountReader.close();
 
-        int perc100 = edgeCount / 100;
-        for(int i = 0; i < edgeCount; i++) {
-            edgesTarget[i] = edgeReader.readInt();
-            if(edgesTarget[i] == 0) {
-                System.out.println(i);
-            }
-            edgesInfobits[i] = edgeReader.readByte();
-            edgeLengths[i] = edgeReader.readShort();
-            edgeMaxSpeeds[i] = edgeReader.readByte();
-			if(i % perc100 == 0) {
-				System.out.println((i / perc100) + "% reading edges");
+			// Read edges
+			System.out.println("Start reading edges");
+			DataInputStream edgeReader = new DataInputStream(
+					new FileInputStream(outDir + "\\pass3-edges.bin"));
+			int[] edgesTarget = new int[edgeCount];
+			byte[] edgesInfobits = new byte[edgeCount];
+			float[] edgeLengths = new float[edgeCount];
+			byte[] edgeMaxSpeeds = new byte[edgeCount];
+
+			int perc100 = edgeCount / 100;
+			for (int i = 0; i < edgeCount; i++) {
+				edgesTarget[i] = edgeReader.readInt();
+				if (edgesTarget[i] == 0) {
+					System.out.println(i);
+				}
+				edgesInfobits[i] = edgeReader.readByte();
+				edgeLengths[i] = edgeReader.readFloat();
+				edgeMaxSpeeds[i] = edgeReader.readByte();
+				if (i % perc100 == 0) {
+					System.out.println((i / perc100) + "% reading edges");
+				}
 			}
-        }
-        
-        edgeReader.close();
-        System.out.println("Finished reading edges");
-        
 
-        System.out.println("Start serializing edges");    
-        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\pass4-edges.bin"));
-        os.writeObject(edgeCount);
-        os.writeObject(edgesTarget);   
-        os.writeObject(edgesInfobits);        
-        os.writeObject(edgeLengths);          
-        os.writeObject(edgeMaxSpeeds);      
-        os.close();
-        System.out.println("Finished serializing edges");  
+			// Serialize edges
+			edgeReader.close();
+			System.out.println("Finished reading edges");
+
+			System.out.println("Start serializing edges");
+			ObjectOutputStream os = new ObjectOutputStream(
+					new FileOutputStream(outDir + "\\pass4-edges.bin"));
+			os.writeObject(edgeCount);
+			os.writeObject(edgesTarget);
+			os.writeObject(edgesInfobits);
+			os.writeObject(edgeLengths);
+			os.writeObject(edgeMaxSpeeds);
+			os.close();
+			System.out.println("Finished serializing edges");
 		}
 	}
 }

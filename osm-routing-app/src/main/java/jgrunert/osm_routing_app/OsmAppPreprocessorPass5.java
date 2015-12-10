@@ -14,8 +14,8 @@ public class OsmAppPreprocessorPass5 {
 	public static void main(String[] args) {
 		try {
 			//String outDir = "D:\\Jonas\\OSM\\germany";
-			//String outDir = "D:\\Jonas\\OSM\\hamburg";
-			String outDir = "D:\\Jonas\\OSM\\bawue";
+			String outDir = "D:\\Jonas\\OSM\\hamburg";
+			//String outDir = "D:\\Jonas\\OSM\\bawue";
 			
 			doPass(outDir);
 		} catch (Exception e) {
@@ -39,7 +39,7 @@ public class OsmAppPreprocessorPass5 {
 	    int edgeCount = 0;
 	    int[] edgesTarget;
 	    byte[] edgesInfobits;
-	    short[] edgesLengths;
+	    float[] edgesLengths;
 	    byte[] edgesMaxSpeeds;
 	        
 		
@@ -66,7 +66,7 @@ public class OsmAppPreprocessorPass5 {
 			edgeCount = (Integer) edgeReader.readObject();
 			edgesTarget = (int[]) edgeReader.readObject();
 			edgesInfobits = (byte[]) edgeReader.readObject();
-			edgesLengths = (short[]) edgeReader.readObject();
+			edgesLengths = (float[]) edgeReader.readObject();
 			edgesMaxSpeeds = (byte[]) edgeReader.readObject();
 
 			edgeReader.close();
@@ -177,7 +177,7 @@ public class OsmAppPreprocessorPass5 {
 	    int[] nodesEdgeOffsetNew = new int[nodeCount];
 	    int[] edgesTargetNew = new int[edgeCount];
 	    byte[] edgesInfobitsNew = new byte[edgeCount];
-	    short[] edgesLengthsNew = new short[edgeCount];
+	    float[] edgesLengthsNew = new float[edgeCount];
 	    byte[] edgesMaxSpeedsNew = new byte[edgeCount];
 
 	    int edgeOffset = 0;

@@ -277,10 +277,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
     private JMapViewer map() {
         return treeMap.getViewer();
     }
-
-    private static Coordinate c(double lat, double lon) {
-        return new Coordinate(lat, lon);
-    }
+    
 
     /**
      * @param args Main program arguments

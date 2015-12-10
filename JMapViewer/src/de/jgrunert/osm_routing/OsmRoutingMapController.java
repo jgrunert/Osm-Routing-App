@@ -85,7 +85,7 @@ MouseWheelListener {
     int edgeCount = 0;
     int[] edgesTarget;
     byte[] edgesInfobits;
-    short[] edgesLengths;
+    float[] edgesLengths;
     byte[] edgesMaxSpeeds;
 
     double gridRaster;
@@ -160,7 +160,7 @@ MouseWheelListener {
         edgeCount = (Integer)edgeReader.readObject();
         edgesTarget = (int[])edgeReader.readObject();
         edgesInfobits =(byte[])edgeReader.readObject();
-        edgesLengths = (short[])edgeReader.readObject();
+        edgesLengths = (float[])edgeReader.readObject();
         edgesMaxSpeeds = (byte[])edgeReader.readObject();
 
         edgeReader.close();
@@ -386,7 +386,7 @@ MouseWheelListener {
 
         
         // Reset buffers
-        routeDistHeap.reset();
+        routeDistHeap.resetFill(nodeCount);
         Arrays.fill(nodesVisitedBuffer, false);
         // TODO Add only relevant nodes?
 
@@ -401,7 +401,7 @@ MouseWheelListener {
         // Find route with Dijkstra
         while (!routeDistHeap.isEmpty()) {
             // Get dist, remove and get index
-            int nodeDist = routeDistHeap.peekNodeValue();
+            float nodeDist = routeDistHeap.peekNodeValue();
 
             // Break if node not visited yet
             if (nodeDist == Integer.MAX_VALUE) {
@@ -449,12 +449,12 @@ MouseWheelListener {
                 }
 
                 // Distance calculation, depending on routing mode
-                int nbDist;
-                int edgeDist = Short.toUnsignedInt(edgesLengths[iEdge]);
+                float nbDist;
+                float edgeDist = edgesLengths[iEdge];
                 if (routeMode == RoutingMode.Fastest) {
-                    int maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
+                    float maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
                     maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
-                    nbDist = nodeDist + (edgeDist * 1000 / maxSpeed);
+                    nbDist = nodeDist + (edgeDist / maxSpeed);
                 } else if (routeMode == RoutingMode.Shortest) {
                     nbDist = nodeDist + edgeDist;
                 } else {
