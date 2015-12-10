@@ -15,9 +15,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
@@ -75,6 +77,8 @@ MouseWheelListener {
     double[] nodesLon;
     int[] nodesEdgeOffset;
    
+    // TODO Save RAM
+    
     // Buffer for predecessors when calculating routes
     int[] nodesPreBuffer;
     // Buffer for node visisted when calculating routes
@@ -331,7 +335,195 @@ MouseWheelListener {
     public enum RoutingMode { Fastest, Shortest }
     // TODO Intelligent? costs for street switching
     
+    
+
     public void calculateRoute(TransportMode transportMode, RoutingMode routeMode) {
+        //calculateRouteDijkstra(transportMode, routeMode);
+        calculateRouteAStar(transportMode, routeMode);
+    }
+    
+    public void calculateRouteDijkstra(TransportMode transportMode, RoutingMode routeMode) {
+
+        if (startNodeIndex == -1 || targetNodeIndex == -1) {
+            System.err.println("Cannot calculate route: Must select start and target");
+            return;
+        }
+         
+        // Edge bitfilter and speed
+        final byte edgeFilterBitMask;
+        final byte edgeFilterBitValue;  
+        final int allMaxSpeed;
+        final int allMinSpeed = PED_MAXSPEED;
+        
+        switch (transportMode) {
+        case Car:
+            edgeFilterBitMask = carBitMask;
+            edgeFilterBitValue = carBitValue;
+            allMaxSpeed = CAR_MAXSPEED;
+            break;
+        case Pedestrian:
+            edgeFilterBitMask = pedBitMask;
+            edgeFilterBitValue = pedBitValue;
+            allMaxSpeed = PED_MAXSPEED;
+            break;
+        default:
+            edgeFilterBitMask = 0;
+            edgeFilterBitValue = 0;
+            allMaxSpeed = CAR_MAXSPEED;
+            break;
+        }
+        
+        
+        Coordinate startCoord = new Coordinate(nodesLat[startNodeIndex], nodesLon[startNodeIndex]);
+        Coordinate targetCoord = new Coordinate(nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
+        
+        // Find better start and end points if not suitable
+        if(!checkNodeWithFilter(startNodeIndex, edgeFilterBitMask, edgeFilterBitValue)) {
+            startNodeIndex = findNextNode(startCoord, edgeFilterBitMask, edgeFilterBitValue);
+            startCoord = new Coordinate(nodesLat[startNodeIndex], nodesLon[startNodeIndex]);
+        }
+        if(!checkNodeWithFilter(targetNodeIndex, edgeFilterBitMask, edgeFilterBitValue)) {
+            targetNodeIndex = findNextNode(targetCoord, edgeFilterBitMask, edgeFilterBitValue);
+            targetCoord = new Coordinate(nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
+        }   
+
+        // Clear markers
+        clearMarkers();
+        // Draw start and target
+        {
+            MapMarkerDot startDot =
+                    new MapMarkerDot("Start", startCoord);
+            map.addMapMarker(startDot);
+            routeDots.add(startDot);
+            MapMarkerDot targetDot =
+                    new MapMarkerDot("Target", targetCoord);
+            map.addMapMarker(targetDot);
+            routeDots.add(targetDot);
+        }
+
+        
+        Random rd = new Random(123);
+        double debugDispProp = 0.9999;
+        int maxMarkerCountdown = 50;
+
+        
+        // Reset buffers
+        routeDistHeap.resetFill(nodeCount);
+        Arrays.fill(nodesRouteClosedList, false);
+        // TODO Add only relevant nodes?
+
+        
+        // Start node
+        routeDistHeap.decreaseKey(startNodeIndex, 0);
+        nodesRouteClosedList[startNodeIndex] = true;
+
+        int visitedCount = 0;
+        boolean found = false;
+
+        // Find route with Dijkstra
+        while (!routeDistHeap.isEmpty()) {
+            // Get dist, remove and get index
+            float nodeDist = routeDistHeap.peekNodeValue();
+
+            // Break if node not visited yet
+            if (nodeDist == Integer.MAX_VALUE) {
+                System.err.println("Node with no distance set found, break after " + visitedCount + " nodes visited, "
+                        + routeDistHeap.getSize() + " nodes not visited");
+                break;
+            }
+
+            //System.out.println(nodeDist);
+
+            // Remove and get index
+            int nodeIndex = routeDistHeap.remove();
+
+            if (nodeIndex == targetNodeIndex) {
+                System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize() + " nodes not visited");
+                System.out.println("Dist: " + nodeDist);
+                found = true;
+                break;
+            } else {
+                //System.out.println("Not found");
+            }
+
+            // Mark as visited
+            nodesRouteClosedList[nodeIndex] = true;
+            visitedCount++;
+
+            // Display
+            if (maxMarkerCountdown > 0 && rd.nextDouble() > debugDispProp) {
+                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[nodeIndex], nodesLon[nodeIndex]));
+                map.addMapMarker(dot);
+                routeDots.add(dot);
+                maxMarkerCountdown--;
+            }
+            //System.out.println(nextIndex);
+
+            // Iterate over edges to neighbors
+            for (int iEdge = nodesEdgeOffset[nodeIndex]; (nodeIndex + 1 < nodesEdgeOffset.length && iEdge < nodesEdgeOffset[nodeIndex + 1])
+                    || (nodeIndex + 1 == nodesEdgeOffset.length && iEdge < edgeCount); // Last node in offset array
+                    iEdge++) {
+                int nbIndex = edgesTarget[iEdge];
+
+                // Skip if edge not accessible
+                if ((edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
+                    continue;
+                }
+
+                // Distance calculation, depending on routing mode
+                float nbDist;
+                float edgeDist = edgesLengths[iEdge];
+                if (routeMode == RoutingMode.Fastest) {
+                    float maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
+                    maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
+                    nbDist = nodeDist + (edgeDist / maxSpeed);
+                } else if (routeMode == RoutingMode.Shortest) {
+                    nbDist = nodeDist + edgeDist;
+                } else {
+                    throw new RuntimeException("Unsupported routing mode: " + routeMode);
+                }
+
+                if (!nodesRouteClosedList[nbIndex]) {
+                    if (routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist)) {
+                        nodesPreBuffer[nbIndex] = nodeIndex;
+                    }
+                } else {
+                    //System.out.println("Already visited");
+                }
+            }
+        }
+
+        if (found) {
+            // Reconstruct route
+            int i = targetNodeIndex;
+            while (i != startNodeIndex) {
+                int pre = nodesPreBuffer[i];
+                //                if (pre == targetIndex) {
+                //                    continue;
+                //                }
+
+                Coordinate c1 = new Coordinate(nodesLat[pre], nodesLon[pre]);
+                Coordinate c2 = new Coordinate(nodesLat[i], nodesLon[i]);
+
+                MapPolygonImpl routPoly = new MapPolygonImpl(c1, c2, c2);
+                routeLines.add(routPoly);
+                map.addMapPolygon(routPoly);
+
+                //                MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[i], nodesLon[i]));
+                //                map.addMapMarker(dot);
+                //                routeDots.add(dot);
+
+                i = pre;
+            }
+        } else {
+            System.err.println("No way found");
+        }
+    }
+    
+    
+    
+    
+    public void calculateRouteAStar(TransportMode transportMode, RoutingMode routeMode) {
 
         if (startNodeIndex == -1 || targetNodeIndex == -1) {
             System.err.println("Cannot calculate route: Must select start and target");
@@ -399,14 +591,21 @@ MouseWheelListener {
         // Reset buffers
         routeDistHeap.resetEmpty();
         routeDistHeap.add(startNodeIndex, 0.0f);
-        Arrays.fill(nodesRouteOpenList, false);
+        //Arrays.fill(nodesRouteOpenList, false);
         Arrays.fill(nodesRouteClosedList, false);
-        nodesRouteOpenList[startNodeIndex] = true;
+        //nodesRouteOpenList[startNodeIndex] = true;
+        
+        int hCalc = 0;
+        int hReuse = 0;
 
+        // Stores all open nodes and their heuristic
+        Map<Integer, Float> nodesRouteOpenMap = new HashMap<>();
+        nodesRouteOpenMap.put(startNodeIndex, 0.0f);
+        
         int visitedCount = 0;
         boolean found = false;
 
-        // Find route with Dijkstra
+        // Find route with A*
         while (!routeDistHeap.isEmpty()) {
             // Remove and get index
             int nodeIndex = routeDistHeap.remove();
@@ -464,7 +663,7 @@ MouseWheelListener {
                 
                 // Distance calculation, depending on routing mode
                 float nbDist;
-                float h;
+                //float h;
                 float edgeDist = edgesLengths[iEdge];
                 if (routeMode == RoutingMode.Fastest) {
                     // Fastest route
@@ -472,12 +671,12 @@ MouseWheelListener {
                     maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
                     nbDist = nodeDist + (edgeDist / maxSpeed);
                     // Heuristic (distance to target)
-                    h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) / allMaxSpeed;
+                    //h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) / allMaxSpeed;
                 } else if (routeMode == RoutingMode.Shortest) {
                     // Shortest route
                     nbDist = nodeDist + edgeDist;
                     // Heuristic (distance to target)
-                    h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
+                    //h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
                 } else {
                     throw new RuntimeException("Unsupported routing mode: " + routeMode);
                 }
@@ -487,20 +686,28 @@ MouseWheelListener {
 
                 //nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
                 
-                if (nodesRouteOpenList[nbIndex]) {
+                Float h2 = nodesRouteOpenMap.get(nbIndex);
+                if (h2 != null) {
+                    hReuse++;
                     // Point open and not closed - update if necessary
-                    if (routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist + h)) {
+                    if (routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist + h2)) {
                         nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
                     }
                 } else {
+                    float hnew = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
+                    hCalc++;
+                    nodesRouteOpenMap.put(nbIndex, hnew);
                     // Point not found yet - add to heap and open list
-                    routeDistHeap.add(nbIndex, nbDist + h);
-                    nodesRouteOpenList[nbIndex] = true;
+                    routeDistHeap.add(nbIndex, nbDist + hnew);
+                    //nodesRouteOpenList[nbIndex] = true;
                     nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
                 }
             }
         }
 
+        System.out.println(hCalc);
+        System.out.println(hReuse);
+        
         if (found) {
             // Reconstruct route
             int i = targetNodeIndex;
