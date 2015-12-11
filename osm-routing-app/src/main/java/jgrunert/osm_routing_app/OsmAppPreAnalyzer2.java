@@ -35,8 +35,9 @@ public class OsmAppPreAnalyzer2 {
 	
 	
 	public static void main(String[] args) throws Exception {
-		File file = new File("D:\\Jonas\\OSM\\germany-latest.osm.pbf");
+		//File file = new File("D:\\Jonas\\OSM\\germany-latest.osm.pbf");
 		//File file = new File("D:\\Jonas\\OSM\\hamburg-latest.osm.pbf");
+		File file = new File("D:\\Jonas\\OSM\\baden-wuerttemberg-latest.osm.pbf");
 		
 		PrintWriter waysHighwayWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways.csv"));
 		PrintWriter waysHighwaySimplWriter = new PrintWriter(new File("D:\\Jonas\\OSM\\highways-simplified.csv"));
