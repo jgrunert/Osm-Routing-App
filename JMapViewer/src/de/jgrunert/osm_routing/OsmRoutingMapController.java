@@ -104,79 +104,6 @@ MouseWheelListener {
         
         
     
-    public static final float atan2Fast(float y, float x)
-    {
-       float add, mul;
-
-       if (x < 0.0f)
-       {
-          if (y < 0.0f)
-          {
-             x = -x;
-             y = -y;
-
-             mul = 1.0f;
-          }
-          else
-          {
-             x = -x;
-             mul = -1.0f;
-          }
-
-          add = -3.141592653f;
-       }
-       else
-       {
-          if (y < 0.0f)
-          {
-             y = -y;
-             mul = -1.0f;
-          }
-          else
-          {
-             mul = 1.0f;
-          }
-
-          add = 0.0f;
-       }
-
-       float invDiv = ATAN2_DIM_MINUS_1 / ((x < y) ? y : x);
-
-       int xi = (int) (x * invDiv);
-       int yi = (int) (y * invDiv);
-
-       return (atan2[yi * ATAN2_DIM + xi] + add) * mul;
-    }
-
-
- private static final int     ATAN2_BITS        = 7;
-
-    private static final int     ATAN2_BITS2       = ATAN2_BITS << 1;
-    private static final int     ATAN2_MASK        = ~(-1 << ATAN2_BITS2);
-    private static final int     ATAN2_COUNT       = ATAN2_MASK + 1;
-    private static final int     ATAN2_DIM         = (int) Math.sqrt(ATAN2_COUNT);
-
-    private static final float   ATAN2_DIM_MINUS_1 = (ATAN2_DIM - 1);
-
-    private static final float[] atan2             = new float[ATAN2_COUNT];
-
-    static
-    {
-       for (int i = 0; i < ATAN2_DIM; i++)
-       {
-          for (int j = 0; j < ATAN2_DIM; j++)
-          {
-             float x0 = (float) i / ATAN2_DIM;
-             float y0 = (float) j / ATAN2_DIM;
-
-             atan2[j * ATAN2_DIM + i] = (float) Math.atan2(y0, x0);
-          }
-       }
-    }
-
-    
-    
-    
    /**
     * Constructor
     * @param map JMapViewer
@@ -185,6 +112,19 @@ MouseWheelListener {
         super(map);
         
         try {
+
+            System.out.println(Math.atan2(0.1f, 0.1f));
+            System.out.println((float)Math.atan2(0.1f, 0.1f));
+            System.out.println(Utils.atan2Fast(0.1f, 0.1f));
+//            for(float i = 0.1f; i <= 3.0f; i += 0.00001f) {
+//                for(float j = 0.1f; j <= 3.0f; j += 0.00001f) {
+//                    System.out.println(i + " " + j);
+//                System.out.println(Math.atan2(i, j));
+//                System.out.println(atan2Fast(i, j));
+//                }
+//            }
+            
+            
             loadOsmData();    
             
             nodesPreBuffer = new int[nodeCount];
@@ -210,15 +150,15 @@ MouseWheelListener {
 //        calculateRoute(TransportMode.Car, RoutingMode.Shortest);
 //        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
         
-        System.out.println(calcNodeDist(48.68f, 9.00f,48.84f, 9.26f));
-        System.out.println(calcNodeDistNew(48.68f, 9.00f,48.84f, 9.26f));
-        System.out.println(calcNodeDist(47.8f, 9.0f, 49.15f, 9.22f));
-        System.out.println(calcNodeDistNew(47.8f, 9.0f, 49.15f, 9.22f));
+        System.out.println(Utils.calcNodeDist(48.68f, 9.00f,48.84f, 9.26f));
+        System.out.println(Utils.calcNodeDistFast(48.68f, 9.00f,48.84f, 9.26f));
+        System.out.println(Utils.calcNodeDist(47.8f, 9.0f, 49.15f, 9.22f));
+        System.out.println(Utils.calcNodeDistFast(47.8f, 9.0f, 49.15f, 9.22f));
 
         startTime = System.currentTimeMillis();
         float max = 0.0f;
         for(int i = 0; i < nodeCount; i++) {
-            max = Math.max(max, calcNodeDist(nodesLat[i], nodesLon[i], (float)nodesLat[i], (float)nodesLon[i]));
+            max = Math.max(max, Utils.calcNodeDist(nodesLat[i], nodesLon[i], (float)nodesLat[i], (float)nodesLon[i]));
         }
         System.err.println(max);
         System.out.println("Time: " + (System.currentTimeMillis() - startTime));
@@ -364,7 +304,7 @@ MouseWheelListener {
                 continue;
             }
                         
-           float dist = calcNodeDist(lat, lon, nodesLat[i], nodesLon[i]);
+           float dist = Utils.calcNodeDistFast(lat, lon, nodesLat[i], nodesLon[i]);
             if(dist < smallestDist) {
                 smallestDist = dist;
                 nextIndex = i;
@@ -373,36 +313,6 @@ MouseWheelListener {
         return nextIndex;
     }
     
-    
-    // From http://stackoverflow.com/questions/837872/calculate-distance-in-meters-when-you-know-longitude-and-latitude-in-java
-    private float calcNodeDist(float lat1, float lon1, float lat2, float lon2) {
-        double earthRadius = 6371000; //meters
-        double dLat = Math.toRadians(lat2-lat1);
-        double dLng = Math.toRadians(lon2-lon1);
-        double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
-                   Math.sin(dLng/2) * Math.sin(dLng/2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return (float) (earthRadius * c);
-    }
-    
-
-    // From http://stackoverflow.com/questions/837872/calculate-distance-in-meters-when-you-know-longitude-and-latitude-in-java
-    private float calcNodeDistNew(float lat1, float lon1, float lat2, float lon2) {
-        double earthRadius = 6371000; //meters
-        double dLat = Math.toRadians(lat2-lat1);
-        double dLng = Math.toRadians(lon2-lon1);
-        double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
-                   Math.sin(dLng/2) * Math.sin(dLng/2);
-        double c = 2 * atan2Fast((float)Math.sqrt(a), (float)Math.sqrt(1-a));
-        return (float) (earthRadius * c);
-    }
-    // 5 times slower
-//  private float getNodeDist(float lat1, float lon1, float lat2, float lon2) {
-//  GeodesicData g = Geodesic.WGS84.Inverse(lat1, lon1, lat2, lon2);
-//  return g.s12;
-//}
     
     private boolean checkNodeWithFilter(int i, byte filterBitMask, byte filterBitValue) {
         if (filterBitMask == 0) {
@@ -810,7 +720,7 @@ MouseWheelListener {
                         nodesRouteDists[nbIndex] = nbDist;
                     }
                 } else {
-                    float hnew = (float)calcNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) * hFactor;
+                    float hnew = Utils.calcNodeDistFast(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) * hFactor;
                     //float hnew = 0.0f;
                     hCalc++;
                     nodesRouteOpenMap.put(nbIndex, hnew);
