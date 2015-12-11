@@ -111,20 +111,7 @@ MouseWheelListener {
     public OsmRoutingMapController(JMapViewer map) {
         super(map);
         
-        try {
-
-            System.out.println(Math.atan2(0.1f, 0.1f));
-            System.out.println((float)Math.atan2(0.1f, 0.1f));
-            System.out.println(Utils.atan2Fast(0.1f, 0.1f));
-//            for(float i = 0.1f; i <= 3.0f; i += 0.00001f) {
-//                for(float j = 0.1f; j <= 3.0f; j += 0.00001f) {
-//                    System.out.println(i + " " + j);
-//                System.out.println(Math.atan2(i, j));
-//                System.out.println(atan2Fast(i, j));
-//                }
-//            }
-            
-            
+        try {            
             loadOsmData();    
             
             nodesPreBuffer = new int[nodeCount];
@@ -150,25 +137,24 @@ MouseWheelListener {
 //        calculateRoute(TransportMode.Car, RoutingMode.Shortest);
 //        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
         
-        System.out.println(Utils.calcNodeDist(48.68f, 9.00f,48.84f, 9.26f));
-        System.out.println(Utils.calcNodeDistFast(48.68f, 9.00f,48.84f, 9.26f));
-        System.out.println(Utils.calcNodeDist(47.8f, 9.0f, 49.15f, 9.22f));
-        System.out.println(Utils.calcNodeDistFast(47.8f, 9.0f, 49.15f, 9.22f));
+//        System.out.println(Utils.calcNodeDist(48.68f, 9.00f,48.84f, 9.26f));
+//        System.out.println(Utils.calcNodeDistFast(48.68f, 9.00f,48.84f, 9.26f));
+//        System.out.println(Utils.calcNodeDist(47.8f, 9.0f, 49.15f, 9.22f));
+//        System.out.println(Utils.calcNodeDistFast(47.8f, 9.0f, 49.15f, 9.22f));
 
-        startTime = System.currentTimeMillis();
-        float max = 0.0f;
-        for(int i = 0; i < nodeCount; i++) {
-            max = Math.max(max, Utils.calcNodeDist(nodesLat[i], nodesLon[i], (float)nodesLat[i], (float)nodesLon[i]));
-        }
-        System.err.println(max);
-        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
+//        startTime = System.currentTimeMillis();
+//        float max = 0.0f;
+//        for(int i = 0; i < nodeCount; i++) {
+//            max = Math.max(max, Utils.calcNodeDist(nodesLat[i], nodesLon[i], (float)nodesLat[i], (float)nodesLon[i]));
+//        }
+//        System.err.println(max);
+//        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
         startNodeIndex = findNextNode(47.8f, 9.0f, (byte)0, (byte)0);
         targetNodeIndex = findNextNode(49.15f, 9.22f, (byte)0, (byte)0);
         //calculateRoute(TransportMode.Car, RoutingMode.Fastest);
-        calculateRoute(TransportMode.Car, RoutingMode.Shortest);
-        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
+        //calculateRoute(TransportMode.Car, RoutingMode.Shortest);
     }
     
     
@@ -304,7 +290,7 @@ MouseWheelListener {
                 continue;
             }
                         
-           float dist = Utils.calcNodeDistFast(lat, lon, nodesLat[i], nodesLon[i]);
+           float dist = Utils.calcNodeDist(lat, lon, nodesLat[i], nodesLon[i]);
             if(dist < smallestDist) {
                 smallestDist = dist;
                 nextIndex = i;
@@ -361,8 +347,11 @@ MouseWheelListener {
     
 
     public void calculateRoute(TransportMode transportMode, RoutingMode routeMode) {
+
+        long startTime = System.currentTimeMillis();
         //calculateRouteDijkstra(transportMode, routeMode);
         calculateRouteAStar(transportMode, routeMode);
+        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
     }
     
     public void calculateRouteDijkstra(TransportMode transportMode, RoutingMode routeMode) {
@@ -685,9 +674,10 @@ MouseWheelListener {
                     continue;
                 }
                 
-                // Distance calculation, depending on routing mode
-                float nbDist;
-                float hFactor = 1.0f; // TODO Not always declare
+                // Distance/Time calculation, depending on routing mode
+                final float nbDist;
+                // Factor for heuristic
+                final float hFactor;
                 //float h;
                 float edgeDist = edgesLengths[iEdge];
                 if (routeMode == RoutingMode.Fastest) {
@@ -695,14 +685,14 @@ MouseWheelListener {
                     float maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
                     maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
                     nbDist = nodeDist + (edgeDist / maxSpeed);
+                    //float highwayBoost = (maxSpeed > 10) ? (maxSpeed > 50) ? (maxSpeed > 100) ? 1.6f : 1.3f : 1.2f : 1.0f; 
+                    //float highwayBoost = (maxSpeed >= 100) ? 5.0f : 1.0f; 
+                    //hFactor = 1.0f / allMaxSpeed / highwayBoost;
                     hFactor = 1.0f / allMaxSpeed;
-                    // Heuristic (distance to target)
-                    //h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) / allMaxSpeed;
                 } else if (routeMode == RoutingMode.Shortest) {
                     // Shortest route
                     nbDist = nodeDist + edgeDist;
-                    // Heuristic (distance to target)
-                    //h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
+                    hFactor = 1.0f;
                 } else {
                     throw new RuntimeException("Unsupported routing mode: " + routeMode);
                 }
@@ -711,21 +701,21 @@ MouseWheelListener {
 
                 //nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
                 
-                Float h2 = nodesRouteOpenMap.get(nbIndex);
-                if (h2 != null) {
+                Float hExistign = nodesRouteOpenMap.get(nbIndex);
+                if (hExistign != null) {
                     hReuse++;
                     // Point open and not closed - update if necessary
-                    if (routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist + h2)) {
+                    if (routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist + hExistign)) {
                         nodesPreBuffer[nbIndex] = nodeIndex; 
                         nodesRouteDists[nbIndex] = nbDist;
                     }
                 } else {
-                    float hnew = Utils.calcNodeDistFast(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) * hFactor;
+                    float hNew = Utils.calcNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) * hFactor;
                     //float hnew = 0.0f;
                     hCalc++;
-                    nodesRouteOpenMap.put(nbIndex, hnew);
+                    nodesRouteOpenMap.put(nbIndex, hNew);
                     // Point not found yet - add to heap and open list
-                    routeDistHeap.add(nbIndex, nbDist + hnew);
+                    routeDistHeap.add(nbIndex, nbDist + hNew);
                     //nodesRouteOpenList[nbIndex] = true;
                     nodesPreBuffer[nbIndex] = nodeIndex; 
                     nodesRouteDists[nbIndex] = nbDist;

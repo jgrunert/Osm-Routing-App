@@ -79,10 +79,11 @@ public class OfOsmAppPreAnalyzer {
 	
 	
 	public static void main(String[] args) throws Exception {
-		File file = new File("D:\\Jonas\\OSM\\germany-latest.osm.pbf");
-		// File file = new File("D:\\Jonas\\OSM\\hamburg-latest.osm.pbf");
+		//File file = new File("D:\\Jonas\\OSM\\germany-latest.osm.pbf");
+		//File file = new File("D:\\Jonas\\OSM\\hamburg-latest.osm.pbf");
+		File file = new File("D:\\Jonas\\OSM\\baden-wuerttemberg-latest.osm.pbf");
 		
-		String suffix = "_germany.csv";
+		String suffix = "_bawue.csv";
 		
 		PrintWriter nodeTagKeys = new PrintWriter(new File("D:\\Jonas\\OSM\\NodeTagKeys" + suffix));
 		PrintWriter wayTagKeys = new PrintWriter(new File("D:\\Jonas\\OSM\\WayTagKey" + suffix));

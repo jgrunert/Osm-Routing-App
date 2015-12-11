@@ -111,9 +111,11 @@ public class OsmAppPreprocessorPass5 {
 		int nodeCounter = 0;
 		newNodeIndices = new int[nodeCount];
 		newNodeIndicesInverse = new int[nodeCount];
+		int[] nodeGridIndices = new int[nodeCount];
 		int[][] gridNodeOffsets = new int[maxLatI - minLatI][maxLonI - minLonI];
 		int[][] gridNodeCounts = new int[maxLatI - minLatI][maxLonI - minLonI];
-				
+			
+		int gridIndex = 0;
 		for(int iLat = 0; iLat < (maxLatI - minLatI); iLat++) {
 			for(int iLon = 0; iLon < (maxLonI - minLonI); iLon++) {
 				float latMin = minLat + iLat * gridRaster;
@@ -134,12 +136,14 @@ public class OsmAppPreprocessorPass5 {
 						}
 						newNodeIndices[iN] = nodeCounter;
 						newNodeIndicesInverse[nodeCounter] = iN;
+						nodeGridIndices[nodeCounter] = gridIndex;
 						gridNodes++;
 						nodeCounter++;
 					}
 				}
 				
 				gridNodeCounts[iLat][iLon] = gridNodes;
+				gridIndex++;
 			}
 			
 			System.out.println(iLat * 100 / (maxLatI - minLatI) + "% finding grid nodes");
@@ -176,6 +180,7 @@ public class OsmAppPreprocessorPass5 {
 		// Update node edge tagets and offsets
 	    int[] nodesEdgeOffsetNew = new int[nodeCount];
 	    int[] edgesTargetNew = new int[edgeCount];
+	    int[] edgesTargetGrid = new int[edgeCount];
 	    byte[] edgesInfobitsNew = new byte[edgeCount];
 	    float[] edgesLengthsNew = new float[edgeCount];
 	    byte[] edgesMaxSpeedsNew = new byte[edgeCount];
@@ -190,6 +195,7 @@ public class OsmAppPreprocessorPass5 {
                     iEdge++) 
 	        {
 	        	edgesTargetNew[edgeOffset] = newNodeIndices[edgesTarget[iEdge]];
+	        	edgesTargetGrid[edgeOffset] = nodeGridIndices[edgesTargetNew[edgeOffset]];
 	        	edgesInfobitsNew[edgeOffset] = edgesInfobits[iEdge];
 	        	edgesLengthsNew[edgeOffset] = edgesLengths[iEdge];
 	        	edgesMaxSpeedsNew[edgeOffset] = edgesMaxSpeeds[iEdge];
@@ -242,6 +248,24 @@ public class OsmAppPreprocessorPass5 {
 	        os.writeObject(edgesMaxSpeeds);      
 	        os.close();
 	        System.out.println("Finished serializing edges");  
+		}
+		
+		
+		
+		// Save grid files 
+		{
+	        System.out.println("Start exporting grids"); 
+
+			gridIndex = 0;
+			for(int iLat = 0; iLat < (maxLatI - minLatI); iLat++) {
+				for(int iLon = 0; iLon < (maxLonI - minLonI); iLon++) {
+					//int gridNodeOffset = 
+					
+					gridIndex++;
+				}
+			}
+			
+	        System.out.println("Finished exporting grids");  
 		}
 		
 		System.out.println("Finished Pass5");

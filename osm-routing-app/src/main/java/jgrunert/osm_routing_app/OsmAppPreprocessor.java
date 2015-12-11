@@ -7,7 +7,7 @@ public class OsmAppPreprocessor {
 			
 			//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
 			//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
-			String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
+			String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-latest.osm.pbf";
 			
 			//String outDir = "D:\\Jonas\\OSM\\germany";
 			//String outDir = "D:\\Jonas\\OSM\\hamburg";

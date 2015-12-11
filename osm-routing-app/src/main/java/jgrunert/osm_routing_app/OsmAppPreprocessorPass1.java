@@ -62,7 +62,7 @@ public class OsmAppPreprocessorPass1 {
 			
 			//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
 					//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
-			String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-140101.osm.pbf";
+			String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-latest.osm.pbf";
 			
 			doPass(inFile, outDir);
 		} catch (Exception e) {
