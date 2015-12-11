@@ -124,8 +124,8 @@ public class OsmAppPreprocessorPass2 {
 								
 							try {
 								connectionWriter.writeInt(nodeIndex);
-								connectionWriter.writeDouble(node.getLatitude());	
-								connectionWriter.writeDouble(node.getLongitude());	
+								connectionWriter.writeFloat((float)node.getLatitude());	
+								connectionWriter.writeFloat((float)node.getLongitude());	
 								connectionWriter.writeLong(node.getId());							
 							} catch (IOException e) {
 								e.printStackTrace();

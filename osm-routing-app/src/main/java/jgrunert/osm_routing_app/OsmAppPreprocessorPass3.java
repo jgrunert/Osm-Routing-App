@@ -30,8 +30,8 @@ import org.openstreetmap.osmosis.core.domain.v0_6.WayNode;
 public class OsmAppPreprocessorPass3 {
 
 
-	private static double[] lats;
-	private static double[] lons;
+	private static float[] lats;
+	private static float[] lons;
 	
 	
 	public static void main(String[] args) {
@@ -93,8 +93,8 @@ public class OsmAppPreprocessorPass3 {
 					new FileInputStream(outDir + "\\pass2-waynodes.bin"));
 			int nodeCount = nodeReader.readInt();
 
-			lats = new double[nodeCount];
-			lons = new double[nodeCount];
+			lats = new float[nodeCount];
+			lons = new float[nodeCount];
 
 			int edgeCounter = 0;
 			perc100 = nodeCount / 100;
@@ -105,8 +105,8 @@ public class OsmAppPreprocessorPass3 {
 							+ " instead of " + iNode);
 				}
 
-				lats[iNode] = nodeReader.readDouble();
-				lons[iNode] = nodeReader.readDouble();
+				lats[iNode] = nodeReader.readFloat();
+				lons[iNode] = nodeReader.readFloat();
 				nodeReader.readLong(); // Ignore old id
 			}
 			System.out.println("Finished loading node coords");
@@ -159,12 +159,12 @@ public class OsmAppPreprocessorPass3 {
 				System.err.println("Wrong nodeIndex: " + nodeIndex + " instead of " + iNode);
 			}
 			
-			double lat = nodeReader.readDouble();
-			double lon = nodeReader.readDouble();
+			float lat = nodeReader.readFloat();
+			float lon = nodeReader.readFloat();
 			nodeReader.readLong(); // Ignore old id
 			
-			nodeWriter.writeDouble(lat);
-			nodeWriter.writeDouble(lon);
+			nodeWriter.writeFloat(lat);
+			nodeWriter.writeFloat(lon);
 			nodeWriter.writeInt(edgeCounter); // Edge offset
 			
 			// Remove duplicate ways (eg. circles with multiple usages of node)
@@ -246,21 +246,27 @@ public class OsmAppPreprocessorPass3 {
 	}
 	
 	
-	private static double maxDist = 0.0;
+	private static float maxDist = 0.0f;
 	private static float calcGeoLength(int i1, int i2) {
-		 GeodesicData g = Geodesic.WGS84.Inverse(lats[i1], lons[i1], lats[i2], lons[i2]);
-		 if(g.s12 > maxDist) {
-			 maxDist = g.s12;
+		 float dist = getNodeDist(lats[i1], lons[i1], lats[i2], lons[i2]);
+		 if(dist > maxDist) {
+			 maxDist = dist;
 			 //System.out.println(maxDist);
 		 }
-		 if(g.s12 > Float.MAX_VALUE) {
-			 // TODO Longest length output, Float?
-			 System.err.println("calcGeoLength > Float.MAX_VALUE: " + g.s12);
-			 throw new RuntimeException("calcGeoLength > Float.MAX_VALUE: " + g.s12);
-		 }
-	     return (float)g.s12;
+	     return dist;
 	}
-
+	
+	// From http://stackoverflow.com/questions/837872/calculate-distance-in-meters-when-you-know-longitude-and-latitude-in-java
+    private static float getNodeDist(float lat1, float lon1, float lat2, float lon2) {
+        double earthRadius = 6371000; //meters
+        double dLat = Math.toRadians(lat2-lat1);
+        double dLng = Math.toRadians(lon2-lon1);
+        double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                   Math.sin(dLng/2) * Math.sin(dLng/2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return (float) (earthRadius * c);
+    }
 	
 	
 	private static class HighwayInfos2 {

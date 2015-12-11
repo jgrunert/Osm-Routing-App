@@ -36,7 +36,7 @@ import org.openstreetmap.gui.jmapviewer.interfaces.ICoordinate;
 
 /**
  * Default map controller which implements map moving by pressing the right
- * mouse button and zooming by double click or by mouse wheel.
+ * mouse button and zooming by float click or by mouse wheel.
  *
  * @author Jan Peter Stotz
  *
@@ -60,7 +60,7 @@ MouseWheelListener {
     private int movementMouseButtonMask = MouseEvent.BUTTON1_DOWN_MASK;
 
     private boolean wheelZoomEnabled = true;
-    private boolean doubleClickZoomEnabled = true;
+    private boolean floatClickZoomEnabled = true;
     
     
     private static final short CAR_MAXSPEED = 150;
@@ -73,8 +73,8 @@ MouseWheelListener {
     private List<MapPolygonImpl> routeLines = new ArrayList<>();
     
     int nodeCount = 0;
-    double[] nodesLat;
-    double[] nodesLon;
+    float[] nodesLat;
+    float[] nodesLon;
     int[] nodesEdgeOffset;
    
     // TODO Save RAM
@@ -94,15 +94,89 @@ MouseWheelListener {
     float[] edgesLengths;
     byte[] edgesMaxSpeeds;
 
-    double gridRaster;
-    double gridMinLat;
-    double gridMinLon;
+    float gridRaster;
+    float gridMinLat;
+    float gridMinLon;
     int gridLatCount;
     int gridLonCount;
     int[][] gridNodeOffsets;
     int[][] gridNodeCounts;
         
         
+    
+    public static final float atan2Fast(float y, float x)
+    {
+       float add, mul;
+
+       if (x < 0.0f)
+       {
+          if (y < 0.0f)
+          {
+             x = -x;
+             y = -y;
+
+             mul = 1.0f;
+          }
+          else
+          {
+             x = -x;
+             mul = -1.0f;
+          }
+
+          add = -3.141592653f;
+       }
+       else
+       {
+          if (y < 0.0f)
+          {
+             y = -y;
+             mul = -1.0f;
+          }
+          else
+          {
+             mul = 1.0f;
+          }
+
+          add = 0.0f;
+       }
+
+       float invDiv = ATAN2_DIM_MINUS_1 / ((x < y) ? y : x);
+
+       int xi = (int) (x * invDiv);
+       int yi = (int) (y * invDiv);
+
+       return (atan2[yi * ATAN2_DIM + xi] + add) * mul;
+    }
+
+
+ private static final int     ATAN2_BITS        = 7;
+
+    private static final int     ATAN2_BITS2       = ATAN2_BITS << 1;
+    private static final int     ATAN2_MASK        = ~(-1 << ATAN2_BITS2);
+    private static final int     ATAN2_COUNT       = ATAN2_MASK + 1;
+    private static final int     ATAN2_DIM         = (int) Math.sqrt(ATAN2_COUNT);
+
+    private static final float   ATAN2_DIM_MINUS_1 = (ATAN2_DIM - 1);
+
+    private static final float[] atan2             = new float[ATAN2_COUNT];
+
+    static
+    {
+       for (int i = 0; i < ATAN2_DIM; i++)
+       {
+          for (int j = 0; j < ATAN2_DIM; j++)
+          {
+             float x0 = (float) i / ATAN2_DIM;
+             float y0 = (float) j / ATAN2_DIM;
+
+             atan2[j * ATAN2_DIM + i] = (float) Math.atan2(y0, x0);
+          }
+       }
+    }
+
+    
+    
+    
    /**
     * Constructor
     * @param map JMapViewer
@@ -129,16 +203,29 @@ MouseWheelListener {
         // Test
         long startTime;
         
+//        startTime = System.currentTimeMillis();
+//        startNodeIndex = findNextNode(new Coordinate(48.68, 9.00), (byte)0, (byte)0);
+//        targetNodeIndex = findNextNode(new Coordinate(48.84, 9.26), (byte)0, (byte)0);
+//        //calculateRoute(TransportMode.Car, RoutingMode.Fastest);
+//        calculateRoute(TransportMode.Car, RoutingMode.Shortest);
+//        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
+        
+        System.out.println(calcNodeDist(48.68f, 9.00f,48.84f, 9.26f));
+        System.out.println(calcNodeDistNew(48.68f, 9.00f,48.84f, 9.26f));
+        System.out.println(calcNodeDist(47.8f, 9.0f, 49.15f, 9.22f));
+        System.out.println(calcNodeDistNew(47.8f, 9.0f, 49.15f, 9.22f));
+
         startTime = System.currentTimeMillis();
-        startNodeIndex = findNextNode(new Coordinate(48.68, 9.00), (byte)0, (byte)0);
-        targetNodeIndex = findNextNode(new Coordinate(48.84, 9.26), (byte)0, (byte)0);
-        //calculateRoute(TransportMode.Car, RoutingMode.Fastest);
-        calculateRoute(TransportMode.Car, RoutingMode.Shortest);
+        float max = 0.0f;
+        for(int i = 0; i < nodeCount; i++) {
+            max = Math.max(max, calcNodeDist(nodesLat[i], nodesLon[i], (float)nodesLat[i], (float)nodesLon[i]));
+        }
+        System.err.println(max);
         System.out.println("Time: " + (System.currentTimeMillis() - startTime));
 
         startTime = System.currentTimeMillis();
-        startNodeIndex = findNextNode(new Coordinate(47.8, 9.0), (byte)0, (byte)0);
-        targetNodeIndex = findNextNode(new Coordinate(49.15, 9.22), (byte)0, (byte)0);
+        startNodeIndex = findNextNode(47.8f, 9.0f, (byte)0, (byte)0);
+        targetNodeIndex = findNextNode(49.15f, 9.22f, (byte)0, (byte)0);
         //calculateRoute(TransportMode.Car, RoutingMode.Fastest);
         calculateRoute(TransportMode.Car, RoutingMode.Shortest);
         System.out.println("Time: " + (System.currentTimeMillis() - startTime));
@@ -156,8 +243,8 @@ MouseWheelListener {
         ObjectInputStream nodeReader = new ObjectInputStream(new FileInputStream(inDir + "\\nodes-final.bin"));
         
         nodeCount = (Integer)nodeReader.readObject();
-        nodesLat = (double[])nodeReader.readObject();
-        nodesLon = (double[])nodeReader.readObject();
+        nodesLat = (float[])nodeReader.readObject();
+        nodesLon = (float[])nodeReader.readObject();
         nodesEdgeOffset = (int[])nodeReader.readObject();
         
         nodeReader.close();
@@ -182,9 +269,9 @@ MouseWheelListener {
             System.out.println("Start reading grid");
             ObjectInputStream gridReader = new ObjectInputStream(
                     new FileInputStream(inDir + "\\grid-final.bin"));
-            gridRaster = gridReader.readDouble();
-            gridMinLat = gridReader.readDouble();
-            gridMinLon = gridReader.readDouble();
+            gridRaster = gridReader.readFloat();
+            gridMinLat = gridReader.readFloat();
+            gridMinLon = gridReader.readFloat();
             gridLatCount = gridReader.readInt();
             gridLonCount = gridReader.readInt();
             gridNodeOffsets = (int[][])gridReader.readObject();
@@ -221,7 +308,7 @@ MouseWheelListener {
             ICoordinate clickPt = map.getPosition(e.getPoint());
             Coordinate clickCoord = new Coordinate(clickPt.getLat(), clickPt.getLon());
             
-            int clickNextPt = findNextNode(clickCoord, (byte)0, (byte)0);            
+            int clickNextPt = findNextNode((float)clickCoord.getLat(), (float)clickCoord.getLon(), (byte)0, (byte)0);            
             if(clickNextPt == -1) {
                 System.err.println("No point found");
                 return;
@@ -246,8 +333,8 @@ MouseWheelListener {
                 routeDots.add(targetDot);
             }
         } 
-        else if (doubleClickZoomEnabled && e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1) {
-            // Zoom on doubleclick
+        else if (floatClickZoomEnabled && e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1) {
+            // Zoom on floatclick
             map.zoomIn(e.getPoint());
         } 
     }
@@ -258,13 +345,13 @@ MouseWheelListener {
      * @param coord
      * @return Index of next point
      */
-    private int findNextNode(Coordinate coord, byte filterBitMask, byte filterBitValue) {
+    private int findNextNode(float lat, float lon, byte filterBitMask, byte filterBitValue) {
         int nextIndex = -1;
-        double smallestDist = Double.MAX_VALUE;
+        float smallestDist = Float.MAX_VALUE;
 
         
-        int latI = (int)((coord.getLat() - gridMinLat) / gridRaster);
-        int lonI = (int)((coord.getLon() - gridMinLon) / gridRaster);
+        int latI = (int)((lat - gridMinLat) / gridRaster);
+        int lonI = (int)((lon - gridMinLon) / gridRaster);
         
         latI = Math.max(0, Math.min(gridLatCount-1, latI));
         lonI = Math.max(0, Math.min(gridLonCount-1, lonI));
@@ -277,7 +364,7 @@ MouseWheelListener {
                 continue;
             }
                         
-           double dist = getNodeDist(coord.getLat(), coord.getLon(), nodesLat[i], nodesLon[i]);
+           float dist = calcNodeDist(lat, lon, nodesLat[i], nodesLon[i]);
             if(dist < smallestDist) {
                 smallestDist = dist;
                 nextIndex = i;
@@ -286,10 +373,36 @@ MouseWheelListener {
         return nextIndex;
     }
     
-    private double getNodeDist(double lat1, double lon1, double lat2, double lon2) {
-        GeodesicData g = Geodesic.WGS84.Inverse(lat1, lon1, lat2, lon2);
-        return g.s12;
+    
+    // From http://stackoverflow.com/questions/837872/calculate-distance-in-meters-when-you-know-longitude-and-latitude-in-java
+    private float calcNodeDist(float lat1, float lon1, float lat2, float lon2) {
+        double earthRadius = 6371000; //meters
+        double dLat = Math.toRadians(lat2-lat1);
+        double dLng = Math.toRadians(lon2-lon1);
+        double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                   Math.sin(dLng/2) * Math.sin(dLng/2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return (float) (earthRadius * c);
     }
+    
+
+    // From http://stackoverflow.com/questions/837872/calculate-distance-in-meters-when-you-know-longitude-and-latitude-in-java
+    private float calcNodeDistNew(float lat1, float lon1, float lat2, float lon2) {
+        double earthRadius = 6371000; //meters
+        double dLat = Math.toRadians(lat2-lat1);
+        double dLng = Math.toRadians(lon2-lon1);
+        double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                   Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                   Math.sin(dLng/2) * Math.sin(dLng/2);
+        double c = 2 * atan2Fast((float)Math.sqrt(a), (float)Math.sqrt(1-a));
+        return (float) (earthRadius * c);
+    }
+    // 5 times slower
+//  private float getNodeDist(float lat1, float lon1, float lat2, float lon2) {
+//  GeodesicData g = Geodesic.WGS84.Inverse(lat1, lon1, lat2, lon2);
+//  return g.s12;
+//}
     
     private boolean checkNodeWithFilter(int i, byte filterBitMask, byte filterBitValue) {
         if (filterBitMask == 0) {
@@ -379,11 +492,11 @@ MouseWheelListener {
         
         // Find better start and end points if not suitable
         if(!checkNodeWithFilter(startNodeIndex, edgeFilterBitMask, edgeFilterBitValue)) {
-            startNodeIndex = findNextNode(startCoord, edgeFilterBitMask, edgeFilterBitValue);
+            startNodeIndex = findNextNode((float)startCoord.getLat(), (float)startCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
             startCoord = new Coordinate(nodesLat[startNodeIndex], nodesLon[startNodeIndex]);
         }
         if(!checkNodeWithFilter(targetNodeIndex, edgeFilterBitMask, edgeFilterBitValue)) {
-            targetNodeIndex = findNextNode(targetCoord, edgeFilterBitMask, edgeFilterBitValue);
+            targetNodeIndex = findNextNode((float)targetCoord.getLat(), (float)targetCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
             targetCoord = new Coordinate(nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
         }   
 
@@ -403,7 +516,7 @@ MouseWheelListener {
 
         
         Random rd = new Random(123);
-        double debugDispProp = 0.9999;
+        float debugDispProp = 0.9999f;
         int maxMarkerCountdown = 50;
 
         
@@ -451,7 +564,7 @@ MouseWheelListener {
             visitedCount++;
 
             // Display
-            if (maxMarkerCountdown > 0 && rd.nextDouble() > debugDispProp) {
+            if (maxMarkerCountdown > 0 && rd.nextFloat() > debugDispProp) {
                 MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[nodeIndex], nodesLon[nodeIndex]));
                 map.addMapMarker(dot);
                 routeDots.add(dot);
@@ -560,11 +673,11 @@ MouseWheelListener {
         
         // Find better start and end points if not suitable
         if(!checkNodeWithFilter(startNodeIndex, edgeFilterBitMask, edgeFilterBitValue)) {
-            startNodeIndex = findNextNode(startCoord, edgeFilterBitMask, edgeFilterBitValue);
+            startNodeIndex = findNextNode((float)startCoord.getLat(), (float)startCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
             startCoord = new Coordinate(nodesLat[startNodeIndex], nodesLon[startNodeIndex]);
         }
         if(!checkNodeWithFilter(targetNodeIndex, edgeFilterBitMask, edgeFilterBitValue)) {
-            targetNodeIndex = findNextNode(targetCoord, edgeFilterBitMask, edgeFilterBitValue);
+            targetNodeIndex = findNextNode((float)targetCoord.getLat(), (float)targetCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
             targetCoord = new Coordinate(nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
         }   
 
@@ -584,7 +697,7 @@ MouseWheelListener {
 
         
         Random rd = new Random(123);
-        double debugDispProp = 0.9999;
+        float debugDispProp = 0.9999f;
         int maxMarkerCountdown = 50;
 
         
@@ -632,11 +745,12 @@ MouseWheelListener {
 
             // Mark as closed/visited
             nodesRouteClosedList[nodeIndex] = true;
+            nodesRouteOpenMap.remove(nodeIndex);
             visitedCount++;
 
             
             // Display
-            if (maxMarkerCountdown > 0 && rd.nextDouble() > debugDispProp) {
+            if (maxMarkerCountdown > 0 && rd.nextFloat() > debugDispProp) {
                 MapMarkerDot dot = new MapMarkerDot(new Coordinate(nodesLat[nodeIndex], nodesLon[nodeIndex]));
                 map.addMapMarker(dot);
                 routeDots.add(dot);
@@ -663,6 +777,7 @@ MouseWheelListener {
                 
                 // Distance calculation, depending on routing mode
                 float nbDist;
+                float hFactor = 1.0f; // TODO Not always declare
                 //float h;
                 float edgeDist = edgesLengths[iEdge];
                 if (routeMode == RoutingMode.Fastest) {
@@ -670,6 +785,7 @@ MouseWheelListener {
                     float maxSpeed = (int) Byte.toUnsignedLong(edgesMaxSpeeds[iEdge]);
                     maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
                     nbDist = nodeDist + (edgeDist / maxSpeed);
+                    hFactor = 1.0f / allMaxSpeed;
                     // Heuristic (distance to target)
                     //h = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) / allMaxSpeed;
                 } else if (routeMode == RoutingMode.Shortest) {
@@ -681,7 +797,6 @@ MouseWheelListener {
                     throw new RuntimeException("Unsupported routing mode: " + routeMode);
                 }
                 
-                nodesRouteDists[nbIndex] = nbDist;
 
 
                 //nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
@@ -691,16 +806,19 @@ MouseWheelListener {
                     hReuse++;
                     // Point open and not closed - update if necessary
                     if (routeDistHeap.decreaseKeyIfSmaller(nbIndex, nbDist + h2)) {
-                        nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
+                        nodesPreBuffer[nbIndex] = nodeIndex; 
+                        nodesRouteDists[nbIndex] = nbDist;
                     }
                 } else {
-                    float hnew = (float)getNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]);
+                    float hnew = (float)calcNodeDist(nodesLat[nbIndex], nodesLon[nbIndex], nodesLat[targetNodeIndex], nodesLon[targetNodeIndex]) * hFactor;
+                    //float hnew = 0.0f;
                     hCalc++;
                     nodesRouteOpenMap.put(nbIndex, hnew);
                     // Point not found yet - add to heap and open list
                     routeDistHeap.add(nbIndex, nbDist + hnew);
                     //nodesRouteOpenList[nbIndex] = true;
-                    nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
+                    nodesPreBuffer[nbIndex] = nodeIndex; 
+                    nodesRouteDists[nbIndex] = nbDist;
                 }
             }
         }
@@ -812,12 +930,12 @@ MouseWheelListener {
         this.wheelZoomEnabled = wheelZoomEnabled;
     }
 
-    public boolean isDoubleClickZoomEnabled() {
-        return doubleClickZoomEnabled;
+    public boolean isFloatClickZoomEnabled() {
+        return floatClickZoomEnabled;
     }
 
-    public void setDoubleClickZoomEnabled(boolean doubleClickZoomEnabled) {
-        this.doubleClickZoomEnabled = doubleClickZoomEnabled;
+    public void setFloatClickZoomEnabled(boolean floatClickZoomEnabled) {
+        this.floatClickZoomEnabled = floatClickZoomEnabled;
     }
 
     @Override

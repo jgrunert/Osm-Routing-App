@@ -29,14 +29,14 @@ public class OsmAppPreprocessorPass4 {
         DataInputStream nodeReader = new DataInputStream(new FileInputStream(outDir + "\\pass3-nodes.bin"));
         
         int nodeCount = nodeReader.readInt();
-        double[] nodesLat = new double[nodeCount];
-        double[] nodesLon = new double[nodeCount];
+        float[] nodesLat = new float[nodeCount];
+        float[] nodesLon = new float[nodeCount];
         int[] nodesEdgeOffset = new int[nodeCount];
         
         int perc100 = nodeCount / 100;
         for(int i = 0; i < nodeCount; i++) {
-            nodesLat[i] = nodeReader.readDouble();
-            nodesLon[i] = nodeReader.readDouble();
+            nodesLat[i] = nodeReader.readFloat();
+            nodesLon[i] = nodeReader.readFloat();
             nodesEdgeOffset[i] = nodeReader.readInt();
 			if(i % perc100 == 0) {
 				System.out.println((i / perc100) + "%  reading nodes");
