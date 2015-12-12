@@ -65,7 +65,7 @@ MouseWheelListener {
     private static final short PED_MAXSPEED = 5;
     private static int ROUTE_HEAP_CAPACITY = 1000000;
     // Number of grids to buffer
-    private static int GRID_BUFFER_SIZE = 3200;
+    private static int GRID_BUFFER_SIZE = 200;
     
     
     // Start and end for route
@@ -638,9 +638,9 @@ MouseWheelListener {
                     float maxSpeed = (float) Byte.toUnsignedLong(visGrid.edgesMaxSpeeds[iEdge]);
                     maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
                     nbDist = nodeDist + (edgeDist / maxSpeed);
-                    //float highwayBoost = (maxSpeed > 10) ? (maxSpeed > 50) ? (maxSpeed > 100) ? 1.6f : 1.3f : 1.2f : 1.0f; 
-                    //float highwayBoost = (maxSpeed >= 100) ? 5.0f : 1.0f; 
-                    //hFactor = 1.0f / allMaxSpeed / highwayBoost;
+                    //float motorwayBoost = (maxSpeed > 10) ? (maxSpeed > 50) ? (maxSpeed > 100) ? 1.6f : 1.3f : 1.2f : 1.0f; 
+                    //float motorwayBoost = (maxSpeed > 100) ? 1.5f : 1.0f; 
+                    //hFactor = 1.0f / allMaxSpeed / motorwayBoost;
                     hFactor = 1.0f / allMaxSpeed;
                 } else if (routeMode == RoutingMode.Shortest) {
                     // Shortest route
