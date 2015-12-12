@@ -12,10 +12,8 @@ import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
@@ -67,7 +65,7 @@ MouseWheelListener {
     private static final short PED_MAXSPEED = 5;
     private static int ROUTE_HEAP_CAPACITY = 1000000;
     // Number of grids to buffer
-    private static int GRID_BUFFER_SIZE = 25;
+    private static int GRID_BUFFER_SIZE = 3200;
     
     
     // Start and end for route
@@ -562,7 +560,7 @@ MouseWheelListener {
             // Found! Break loop
             if (visNodeGridIndex == target) {
                 System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize() + " still in heap");
-                System.out.println("Dist: " + nodeDist);
+                System.out.println("Cost: " + nodeDist);
                 found = true;
                 break;
             }

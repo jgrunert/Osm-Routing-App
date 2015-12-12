@@ -7,7 +7,7 @@ import java.io.ObjectOutputStream;
 
 public class OsmAppPreprocessorPass5 {
 
-	private static final float gridRaster = 0.20f;
+	private static final float gridRaster = 0.10f;
 	
 	
 	
