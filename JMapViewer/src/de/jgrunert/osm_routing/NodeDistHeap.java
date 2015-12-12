@@ -1,7 +1,5 @@
 package de.jgrunert.osm_routing;
 
-import java.util.HashMap;
-import java.util.Map;
 
 
 /**
@@ -15,7 +13,6 @@ public class NodeDistHeap {
     private final float[] valuesArray;
     // Combined gridIndex(63-32)+nodeIndex(31-0)
     private final long[] nodeGridIndexArray;
-    private final Map<Long,Integer> nodeGridHeapIndices;
     private int size;
     private int sizeUsageMax;
     
@@ -26,7 +23,6 @@ public class NodeDistHeap {
         this.maxCapacity = maxCapacity;
         valuesArray = new float[maxCapacity+1];  
         nodeGridIndexArray = new long[maxCapacity+1];  
-        nodeGridHeapIndices = new HashMap<>(maxCapacity);
         size = 0;
         sizeUsageMax = 0;
     }
@@ -49,7 +45,6 @@ public class NodeDistHeap {
     public void resetEmpty() {
         size = 0;
         sizeUsageMax = 0;
-        nodeGridHeapIndices.clear();
     }
 
     public void add(long nodeGridIndex, float value) 
@@ -57,7 +52,6 @@ public class NodeDistHeap {
         if (size >= maxCapacity) {
             throw new IllegalStateException("Heap capacity exceeded");
         } 
-        assert !nodeGridHeapIndices.containsKey(nodeGridIndex);
 //        if(nodeGridHeapIndices.containsKey(nodeGridIndex)) {
 //            throw new IllegalStateException("Cant add same node twice");            
 //        }
@@ -65,10 +59,8 @@ public class NodeDistHeap {
         // place element into heap at bottom
         size++;
         int indexInHeap = size;
-        valuesArray[indexInHeap] = value;
-        
+        valuesArray[indexInHeap] = value;        
         nodeGridIndexArray[indexInHeap] = nodeGridIndex;
-        nodeGridHeapIndices.put(nodeGridIndex, indexInHeap);
         
         if(size > sizeUsageMax) {
             sizeUsageMax = size;
@@ -79,9 +71,10 @@ public class NodeDistHeap {
     
     /**
      * Decreases key if new key smaller than existing key
+     * Slow linear time complexity (n=heapsize) but isnt called very often.
      */
     public boolean decreaseKeyIfSmaller(long nodeGridIndex, float newKey) {
-        int heapIndex = nodeGridHeapIndices.get(nodeGridIndex);
+        int heapIndex = findNode(nodeGridIndex);
         if (newKey < valuesArray[heapIndex]) {
             valuesArray[heapIndex] = newKey;
             bubbleUp(heapIndex);
@@ -95,10 +88,24 @@ public class NodeDistHeap {
     /**
      * Changes key, assumes that newKey<oldKey
      */
-    public void decreaseKey(long nodeGridIndex, int newKey) {
-        int heapIndex = nodeGridHeapIndices.get(nodeGridIndex);
+    public void decreaseKey(int heapIndex, int newKey) {
         valuesArray[heapIndex] = newKey;
         bubbleUp(heapIndex);
+    }
+    
+    
+    /**
+     * Tries to find a node with given index
+     * @param nodeId GridNode ID of node
+     * @return Index in heap or -1 if not found
+     */
+    public int findNode(long nodeGridIndex) {
+        for(int i = 1; i < size+1; i++) {
+            if(nodeGridIndexArray[i] == nodeGridIndex) {
+                return i;
+            }
+        }
+        return -1;
     }
     
     
@@ -140,7 +147,6 @@ public class NodeDistHeap {
         valuesArray[size] = -1;
         nodeGridIndexArray[1] = nodeGridIndexArray[size];
         //nodeGridIndexArray[size] = -1;
-        nodeGridHeapIndices.remove(nodeGridIndex);
         size--;
         
         bubbleDown();
@@ -232,18 +238,14 @@ public class NodeDistHeap {
 
 
     
-    protected void swap(int index1, int index2) {
+    protected void swap(int index1, int index2) 
+    {
         float tmp1 = valuesArray[index1];
         valuesArray[index1] = valuesArray[index2];
         valuesArray[index2] = tmp1;      
 
-        long nodeGridIndex1 = nodeGridIndexArray[index2];
-        long nodeGridIndex2 = nodeGridIndexArray[index1];
-        nodeGridIndexArray[index1] = nodeGridIndex1;
-        nodeGridIndexArray[index2] = nodeGridIndex2;  
-        
-        // TODO Check
-        nodeGridHeapIndices.put(nodeGridIndex1, index1);
-        nodeGridHeapIndices.put(nodeGridIndex2, index2);
+        long tmp2 = nodeGridIndexArray[index1];
+        nodeGridIndexArray[index1] = nodeGridIndexArray[index2];
+        nodeGridIndexArray[index2] = tmp2;
     }
 }

@@ -12,9 +12,13 @@ import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 
 import org.openstreetmap.gui.jmapviewer.Coordinate;
 import org.openstreetmap.gui.jmapviewer.JMapController;
@@ -63,6 +67,8 @@ MouseWheelListener {
     private static final short CAR_MAXSPEED = 150;
     private static final short PED_MAXSPEED = 5;
     private static int ROUTE_HEAP_CAPACITY = 1000000;
+    // Number of grids to buffer
+    private static int GRID_BUFFER_SIZE = 25;
     
     
     // Start and end for route
@@ -85,8 +91,10 @@ MouseWheelListener {
     int[][] gridIndices;
     // List of all grids, loaded or not loaded
     ArrayList<MapGrid> grids;
-    int gridsLoadedCount;
-    // TODO Grid offloading
+    // A simple queue with order of grids loaded to unload it in same order
+    Queue<Integer> loadedGridsQueue;
+    int gridLoads = 0;
+    // TODO Intelligent Grid unloading
     
     // Heap for rout finding
     NodeDistHeap routeDistHeap;
@@ -101,7 +109,7 @@ MouseWheelListener {
         super(map);
         
         try {            
-            loadGridIndex();    
+            loadGridIndexData();    
             
             routeDistHeap = new NodeDistHeap(ROUTE_HEAP_CAPACITY);
         } catch (Exception e) {
@@ -146,7 +154,7 @@ MouseWheelListener {
      * Read and initialize grid information
      * @throws Exception
      */
-    private void loadGridIndex() throws Exception 
+    private void loadGridIndexData() throws Exception 
     {
         System.out.println("Start loading grid index");
         try (ObjectInputStream gridReader =
@@ -158,7 +166,7 @@ MouseWheelListener {
             gridLonCount = gridReader.readInt();
 
             grids = new ArrayList<>(gridLatCount * gridLonCount);
-            gridsLoadedCount = 0;
+            loadedGridsQueue = new LinkedList<>();
             gridIndices = new int[gridLatCount][gridLonCount];
             int iGrid = 0;
             for (int iLat = 0; iLat < gridLatCount; iLat++) {
@@ -180,22 +188,24 @@ MouseWheelListener {
      */
     private MapGrid loadGrid(int gridIndex) {
         try {
+            while(loadedGridsQueue.size() >= GRID_BUFFER_SIZE) {
+                // Unload grid if to many grids in buffer
+                int unloadIndex = loadedGridsQueue.remove();
+                grids.set(unloadIndex, new MapGrid());
+                System.out.println("Unloaded grid " + gridIndex + ". Grids loaded: " + loadedGridsQueue.size());
+            }
+            
             MapGrid loaded = new MapGrid(MAP_DIR + "\\grids\\" + gridIndex + ".grid");
             grids.set(gridIndex, loaded);
-            gridsLoadedCount++;
-            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + gridsLoadedCount);
+            loadedGridsQueue.add(gridIndex);
+            gridLoads++;
+            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGridsQueue.size() + ". Load operations: " + gridLoads);
             return loaded;
         } catch (Exception e) {
             System.err.println("Failed to load grid");
             e.printStackTrace();
             return grids.get(gridIndex);
         }
-    }
-    
-    private void unloadGrid(int gridIndex) {
-        grids.set(gridIndex, new MapGrid());
-        gridsLoadedCount--;
-        System.out.println("Unloaded grid " + gridIndex + ". Grids loaded: " + gridsLoadedCount);
     }
     
     
@@ -485,14 +495,14 @@ MouseWheelListener {
         // Reset buffers and 
         routeDistHeap.resetEmpty();
         Map<Integer, MapGridRoutingBuffer> routingGridBuffers = new HashMap<>(); // Stores all buffers for all grids involved in routing
-        Map<Long, Float> nodesRouteOpenMap = new HashMap<>(); // Stores all open nodes and their heuristic
+        Set<Long> openList = new HashSet<>(); // Stores all open nodes and their heuristic
         // TODO routingBuffers offloading
         
         // Add startnode  
         routeDistHeap.add(startNodeGridIndex, 0.0f);
         MapGridRoutingBuffer startGridRB = new MapGridRoutingBuffer(startGrid.nodeCount);
         routingGridBuffers.put(startGridIndex, startGridRB);
-        nodesRouteOpenMap.put(startNodeGridIndex, 0.0f);
+        openList.add(startNodeGridIndex);
         
         boolean found = false;
         long target = (long)targetNodeGridIndex;
@@ -501,6 +511,8 @@ MouseWheelListener {
         int hReuse = 0;
         int gridChanges = 0;
         int gridStays = 0;
+        int firstVisits = 0;
+        int againVisits = 0;
         
         int oldVisGridIndex = startGridIndex;
         MapGrid visGrid = startGrid;
@@ -541,7 +553,7 @@ MouseWheelListener {
 
             // Mark as closed/visited
             visGridRB.nodesRouteClosedList[visNodeIndex] = true;
-            nodesRouteOpenMap.remove(visNodeGridIndex);
+            openList.remove(visNodeGridIndex);
             visitedCount++;
 
             
@@ -624,28 +636,28 @@ MouseWheelListener {
                     throw new RuntimeException("Unsupported routing mode: " + routeMode);
                 }
                 
+                // Caching h or holding visited in a nodes does not make sense
+                // Re-visiting rate seems to be below 1:10 and maps get very slow and memory consuming
+                float h = Utils.calcNodeDist(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon) * hFactor;
 
-
-                //nodesPreBuffer[nbIndex] = nodeIndex; // TODO outside if?
-                
-                Float hExistign = nodesRouteOpenMap.get(nbNodeGridIndex);
-                if (hExistign != null) {
+                if (openList.contains(nbNodeGridIndex)) {
                     hReuse++;
                     // Point open and not closed - update if necessary
-                    if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbDist + hExistign)) {
+                    if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbDist + h)) {
                         nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
                         nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
                     }
+                    againVisits++;
                 } else {    
-                    float hNew = Utils.calcNodeDist(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon) * hFactor;
-                    //float hnew = 0.0f;
-                    hCalc++;
-                    nodesRouteOpenMap.put(nbNodeGridIndex, hNew);
                     // Point not found yet - add to heap and open list
-                    routeDistHeap.add(nbNodeGridIndex, nbDist + hNew);
+                    hCalc++;
+                    // Add
+                    routeDistHeap.add(nbNodeGridIndex, nbDist + h);
                     //nodesRouteOpenList[nbIndex] = true;
                     nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
                     nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
+                    openList.add(nbNodeGridIndex);
+                    firstVisits++;
                 }
             }
         }
@@ -654,6 +666,8 @@ MouseWheelListener {
         System.out.println("H reuse: " + hReuse);
         System.out.println("gridChanges: " + gridChanges);
         System.out.println("gridStays: " + gridStays);
+        System.out.println("firstVisits: " + firstVisits);
+        System.out.println("againVisits: " + againVisits);
         System.out.println("MaxHeapSize: " + routeDistHeap.getSizeUsageMax());
         
         // TODO Time and dist
