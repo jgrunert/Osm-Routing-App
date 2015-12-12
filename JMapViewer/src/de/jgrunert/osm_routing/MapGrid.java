@@ -14,7 +14,8 @@ public class MapGrid {
     public final int[] nodesEdgeOffset;
    
     public final int edgeCount;
-    public final int[] edgesTarget;
+    public final int[] edgesTargetGrid;
+    public final short[] edgesTargetGridIndex;
     public final byte[] edgesInfobits;
     public final float[] edgesLengths;
     public final byte[] edgesMaxSpeeds;
@@ -36,7 +37,8 @@ public class MapGrid {
         this.nodesLon = null;
         this.nodesEdgeOffset = null;
 
-        this.edgesTarget = null;
+        this.edgesTargetGrid = null;
+        this.edgesTargetGridIndex = null;
         this.edgesInfobits = null;
         this.edgesLengths = null;
         this.edgesMaxSpeeds = null;
@@ -47,7 +49,7 @@ public class MapGrid {
      * Creates loaded map grid
      */
     public MapGrid(int index, float lat, float lon, int nodeCount, float[] nodesLat, float[] nodesLon,
-            int[] nodesEdgeOffset, int edgeCount, int[] edgesTarget, byte[] edgesInfobits, float[] edgesLengths,
+            int[] nodesEdgeOffset, int edgeCount, int[] edgesTargetGrid, short[] edgesTargetGridIndex, byte[] edgesInfobits, float[] edgesLengths,
             byte[] edgesMaxSpeeds) {
         super();
         this.index = index;
@@ -59,7 +61,8 @@ public class MapGrid {
         this.nodesLon = nodesLon;
         this.nodesEdgeOffset = nodesEdgeOffset;
         this.edgeCount = edgeCount;
-        this.edgesTarget = edgesTarget;
+        this.edgesTargetGrid = edgesTargetGrid;
+        this.edgesTargetGridIndex = edgesTargetGridIndex;
         this.edgesInfobits = edgesInfobits;
         this.edgesLengths = edgesLengths;
         this.edgesMaxSpeeds = edgesMaxSpeeds;

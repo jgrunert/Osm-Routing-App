@@ -111,11 +111,13 @@ public class OsmAppPreprocessorPass5 {
 		int nodeCounter = 0;
 		newNodeIndices = new int[nodeCount];
 		newNodeIndicesInverse = new int[nodeCount];
-		int[] nodeGridIndices = new int[nodeCount];
+		int[] nodesGrids = new int[nodeCount]; // Indices of grids a node is located in
+		short[] nodesGridIndex = new short[nodeCount]; // Indices of nodes inside a grid
 		int[][] gridNodeOffsets = new int[maxLatI - minLatI][maxLonI - minLonI];
 		int[][] gridNodeCounts = new int[maxLatI - minLatI][maxLonI - minLonI];
 			
 		int gridIndex = 0;
+		int largestGrid = 0;
 		for(int iLat = 0; iLat < (maxLatI - minLatI); iLat++) {
 			for(int iLon = 0; iLon < (maxLonI - minLonI); iLon++) {
 				float latMin = minLat + iLat * gridRaster;
@@ -123,7 +125,7 @@ public class OsmAppPreprocessorPass5 {
 				float lonMin = minLon + iLon * gridRaster;
 				float lonMax = minLon + (iLon+1) * gridRaster;
 				
-				int gridNodes = 0;
+				int gridNodeCounter = 0;
 				gridNodeOffsets[iLat][iLon] = nodeCounter;
 				
 				for(int iN = 0; iN < nodeCount; iN++) {
@@ -134,15 +136,22 @@ public class OsmAppPreprocessorPass5 {
 						if(newNodeIndices[iN] != 0) {
 							throw new RuntimeException("Node cannot be in two different grids");
 						}
+						if(gridIndex > Short.MAX_VALUE) {
+							throw new RuntimeException("To many nodes in grid: gridIndex > Short.MAX_VALUE");
+						}
 						newNodeIndices[iN] = nodeCounter;
 						newNodeIndicesInverse[nodeCounter] = iN;
-						nodeGridIndices[nodeCounter] = gridIndex;
-						gridNodes++;
+						nodesGrids[nodeCounter] = gridIndex;
+						nodesGridIndex[nodeCounter] = (short)gridNodeCounter;
+						gridNodeCounter++;
 						nodeCounter++;
+						if(gridNodeCounter > largestGrid) {
+							largestGrid = gridNodeCounter;
+						}
 					}
 				}
 				
-				gridNodeCounts[iLat][iLon] = gridNodes;
+				gridNodeCounts[iLat][iLon] = gridNodeCounter;
 				gridIndex++;
 			}
 			
@@ -153,6 +162,7 @@ public class OsmAppPreprocessorPass5 {
 			throw new RuntimeException("nodeIndex != nodeCount");
 		}
 		System.out.println("Finished finding grid nodes");
+		System.out.println("Largest grid: " + largestGrid);
 		
 		
 		// Update node coordinates
@@ -174,13 +184,14 @@ public class OsmAppPreprocessorPass5 {
 		}
     	System.out.println("Finished updating nodes");
 	    
-	    
+
+	    int[] edgesTargetGrid = new int[edgeCount];
+	    short[] edgesTargetGridIndex = new short[edgeCount];
 	    {
 	    System.out.println("Start updating edges");
 		// Update node edge tagets and offsets
 	    int[] nodesEdgeOffsetNew = new int[nodeCount];
 	    int[] edgesTargetNew = new int[edgeCount];
-	    int[] edgesTargetGrid = new int[edgeCount];
 	    byte[] edgesInfobitsNew = new byte[edgeCount];
 	    float[] edgesLengthsNew = new float[edgeCount];
 	    byte[] edgesMaxSpeedsNew = new byte[edgeCount];
@@ -194,8 +205,10 @@ public class OsmAppPreprocessorPass5 {
                     || (iN + 1 == nodesEdgeOffset.length && iEdge < edgesTarget.length); // Last node in offset array
                     iEdge++) 
 	        {
-	        	edgesTargetNew[edgeOffset] = newNodeIndices[edgesTarget[iEdge]];
-	        	edgesTargetGrid[edgeOffset] = nodeGridIndices[edgesTargetNew[edgeOffset]];
+	        	int target = newNodeIndices[edgesTarget[iEdge]];
+	        	edgesTargetNew[edgeOffset] = target;
+	        	edgesTargetGrid[edgeOffset] = nodesGrids[target];
+	        	edgesTargetGridIndex[edgeOffset] = nodesGridIndex[target];
 	        	edgesInfobitsNew[edgeOffset] = edgesInfobits[iEdge];
 	        	edgesLengthsNew[edgeOffset] = edgesLengths[iEdge];
 	        	edgesMaxSpeedsNew[edgeOffset] = edgesMaxSpeeds[iEdge];
@@ -259,10 +272,74 @@ public class OsmAppPreprocessorPass5 {
 			gridIndex = 0;
 			for(int iLat = 0; iLat < (maxLatI - minLatI); iLat++) {
 				for(int iLon = 0; iLon < (maxLonI - minLonI); iLon++) {
-					//int gridNodeOffset = 
+					// Get node count
+					int gridNodeFirst = gridNodeOffsets[iLat][iLon];
+					int gridNodeCount = gridNodeCounts[iLat][iLon];
+					int nodeLast = gridNodeFirst + gridNodeCount - 1;
+					
+			        
+					// Extract nodes
+			        float[] gridNodesLat = new float[gridNodeCount];
+			        float[] gridNodesLon = new float[gridNodeCount];
+			        int[] gridNodesEdgeOffset = new int[gridNodeCount];
+			       
+					for(int iN = 0; iN < gridNodeCount; iN++) {
+						gridNodesLat[iN] = nodesLat[gridNodeFirst + iN];
+						gridNodesLon[iN] = nodesLon[gridNodeFirst + iN];
+						gridNodesEdgeOffset[iN] = nodesEdgeOffset[gridNodeFirst + iN];
+					}
+
+					// Extract edges
+					int gridEdgeCount;
+					int gridEdgeFirst;
+					if (gridNodeCount > 0) {
+						// Get edge count
+						gridEdgeFirst = nodesEdgeOffset[gridNodeFirst];
+
+						if (nodeLast + 1 == nodesEdgeOffset.length) {
+							gridEdgeCount = edgeCount - gridEdgeFirst;
+						} else {
+							gridEdgeCount = nodesEdgeOffset[nodeLast + 1]
+									- gridEdgeFirst;
+						}
+					} else {
+						gridEdgeFirst = 0;
+						gridEdgeCount = 0;
+					}
+					
+			        int[] gridEdgesTargetGrid = new int[gridEdgeCount];
+			        short[] gridEdgesTargetGridIndex = new short[gridEdgeCount];
+			        byte[] gridEdgesInfobits = new byte[gridEdgeCount];
+			        float[] gridEdgesLengths = new float[gridEdgeCount];
+			        byte[] gridEdgesMaxSpeeds = new byte[gridEdgeCount];
+					for(int iE = 0; iE < gridEdgeCount; iE++) {
+						gridEdgesTargetGrid[iE] = edgesTargetGrid[gridEdgeFirst + iE];
+						gridEdgesTargetGridIndex[iE] = edgesTargetGridIndex[gridEdgeFirst + iE];
+						gridEdgesInfobits[iE] = edgesInfobits[gridEdgeFirst + iE];
+						gridEdgesLengths[iE] = edgesLengths[gridEdgeFirst + iE];
+						gridEdgesMaxSpeeds[iE] = edgesMaxSpeeds[gridEdgeFirst + iE];
+					}
+			        
+					
+					// Write output
+			        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\grids\\" + gridIndex + ".grid"));
+			        os.writeInt(gridNodeCount); // Node count
+			        os.writeInt(gridEdgeCount); // Edge count
+			        // Nodes
+			        os.writeObject(gridNodesLat);
+			        os.writeObject(gridNodesLon);
+			        os.writeObject(gridNodesEdgeOffset);
+			        // Edges
+			        os.writeObject(gridEdgesTargetGrid);
+			        os.writeObject(gridEdgesTargetGridIndex);
+			        os.writeObject(gridEdgesInfobits);
+			        os.writeObject(gridEdgesLengths);
+			        os.writeObject(gridEdgesMaxSpeeds);
+					os.close();
 					
 					gridIndex++;
 				}
+				System.out.println(iLat * 100 / (maxLatI - minLatI) + "% finding grid nodes");
 			}
 			
 	        System.out.println("Finished exporting grids");  

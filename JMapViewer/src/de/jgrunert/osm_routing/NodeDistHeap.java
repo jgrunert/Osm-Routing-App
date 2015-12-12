@@ -15,6 +15,7 @@ public class NodeDistHeap {
     private final int[] indexArray;
     private final int[] nodeHeapIndices;
     private int size;
+    private int sizeUsageMax;
     
     /**
      * Initializes heap
@@ -38,13 +39,15 @@ public class NodeDistHeap {
         }
         Arrays.fill(valuesArray, Float.MAX_VALUE);
         size = nodeCount;
+        sizeUsageMax = 0;
         System.out.println("Finished reset NodeDistHeap");
     }
     
     public void resetEmpty() {
         size = 0;
+        sizeUsageMax = 0;
     }
-    
+
     public void add(int nodeIndex, float value) {
         if (size >= maxSize) {
             throw new IllegalStateException("Heap capacity exceeded");
@@ -56,6 +59,10 @@ public class NodeDistHeap {
         valuesArray[index] = value;
         indexArray[index] = nodeIndex;
         nodeHeapIndices[nodeIndex] = index;
+        
+        if(size > sizeUsageMax) {
+            sizeUsageMax = size;
+        }
         
         bubbleUp(this.size);
     }
@@ -206,6 +213,10 @@ public class NodeDistHeap {
     
     public int getSize() {
         return size;
+    }
+    
+    public int getSizeUsageMax() {
+        return sizeUsageMax;
     }
 
 
