@@ -10,7 +10,6 @@ import java.awt.event.MouseWheelListener;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -92,9 +91,9 @@ MouseWheelListener {
     // List of all grids, loaded or not loaded
     ArrayList<MapGrid> grids;
     // A simple queue with order of grids loaded to unload it in same order
-    Queue<Integer> loadedGridsQueue;
-    int gridLoads = 0;
-    // TODO Intelligent Grid unloading
+    List<MapGrid> loadedGrids;
+    int gridLoadOperations;
+    long gridVisitTimestamp;
     
     // Heap for rout finding
     NodeDistHeap routeDistHeap;
@@ -109,7 +108,7 @@ MouseWheelListener {
         super(map);
         
         try {            
-            loadGridIndexData();    
+            intializeGrids();    
             
             routeDistHeap = new NodeDistHeap(ROUTE_HEAP_CAPACITY);
         } catch (Exception e) {
@@ -154,7 +153,7 @@ MouseWheelListener {
      * Read and initialize grid information
      * @throws Exception
      */
-    private void loadGridIndexData() throws Exception 
+    private void intializeGrids() throws Exception 
     {
         System.out.println("Start loading grid index");
         try (ObjectInputStream gridReader =
@@ -166,12 +165,15 @@ MouseWheelListener {
             gridLonCount = gridReader.readInt();
 
             grids = new ArrayList<>(gridLatCount * gridLonCount);
-            loadedGridsQueue = new LinkedList<>();
+            loadedGrids = new ArrayList<>();
             gridIndices = new int[gridLatCount][gridLonCount];
+            gridVisitTimestamp = 0;
+            gridLoadOperations = 0;
+            
             int iGrid = 0;
             for (int iLat = 0; iLat < gridLatCount; iLat++) {
                 for (int iLon = 0; iLon < gridLonCount; iLon++) {
-                    grids.add(new MapGrid()); // Initialize with empty, not loaded grids
+                    grids.add(new MapGrid(iGrid)); // Initialize with empty, not loaded grids
                     gridIndices[iLat][iLon] = iGrid;
                     iGrid++;
                 }
@@ -188,18 +190,30 @@ MouseWheelListener {
      */
     private MapGrid loadGrid(int gridIndex) {
         try {
-            while(loadedGridsQueue.size() >= GRID_BUFFER_SIZE) {
+            while(loadedGrids.size() >= GRID_BUFFER_SIZE) {
                 // Unload grid if to many grids in buffer
-                int unloadIndex = loadedGridsQueue.remove();
-                grids.set(unloadIndex, new MapGrid());
-                System.out.println("Unloaded grid " + gridIndex + ". Grids loaded: " + loadedGridsQueue.size());
+                
+                // Find grid longest time not used
+                int sleepyGridIndex = 0;
+                long sleepyGridTimestamp = loadedGrids.get(0).visitTimestamp;
+                for(int i = 1; i < loadedGrids.size(); i++) {
+                    if(loadedGrids.get(i).visitTimestamp < sleepyGridTimestamp) {
+                        sleepyGridIndex = i;
+                        sleepyGridTimestamp = loadedGrids.get(i).visitTimestamp;
+                    }
+                }
+                MapGrid toUnload = loadedGrids.remove(sleepyGridIndex);
+                
+                // Unload
+                grids.set(toUnload.index, new MapGrid(toUnload.index));
+                System.out.println("Unloaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size());
             }
             
-            MapGrid loaded = new MapGrid(MAP_DIR + "\\grids\\" + gridIndex + ".grid");
+            MapGrid loaded = new MapGrid(gridIndex, gridVisitTimestamp, MAP_DIR + "\\grids\\" + gridIndex + ".grid");
             grids.set(gridIndex, loaded);
-            loadedGridsQueue.add(gridIndex);
-            gridLoads++;
-            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGridsQueue.size() + ". Load operations: " + gridLoads);
+            loadedGrids.add(loaded);
+            gridLoadOperations++;
+            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size() + ". Load operations: " + gridLoadOperations);
             return loaded;
         } catch (Exception e) {
             System.err.println("Failed to load grid");
@@ -387,7 +401,6 @@ MouseWheelListener {
 
     
     // Info bits: 0,0,0,0,0,[Car],[Ped],[Oneway]
-    // TODO Zugangsbeschränkung
     private byte carBitMask = 5;
     private byte carBitValue = 4;
     private byte pedBitMask = 2;
@@ -496,9 +509,9 @@ MouseWheelListener {
         routeDistHeap.resetEmpty();
         Map<Integer, MapGridRoutingBuffer> routingGridBuffers = new HashMap<>(); // Stores all buffers for all grids involved in routing
         Set<Long> openList = new HashSet<>(); // Stores all open nodes and their heuristic
-        // TODO routingBuffers offloading
+        // TODO routingGridBuffers offloading (if no more nodes of this grid open? does this ever happen?)
         
-        // Add startnode  
+        // Add start node  
         routeDistHeap.add(startNodeGridIndex, 0.0f);
         MapGridRoutingBuffer startGridRB = new MapGridRoutingBuffer(startGrid.nodeCount);
         routingGridBuffers.put(startGridIndex, startGridRB);
@@ -538,6 +551,9 @@ MouseWheelListener {
             } else {
                 gridStays++;
             }
+            
+            // Update visitTimestamp to mark that grid is still in use
+            visGrid.visitTimestamp = ++gridVisitTimestamp;
            
 
             // Get distance of node from start, remove and get index
@@ -670,7 +686,7 @@ MouseWheelListener {
         System.out.println("againVisits: " + againVisits);
         System.out.println("MaxHeapSize: " + routeDistHeap.getSizeUsageMax());
         
-        // TODO Time and dist
+        // TODO Time and dist and output (as table?)
         if (found) {
             // Reconstruct route
             long i = targetNodeGridIndex;
@@ -911,7 +927,6 @@ MouseWheelListener {
 //        // Reset buffers
 //        routeDistHeap.resetFill(nodeCount);
 //        Arrays.fill(nodesRouteClosedList, false);
-//        // TODO Add only relevant nodes?
 //
 //        
 //        // Start node

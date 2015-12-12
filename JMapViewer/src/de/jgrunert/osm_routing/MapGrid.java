@@ -7,7 +7,11 @@ import java.io.ObjectInputStream;
 @SuppressWarnings("javadoc")
 public class MapGrid {
 
+    public final int index;
+    // Indicates if grid data is loaded
     public final boolean loaded;
+    // Timestamp of the last node visit in this array
+    public long visitTimestamp;
     
     public final int nodeCount;
     public final float[] nodesLat;
@@ -24,8 +28,11 @@ public class MapGrid {
     /**
      * Creates empty map grid
      */
-    public MapGrid() {
+    public MapGrid(int index) {
         super();
+        this.index = index;
+        this.visitTimestamp = 0;
+        
         this.nodeCount = 0;
         this.edgeCount = 0;
         this.loaded = false;
@@ -44,8 +51,11 @@ public class MapGrid {
     /**
      * Creates loaded map grid
      */
-    public MapGrid(String gridFile) throws Exception {
+    public MapGrid(int index, long gridOperationTimestamp, String gridFile) throws Exception {
         super();
+
+        this.index = index;
+        this.visitTimestamp = gridOperationTimestamp;
         
         try (ObjectInputStream gridReader = new ObjectInputStream(new FileInputStream(gridFile))) 
         {
