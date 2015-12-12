@@ -53,44 +53,42 @@ MouseWheelListener {
     private boolean floatClickZoomEnabled = true;
     
     
+    // General constants
+    private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
+    //private static final String MAP_DIR = "D:\\Jonas\\OSM\\germany";
+    
+    
+    // Routing constants
     private static final short CAR_MAXSPEED = 150;
     private static final short PED_MAXSPEED = 5;
+    private static int ROUTE_HEAP_CAPACITY = 1000000;
     
-    private int startNodeIndex = -1;
-    private int targetNodeIndex = -1;
-
+    
+    // Start and end for route
+    private Long startNodeGridIndex = null;
+    private Long targetNodeGridIndex = null;
+    
+    
+    // Route and point display
     private List<MapMarkerDot> routeDots = new ArrayList<>();
     private List<MapPolygonImpl> routeLines = new ArrayList<>();
-    
-    int nodeCount = 0;
-    float[] nodesLat;
-    float[] nodesLon;
-    int[] nodesEdgeOffset;
-   
-    // TODO Save RAM
-    
-    // Buffer for predecessors when calculating routes
-    int[] nodesPreBuffer;
-    // Buffer for node visisted when calculating routes
-    boolean[] nodesRouteClosedList;
-    float[] nodesRouteDists;
-    // Heap for rout finding
-    NodeDistHeap routeDistHeap;
-    
-    int edgeCount = 0;
-    int[] edgesTarget;
-    byte[] edgesInfobits;
-    float[] edgesLengths;
-    byte[] edgesMaxSpeeds;
 
+    
+    // Grid information
     float gridRaster;
     float gridMinLat;
     float gridMinLon;
     int gridLatCount;
     int gridLonCount;
-    int[][] gridNodeOffsets;
-    int[][] gridNodeCounts;
-        
+    // Indices of grids (iLat/iLon to index)
+    int[][] gridIndices;
+    // List of all grids, loaded or not loaded
+    ArrayList<MapGrid> grids;
+    // TODO Grid offloading
+    
+    // Heap for rout finding
+    NodeDistHeap routeDistHeap;
+            
         
     
    /**
@@ -101,12 +99,9 @@ MouseWheelListener {
         super(map);
         
         try {            
-            loadOsmData();    
+            loadGridData();    
             
-            nodesPreBuffer = new int[nodeCount];
-            nodesRouteClosedList = new boolean[nodeCount];
-            nodesRouteDists = new float[nodeCount];
-            routeDistHeap = new NodeDistHeap(nodeCount);
+            routeDistHeap = new NodeDistHeap(ROUTE_HEAP_CAPACITY);
         } catch (Exception e) {
             System.err.println("Error at loadOsmData");
             e.printStackTrace();
@@ -139,60 +134,71 @@ MouseWheelListener {
 //        System.out.println("Time: " + (System.currentTimeMillis() - startTime));
 
 //        startTime = System.currentTimeMillis();
-        startNodeIndex = findNextNode(47.8f, 9.0f, (byte)0, (byte)0);
-        targetNodeIndex = findNextNode(49.15f, 9.22f, (byte)0, (byte)0);
+        startNodeGridIndex = findNextNode(47.8f, 9.0f, (byte)0, (byte)0);
+        targetNodeGridIndex = findNextNode(49.15f, 9.22f, (byte)0, (byte)0);
         //calculateRoute(TransportMode.Car, RoutingMode.Fastest);
         //calculateRoute(TransportMode.Car, RoutingMode.Shortest);
     }
     
-    
-    @SuppressWarnings("resource")
-    private void loadOsmData() throws Exception {
-        
-        //String inDir = "D:\\Jonas\\OSM\\germany";
-        String inDir = "D:\\Jonas\\OSM\\bawue";
+    /**
+     * Read and initialize grid information
+     * @throws Exception
+     */
+    private void loadGridData() throws Exception 
+    {
+        System.out.println("Start reading grid");
+        ObjectInputStream gridReader = new ObjectInputStream(new FileInputStream(MAP_DIR + "\\grids\\grids.index"));
+        gridRaster = gridReader.readFloat();
+        gridMinLat = gridReader.readFloat();
+        gridMinLon = gridReader.readFloat();
+        gridLatCount = gridReader.readInt();
+        gridLonCount = gridReader.readInt();
 
-        {
-        System.out.println("Start reading nodes");
-        ObjectInputStream nodeReader = new ObjectInputStream(new FileInputStream(inDir + "\\nodes-final.bin"));
-        
-        nodeCount = (Integer)nodeReader.readObject();
-        nodesLat = (float[])nodeReader.readObject();
-        nodesLon = (float[])nodeReader.readObject();
-        nodesEdgeOffset = (int[])nodeReader.readObject();
-        
-        nodeReader.close();
-        System.out.println("Finished reading nodes");
+        grids = new ArrayList<>(gridLatCount * gridLonCount);
+        gridIndices = new int[gridLatCount][gridLonCount];
+        int iGrid = 0;
+        for (int iLat = 0; iLat < gridLatCount; iLat++) {
+            for (int iLon = 0; iLon < gridLonCount; iLon++) {
+                grids.add(new MapGrid()); // Initialize with empty, not loaded grids
+                gridIndices[iLat][iLon] = iGrid;
+                iGrid++;
+            }
         }
-        
-        {
-        System.out.println("Start reading edges");
-        ObjectInputStream edgeReader = new ObjectInputStream(new FileInputStream(inDir + "\\edges-final.bin"));
-        edgeCount = (Integer)edgeReader.readObject();
-        edgesTarget = (int[])edgeReader.readObject();
-        edgesInfobits =(byte[])edgeReader.readObject();
-        edgesLengths = (float[])edgeReader.readObject();
-        edgesMaxSpeeds = (byte[])edgeReader.readObject();
-        
-        edgeReader.close();
-        System.out.println("Finished reading edges");
+
+        gridReader.close();
+        System.out.println("Finished reading grid");
+    }
+    
+    
+    /**
+     * Loads grid, caches and returns it
+     */
+    private MapGrid loadGrid(int gridIndex) {
+        try {
+            MapGrid loaded = new MapGrid(MAP_DIR + "\\" + gridIndex + ".grid");
+            grids.set(gridIndex, loaded);
+            return loaded;
+        } catch (Exception e) {
+            System.err.println("Failed to load grid");
+            e.printStackTrace();
+            return grids.get(gridIndex);
         }
-        
-        // Output
-        {
-            System.out.println("Start reading grid");
-            ObjectInputStream gridReader = new ObjectInputStream(
-                    new FileInputStream(inDir + "\\grid-final.bin"));
-            gridRaster = gridReader.readFloat();
-            gridMinLat = gridReader.readFloat();
-            gridMinLon = gridReader.readFloat();
-            gridLatCount = gridReader.readInt();
-            gridLonCount = gridReader.readInt();
-            gridNodeOffsets = (int[][])gridReader.readObject();
-            gridNodeCounts = (int[][])gridReader.readObject();
-            gridReader.close();
-            System.out.println("Finished reading grid");
-        }
+    }
+    
+    private void unloadGrid(int gridIndex) {
+        grids.set(gridIndex, new MapGrid());
+    }
+    
+    
+    /**
+     * Returns grid a point is located in or next grid if not in any grid
+     */
+    private int getGridOfPoint(float lat, float lon) {
+        int latI = (int)((lat - gridMinLat) / gridRaster);
+        int lonI = (int)((lon - gridMinLon) / gridRaster);        
+        latI = Math.max(0, Math.min(gridLatCount-1, latI));
+        lonI = Math.max(0, Math.min(gridLonCount-1, lonI));        
+        return gridIndices[latI][lonI];
     }
     
     
@@ -254,31 +260,51 @@ MouseWheelListener {
     }
     
     
+
+    /**
+     * Tries to return a grid, tries to load grid if necessary
+     */
+    private MapGrid getGrid(int gridIndex) {
+        MapGrid grid = grids.get(gridIndex);
+        if(!grid.loaded) {
+            grid = loadGrid(gridIndex);
+        }
+        return grid;
+    }
+    
+    /**
+     * Tries to determine coordinates of a node, tries to load grid if necessary
+     */
+    private Coordinate getNodeCoordinates(int gridIndex, short nodeIndex) {
+        MapGrid grid = getGrid(gridIndex);
+        return new Coordinate(grid.nodesLat[nodeIndex], grid.nodesLon[nodeIndex]);
+    }
+    
+    
     /**
      * Tries to find out index of next point to given coordinate
      * @param coord
      * @return Index of next point
      */
-    private int findNextNode(float lat, float lon, byte filterBitMask, byte filterBitValue) {
+    private long findNextNode(float lat, float lon, byte filterBitMask, byte filterBitValue) 
+    {
+        // Get grid
+        int gridIndex = getGridOfPoint(lat, lon);
+        MapGrid grid = grids.get(gridIndex);
+        if(!grid.loaded) {
+            grid = loadGrid(gridIndex);
+        }
+        
+        
         int nextIndex = -1;
         float smallestDist = Float.MAX_VALUE;
-
         
-        int latI = (int)((lat - gridMinLat) / gridRaster);
-        int lonI = (int)((lon - gridMinLon) / gridRaster);
-        
-        latI = Math.max(0, Math.min(gridLatCount-1, latI));
-        lonI = Math.max(0, Math.min(gridLonCount-1, lonI));
-        
-        int iMin = gridNodeOffsets[latI][lonI];
-        int iMax = iMin + gridNodeCounts[latI][lonI];
-        
-        for(int i = iMin; i < iMax; i++) {                        
+        for(int i = 0; i < grid.nodeCount; i++) {                        
             if(!checkNodeWithFilter(i, filterBitMask, filterBitValue)) {
                 continue;
             }
                         
-           float dist = Utils.calcNodeDist(lat, lon, nodesLat[i], nodesLon[i]);
+           float dist = Utils.calcNodeDist(lat, lon, grid.nodesLat[i], grid.nodesLon[i]);
             if(dist < smallestDist) {
                 smallestDist = dist;
                 nextIndex = i;
@@ -426,7 +452,8 @@ MouseWheelListener {
         // Find route with A*
         while (!routeDistHeap.isEmpty()) {
             // Remove and get index
-            int nodeIndex = routeDistHeap.remove();
+            int nodeGrid = routeDistHeap.peekNodeGrid();
+            short nodeGridIndex = routeDistHeap.peekNodeGridIndex();
 
             // Get distance of node from start, remove and get index
             float nodeDist = nodesRouteDists[nodeIndex];

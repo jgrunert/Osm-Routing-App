@@ -240,6 +240,20 @@ public class OsmAppPreprocessorPass5 {
 			System.out.println("Finished serializing grid");
 		}
 		
+		// Output
+		{
+			System.out.println("Start writing grid2");
+			ObjectOutputStream os = new ObjectOutputStream(
+					new FileOutputStream(outDir + "\\grids\\grids.index"));
+			os.writeFloat(gridRaster);
+			os.writeFloat(minLat);
+			os.writeFloat(minLon);
+			os.writeInt(maxLatI - minLatI);
+			os.writeInt(maxLonI - minLonI);
+			os.close();
+			System.out.println("Finished serializing grid2");
+		}
+		
 		{
 	        System.out.println("Start serializing nodes");    
 	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\nodes-final.bin"));

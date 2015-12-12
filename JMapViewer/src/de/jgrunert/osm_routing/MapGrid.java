@@ -1,11 +1,13 @@
 package de.jgrunert.osm_routing;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+
 @SuppressWarnings("javadoc")
 public class MapGrid {
 
-    public final int index;
-    public final float lat;
-    public final float lon;
     public final boolean loaded;
     
     public final int nodeCount;
@@ -24,11 +26,8 @@ public class MapGrid {
     /**
      * Creates empty map grid
      */
-    public MapGrid(int index, float lat, float lon) {
+    public MapGrid() {
         super();
-        this.index = index;
-        this.lat = lat;
-        this.lon = lon;
         this.nodeCount = 0;
         this.edgeCount = 0;
         this.loaded = false;
@@ -48,24 +47,22 @@ public class MapGrid {
     /**
      * Creates loaded map grid
      */
-    public MapGrid(int index, float lat, float lon, int nodeCount, float[] nodesLat, float[] nodesLon,
-            int[] nodesEdgeOffset, int edgeCount, int[] edgesTargetGrid, short[] edgesTargetGridIndex, byte[] edgesInfobits, float[] edgesLengths,
-            byte[] edgesMaxSpeeds) {
+    public MapGrid(String gridFile) throws Exception {
         super();
-        this.index = index;
-        this.lat = lat;
-        this.lon = lon;
+        
+        ObjectInputStream gridReader = new ObjectInputStream(new FileInputStream(gridFile));
         this.loaded = true;
-        this.nodeCount = nodeCount;
-        this.nodesLat = nodesLat;
-        this.nodesLon = nodesLon;
-        this.nodesEdgeOffset = nodesEdgeOffset;
-        this.edgeCount = edgeCount;
-        this.edgesTargetGrid = edgesTargetGrid;
-        this.edgesTargetGridIndex = edgesTargetGridIndex;
-        this.edgesInfobits = edgesInfobits;
-        this.edgesLengths = edgesLengths;
-        this.edgesMaxSpeeds = edgesMaxSpeeds;
+        this.nodeCount = gridReader.readInt();
+        this.edgeCount = gridReader.readInt();
+        
+        this.nodesLat = (float[])gridReader.readObject();
+        this.nodesLon = (float[])gridReader.readObject();
+        this.nodesEdgeOffset = (int[])gridReader.readObject();
+        this.edgesTargetGrid = (int[])gridReader.readObject();
+        this.edgesTargetGridIndex = (short[])gridReader.readObject();
+        this.edgesInfobits = (byte[])gridReader.readObject();
+        this.edgesLengths = (float[])gridReader.readObject();
+        this.edgesMaxSpeeds = (byte[])gridReader.readObject();
     }
 
 }
