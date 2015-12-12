@@ -1,9 +1,8 @@
 package de.jgrunert.osm_routing;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.ObjectInputStream;
+
 
 @SuppressWarnings("javadoc")
 public class MapGrid {
@@ -50,19 +49,23 @@ public class MapGrid {
     public MapGrid(String gridFile) throws Exception {
         super();
         
-        ObjectInputStream gridReader = new ObjectInputStream(new FileInputStream(gridFile));
-        this.loaded = true;
-        this.nodeCount = gridReader.readInt();
-        this.edgeCount = gridReader.readInt();
-        
-        this.nodesLat = (float[])gridReader.readObject();
-        this.nodesLon = (float[])gridReader.readObject();
-        this.nodesEdgeOffset = (int[])gridReader.readObject();
-        this.edgesTargetGrid = (int[])gridReader.readObject();
-        this.edgesTargetGridIndex = (short[])gridReader.readObject();
-        this.edgesInfobits = (byte[])gridReader.readObject();
-        this.edgesLengths = (float[])gridReader.readObject();
-        this.edgesMaxSpeeds = (byte[])gridReader.readObject();
+        try (ObjectInputStream gridReader = new ObjectInputStream(new FileInputStream(gridFile))) 
+        {
+            this.loaded = true;
+            this.nodeCount = gridReader.readInt();
+            this.edgeCount = gridReader.readInt();
+
+            this.nodesLat = (float[]) gridReader.readObject();
+            this.nodesLon = (float[]) gridReader.readObject();
+            this.nodesEdgeOffset = (int[]) gridReader.readObject();
+            this.edgesTargetGrid = (int[]) gridReader.readObject();
+            this.edgesTargetGridIndex = (short[]) gridReader.readObject();
+            this.edgesInfobits = (byte[]) gridReader.readObject();
+            this.edgesLengths = (float[]) gridReader.readObject();
+            this.edgesMaxSpeeds = (byte[]) gridReader.readObject();
+
+            gridReader.close();
+        }
     }
 
 }

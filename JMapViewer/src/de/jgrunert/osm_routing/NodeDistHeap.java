@@ -1,9 +1,8 @@
 package de.jgrunert.osm_routing;
 
-
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
 
 /**
  * Min heap for map nodes
@@ -14,9 +13,9 @@ import java.util.Map;
 public class NodeDistHeap {
     private final int maxCapacity;
     private final float[] valuesArray;
-    private final int[] gridIndexArray;
-    private final short[] nodeIndexArray;
-    private final Map<Integer, Map<Short, Integer>> nodeHeapIndices;
+    // Combined gridIndex(63-32)+nodeIndex(31-0)
+    private final long[] nodeGridIndexArray;
+    private final Map<Long,Integer> nodeGridHeapIndices;
     private int size;
     private int sizeUsageMax;
     
@@ -26,9 +25,8 @@ public class NodeDistHeap {
     public NodeDistHeap (int maxCapacity) {
         this.maxCapacity = maxCapacity;
         valuesArray = new float[maxCapacity+1];  
-        gridIndexArray = new int[maxCapacity+1];  
-        nodeIndexArray = new short[maxCapacity+1];
-        nodeHeapIndices = new HashMap<>(maxCapacity);
+        nodeGridIndexArray = new long[maxCapacity+1];  
+        nodeGridHeapIndices = new HashMap<>(maxCapacity);
         size = 0;
         sizeUsageMax = 0;
     }
@@ -51,10 +49,10 @@ public class NodeDistHeap {
     public void resetEmpty() {
         size = 0;
         sizeUsageMax = 0;
-        nodeHeapIndices.clear();
+        nodeGridHeapIndices.clear();
     }
 
-    public void add(int nodeGrid, short nodeGridIndex, float value) {
+    public void add(long nodeGridIndex, float value) {
         if (size >= maxCapacity) {
             throw new IllegalStateException("Heap capacity exceeded");
         }        
@@ -63,15 +61,9 @@ public class NodeDistHeap {
         size++;
         int indexInHeap = size;
         valuesArray[indexInHeap] = value;
-        gridIndexArray[indexInHeap] = nodeGrid;
-        nodeIndexArray[indexInHeap] = nodeGridIndex;
         
-        Map<Short, Integer> gridIndices = nodeHeapIndices.get(nodeGrid);
-        if(gridIndices == null) {
-            gridIndices = new HashMap<>();
-            nodeHeapIndices.put(nodeGrid, gridIndices);
-        }
-        gridIndices.put(nodeGridIndex, indexInHeap);
+        nodeGridIndexArray[indexInHeap] = nodeGridIndex;
+        nodeGridHeapIndices.put(nodeGridIndex, indexInHeap);
         
         if(size > sizeUsageMax) {
             sizeUsageMax = size;
@@ -83,8 +75,8 @@ public class NodeDistHeap {
     /**
      * Decreases key if new key smaller than existing key
      */
-    public boolean decreaseKeyIfSmaller(int nodeGrid, short nodeGridIndex, float newKey) {
-        int heapIndex = nodeHeapIndices.get(nodeGrid).get(nodeGridIndex);
+    public boolean decreaseKeyIfSmaller(long nodeGridIndex, float newKey) {
+        int heapIndex = nodeGridHeapIndices.get(nodeGridIndex);
         if (newKey < valuesArray[heapIndex]) {
             valuesArray[heapIndex] = newKey;
             bubbleUp(heapIndex);
@@ -98,8 +90,8 @@ public class NodeDistHeap {
     /**
      * Changes key, assumes that newKey<oldKey
      */
-    public void decreaseKey(int nodeGrid, short nodeGridIndex, int newKey) {
-        int heapIndex = nodeHeapIndices.get(nodeGrid).get(nodeGridIndex);
+    public void decreaseKey(long nodeGridIndex, int newKey) {
+        int heapIndex = nodeGridHeapIndices.get(nodeGridIndex);
         valuesArray[heapIndex] = newKey;
         bubbleUp(heapIndex);
     }
@@ -118,46 +110,35 @@ public class NodeDistHeap {
         return valuesArray[1];
     }
 
-    public int peekNodeGrid() {
+
+    public long peekNodeGridIndex() {
 //        if (this.isEmpty()) {
 //            throw new IllegalStateException();
 //        }
         
-        return gridIndexArray[1];
-    }
-    
-    public short peekNodeGridIndex() {
-//        if (this.isEmpty()) {
-//            throw new IllegalStateException();
-//        }
-        
-        return nodeIndexArray[1];
+        return nodeGridIndexArray[1];
     }
     
 
 
-    public void removeFirst() {
+    public long removeFirst() {
 //        if (this.isEmpty()) {
 //          throw new IllegalStateException();
 //      }
+        
+        long nodeGridIndex = nodeGridIndexArray[1];
             
         // get rid of the last leaf/decrement
         valuesArray[1] = valuesArray[size];
         valuesArray[size] = -1;
-        gridIndexArray[1] = gridIndexArray[size];
-        gridIndexArray[size] = -1;
-        nodeIndexArray[1] = nodeIndexArray[size];
-        nodeIndexArray[size] = -1;
+        nodeGridIndexArray[1] = nodeGridIndexArray[size];
+        nodeGridIndexArray[size] = -1;
+        nodeGridHeapIndices.remove(nodeGridIndex);
         size--;
         
-        int gridIndex = gridIndexArray[1];
-        Map<Short, Integer> gridIndices = nodeHeapIndices.get(gridIndex);
-        gridIndices.remove(nodeIndexArray[1]);
-        if(gridIndices.isEmpty()) {
-            nodeHeapIndices.remove(gridIndex);
-        }
-        
         bubbleDown();
+        
+        return nodeGridIndex;
     }
     
     
@@ -249,17 +230,12 @@ public class NodeDistHeap {
         valuesArray[index1] = valuesArray[index2];
         valuesArray[index2] = tmp1;      
 
-        int grid1 = gridIndexArray[index2];
-        int grid2 = gridIndexArray[index1];
-        gridIndexArray[index1] = grid1;
-        gridIndexArray[index2] = grid2;   
-
-        short node1 = nodeIndexArray[index2];
-        short node2 = nodeIndexArray[index1];
-        nodeIndexArray[index1] = node1;
-        nodeIndexArray[index2] = node2;  
+        long nodeGridIndex1 = nodeGridIndexArray[index2];
+        long nodeGridIndex2 = nodeGridIndexArray[index1];
+        nodeGridIndexArray[index1] = nodeGridIndex1;
+        nodeGridIndexArray[index2] = nodeGridIndex2;  
         
-        nodeHeapIndices.get(grid1).put(node1, index1);
-        nodeHeapIndices.get(grid2).put(node2, index2);
+        nodeGridHeapIndices.put(nodeGridIndex1, index1);
+        nodeGridHeapIndices.put(nodeGridIndex2, index2);
     }
 }

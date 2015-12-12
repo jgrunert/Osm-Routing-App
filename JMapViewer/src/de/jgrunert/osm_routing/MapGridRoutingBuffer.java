@@ -10,7 +10,7 @@ package de.jgrunert.osm_routing;
 @SuppressWarnings("javadoc")
 public class MapGridRoutingBuffer {
     // Buffer for predecessors when calculating routes
-    public final int[] nodesPreBuffer;
+    public final long[] nodesPreBuffer;
     // Buffer for node visisted when calculating routes
     public final boolean[] nodesRouteClosedList;
     public final float[] nodesRouteDists;
@@ -21,7 +21,7 @@ public class MapGridRoutingBuffer {
      * @param nodeCount Number of nodes in this grid
      */
     public MapGridRoutingBuffer(int nodeCount) {
-        nodesPreBuffer = new int[nodeCount];
+        nodesPreBuffer = new long[nodeCount];
         nodesRouteClosedList = new boolean[nodeCount];
         nodesRouteDists = new float[nodeCount];
     }
