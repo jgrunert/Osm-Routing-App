@@ -55,8 +55,8 @@ MouseWheelListener {
     
     // General constants
     //private static final String MAP_DIR = "D:\\Jonas\\OSM\\germany";
-    //private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
-    private static final String MAP_DIR = "D:\\Jonas\\OSM\\hamburg";
+    private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
+    //private static final String MAP_DIR = "D:\\Jonas\\OSM\\hamburg";
     
     
     // Routing constants
@@ -286,14 +286,14 @@ MouseWheelListener {
      * @return Coordinates of node
      */
     private Coordinate getNodeCoordinates(long nodeGridIndex) {
-        return getNodeCoordinates((int)(nodeGridIndex >> 32), (short)nodeGridIndex);
+        return getNodeCoordinates((int)(nodeGridIndex >> 32), (int)nodeGridIndex);
     }
     
     /**
      * Tries to determine coordinates of a node, tries to load grid if necessary
      * @return Coordinates of node
      */
-    private Coordinate getNodeCoordinates(int gridIndex, short nodeIndex) {
+    private Coordinate getNodeCoordinates(int gridIndex, int nodeIndex) {
         MapGrid grid = getGrid(gridIndex);
         return getNodeCoordinates(grid, nodeIndex);
     }
@@ -302,7 +302,7 @@ MouseWheelListener {
      * Tries to determine coordinates of a node, tries to load grid if necessary
      * @return Coordinates of node
      */
-    private Coordinate getNodeCoordinates(MapGrid grid, short nodeIndex) {
+    private Coordinate getNodeCoordinates(MapGrid grid, int nodeIndex) {
         return new Coordinate(grid.nodesLat[nodeIndex], grid.nodesLon[nodeIndex]);
     }
     
@@ -436,11 +436,11 @@ MouseWheelListener {
         Coordinate targetCoord = getNodeCoordinates(targetNodeGridIndex);
         
         // Find better start and end points if not suitable
-        if(!checkNodeWithFilter(getGrid((int)(startNodeGridIndex >> 32)), (short)(long)startNodeGridIndex, edgeFilterBitMask, edgeFilterBitValue)) {
+        if(!checkNodeWithFilter(getGrid((int)(startNodeGridIndex >> 32)), (int)(long)startNodeGridIndex, edgeFilterBitMask, edgeFilterBitValue)) {
             startNodeGridIndex = findNextNode((float)startCoord.getLat(), (float)startCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
             startCoord = getNodeCoordinates(startNodeGridIndex);
         }
-        if(!checkNodeWithFilter(getGrid((int)(targetNodeGridIndex >> 32)), (short)(long)targetNodeGridIndex, edgeFilterBitMask, edgeFilterBitValue)) {
+        if(!checkNodeWithFilter(getGrid((int)(targetNodeGridIndex >> 32)), (int)(long)targetNodeGridIndex, edgeFilterBitMask, edgeFilterBitValue)) {
             targetNodeGridIndex = findNextNode((float)targetCoord.getLat(), (float)targetCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
             getNodeCoordinates(targetNodeGridIndex);
         }   
@@ -473,11 +473,11 @@ MouseWheelListener {
 
 
         int startGridIndex = (int)(startNodeGridIndex >> 32);
-        short startNodeIndex = (short)(long)(startNodeGridIndex);
+        //int startNodeIndex = (int)(long)(startNodeGridIndex);
         MapGrid startGrid = getGrid(startGridIndex);
 
         int targetGridIndex = (int)(targetNodeGridIndex >> 32);
-        short targetNodeIndex = (short)(long)(targetNodeGridIndex);
+        int targetNodeIndex = (int)(long)(targetNodeGridIndex);
         MapGrid targetGrid = getGrid(targetGridIndex);
         float targetLat = targetGrid.nodesLat[targetNodeIndex];
         float targetLon = targetGrid.nodesLon[targetNodeIndex];
@@ -490,7 +490,8 @@ MouseWheelListener {
         
         // Add startnode  
         routeDistHeap.add(startNodeGridIndex, 0.0f);
-        routingGridBuffers.put(startGridIndex, new MapGridRoutingBuffer(startGrid.nodeCount));
+        MapGridRoutingBuffer startGridRB = new MapGridRoutingBuffer(startGrid.nodeCount);
+        routingGridBuffers.put(startGridIndex, startGridRB);
         nodesRouteOpenMap.put(startNodeGridIndex, 0.0f);
         
         boolean found = false;
@@ -498,22 +499,40 @@ MouseWheelListener {
         int visitedCount = 0;
         int hCalc = 0;
         int hReuse = 0;
-
+        int gridChanges = 0;
+        int gridStays = 0;
+        
+        int oldVisGridIndex = startGridIndex;
+        MapGrid visGrid = startGrid;
+        MapGridRoutingBuffer visGridRB = startGridRB;
+        
         // Find route with A*
         while (!routeDistHeap.isEmpty()) {
             // Remove and get index
             long visNodeGridIndex = routeDistHeap.removeFirst();
-            int visGridIndex = (int)(startNodeGridIndex >> 32);
-            short visNodeIndex = (short)(long)(startNodeGridIndex);
+            int visGridIndex = (int)(visNodeGridIndex >> 32);
+            int visNodeIndex = (int)(long)(visNodeGridIndex);
+            //System.out.println("VIS: " + visNodeGridIndex);
             
-            MapGrid visGrid = getGrid(visGridIndex);
-            MapGridRoutingBuffer visGridRB = routingGridBuffers.get(visGridIndex);
+            if(visGridIndex != oldVisGridIndex) {
+                oldVisGridIndex = visGridIndex;
+                visGrid = getGrid(visGridIndex);
+                visGridRB = routingGridBuffers.get(visGridIndex);  
+                if(visGridRB == null) {
+                    visGridRB = new MapGridRoutingBuffer(visGridIndex);
+                    routingGridBuffers.put(visGridIndex, visGridRB);
+                }
+                gridChanges++;
+            } else {
+                gridStays++;
+            }
+           
 
             // Get distance of node from start, remove and get index
             float nodeDist = visGridRB.nodesRouteDists[visNodeIndex];
 
             // Found! Break loop
-            if (visNodeIndex == target) {
+            if (visNodeGridIndex == target) {
                 System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize() + " still in heap");
                 System.out.println("Dist: " + nodeDist);
                 found = true;
@@ -545,17 +564,36 @@ MouseWheelListener {
                 if ((visGrid.edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
                     continue;
                 }
-
+                
                 // Get neighbor
-                int nbGridIndex = visGrid.edgesTargetGrid[iEdge];
-                short nbNodeIndex = visGrid.edgesTargetGridIndex[iEdge];
-                long nbNodeGridIndex = (((long)nbGridIndex) << 32) | (nbNodeIndex & 0xffffffffL);
+                long nbNodeGridIndex = visGrid.edgesTargetNodeGridIndex[iEdge];
+                int nbGridIndex = (int)(nbNodeGridIndex >> 32);
+                int nbNodeIndex = (int)(long)(nbNodeGridIndex);
+
+                // Skip loop edges
+                if(nbNodeGridIndex == visNodeGridIndex) {
+                    System.err.println("Warning: Loop edge - skipping");
+                    continue;
+                }
+                
+                // Get neighbor grid routing buffer
+                MapGrid nbGrid;
+                if(nbGridIndex == visGridIndex) {
+                    nbGrid = visGrid;
+                } else {
+                    nbGrid = getGrid(nbGridIndex);
+                }     
+                
                 // Get neighbor grid routing buffer
                 MapGridRoutingBuffer nbGridRB;
                 if(nbGridIndex == visGridIndex) {
                     nbGridRB = visGridRB;
                 } else {
                     nbGridRB = routingGridBuffers.get(nbGridIndex);
+                    if(nbGridRB == null) {
+                        nbGridRB = new MapGridRoutingBuffer(nbGrid.nodeCount);
+                        routingGridBuffers.put(nbGridIndex, nbGridRB);
+                    }
                 }
                 
                 // Continue if target node node already in closed list
@@ -595,18 +633,10 @@ MouseWheelListener {
                     hReuse++;
                     // Point open and not closed - update if necessary
                     if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbDist + hExistign)) {
-                        nbGridRB.nodesPreBuffer[nbNodeIndex] = nbNodeGridIndex; 
+                        nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
                         nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
                     }
-                } else {
-                    // Get neighbor grid routing buffer
-                    MapGrid nbGrid;
-                    if(nbGridIndex == visGridIndex) {
-                        nbGrid = visGrid;
-                    } else {
-                        nbGrid = getGrid(nbGridIndex);
-                    }                    
-                    
+                } else {    
                     float hNew = Utils.calcNodeDist(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon) * hFactor;
                     //float hnew = 0.0f;
                     hCalc++;
@@ -614,7 +644,7 @@ MouseWheelListener {
                     // Point not found yet - add to heap and open list
                     routeDistHeap.add(nbNodeGridIndex, nbDist + hNew);
                     //nodesRouteOpenList[nbIndex] = true;
-                    nbGridRB.nodesPreBuffer[nbNodeIndex] = nbNodeGridIndex; 
+                    nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
                     nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
                 }
             }
@@ -622,22 +652,25 @@ MouseWheelListener {
 
         System.out.println("H calc: " + hCalc);
         System.out.println("H reuse: " + hReuse);
+        System.out.println("gridChanges: " + gridChanges);
+        System.out.println("gridStays: " + gridStays);
         System.out.println("MaxHeapSize: " + routeDistHeap.getSizeUsageMax());
         
         // TODO Time and dist
         if (found) {
             // Reconstruct route
-            long i = targetNodeIndex;
-            while (i != startNodeIndex) {
+            long i = targetNodeGridIndex;
+            while (i != startNodeGridIndex) {
 
                 int iGridIndex = (int)(i >> 32);
-                short iNodeIndex = (short)(long)(i);
+                int iNodeIndex = (int)(long)(i);
                 MapGrid iGrid = getGrid(iGridIndex);
                 MapGridRoutingBuffer iGridRB = routingGridBuffers.get(iGridIndex);
                 
                 long pre = iGridRB.nodesPreBuffer[iNodeIndex];
+                assert pre != i;
                 int preGridIndex = (int)(pre >> 32);
-                short preNodeIndex = (short)(long)(pre);
+                int preNodeIndex = (int)(long)(pre);
                 MapGrid preGrid;
                 if(iGridIndex == preGridIndex) {
                     preGrid = iGrid;

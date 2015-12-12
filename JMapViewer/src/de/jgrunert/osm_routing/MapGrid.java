@@ -15,8 +15,7 @@ public class MapGrid {
     public final int[] nodesEdgeOffset;
    
     public final int edgeCount;
-    public final int[] edgesTargetGrid;
-    public final short[] edgesTargetGridIndex;
+    public final long[] edgesTargetNodeGridIndex;
     public final byte[] edgesInfobits;
     public final float[] edgesLengths;
     public final byte[] edgesMaxSpeeds;
@@ -35,8 +34,7 @@ public class MapGrid {
         this.nodesLon = null;
         this.nodesEdgeOffset = null;
 
-        this.edgesTargetGrid = null;
-        this.edgesTargetGridIndex = null;
+        this.edgesTargetNodeGridIndex = null;
         this.edgesInfobits = null;
         this.edgesLengths = null;
         this.edgesMaxSpeeds = null;
@@ -58,8 +56,7 @@ public class MapGrid {
             this.nodesLat = (float[]) gridReader.readObject();
             this.nodesLon = (float[]) gridReader.readObject();
             this.nodesEdgeOffset = (int[]) gridReader.readObject();
-            this.edgesTargetGrid = (int[]) gridReader.readObject();
-            this.edgesTargetGridIndex = (short[]) gridReader.readObject();
+            this.edgesTargetNodeGridIndex = (long[]) gridReader.readObject();
             this.edgesInfobits = (byte[]) gridReader.readObject();
             this.edgesLengths = (float[]) gridReader.readObject();
             this.edgesMaxSpeeds = (byte[]) gridReader.readObject();

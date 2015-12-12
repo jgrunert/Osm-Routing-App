@@ -52,10 +52,15 @@ public class NodeDistHeap {
         nodeGridHeapIndices.clear();
     }
 
-    public void add(long nodeGridIndex, float value) {
+    public void add(long nodeGridIndex, float value) 
+    {
         if (size >= maxCapacity) {
             throw new IllegalStateException("Heap capacity exceeded");
-        }        
+        } 
+        assert !nodeGridHeapIndices.containsKey(nodeGridIndex);
+//        if(nodeGridHeapIndices.containsKey(nodeGridIndex)) {
+//            throw new IllegalStateException("Cant add same node twice");            
+//        }
         
         // place element into heap at bottom
         size++;
@@ -121,7 +126,9 @@ public class NodeDistHeap {
     
 
 
-    public long removeFirst() {
+    public long removeFirst() 
+    {
+        assert !this.isEmpty();
 //        if (this.isEmpty()) {
 //          throw new IllegalStateException();
 //      }
@@ -132,7 +139,7 @@ public class NodeDistHeap {
         valuesArray[1] = valuesArray[size];
         valuesArray[size] = -1;
         nodeGridIndexArray[1] = nodeGridIndexArray[size];
-        nodeGridIndexArray[size] = -1;
+        //nodeGridIndexArray[size] = -1;
         nodeGridHeapIndices.remove(nodeGridIndex);
         size--;
         
@@ -235,6 +242,7 @@ public class NodeDistHeap {
         nodeGridIndexArray[index1] = nodeGridIndex1;
         nodeGridIndexArray[index2] = nodeGridIndex2;  
         
+        // TODO Check
         nodeGridHeapIndices.put(nodeGridIndex1, index1);
         nodeGridHeapIndices.put(nodeGridIndex2, index2);
     }
