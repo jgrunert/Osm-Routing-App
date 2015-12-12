@@ -9,3 +9,6 @@ osm-routing-app/target
 bin/
 JMapViewer/releases
 *.log
+.gradle/
+.idea/
+build/
