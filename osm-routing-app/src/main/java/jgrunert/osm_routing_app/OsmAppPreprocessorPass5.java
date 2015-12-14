@@ -4,35 +4,23 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.logging.FileHandler;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 public class OsmAppPreprocessorPass5 {
 
 	private static final float gridRaster = 0.10f;
 	
-	private static final Logger LOG = Logger.getLogger(OsmAppPreprocessorPass5.class.getName()); 
-	
-	
 	
 	public static void main(String[] args) {
 		try {
-
-			FileHandler fh = new FileHandler("pass5.log");
-			fh.setFormatter(new SimpleFormatter());
-			LOG.addHandler(fh);
-			LOG.info("Starting pass5");
-			
 			//String outDir = "D:\\Jonas\\OSM\\germany";
 			//String outDir = "D:\\Jonas\\OSM\\hamburg";
 			String outDir = "D:\\Jonas\\OSM\\bawue";
 			
 			doPass(outDir);
 		} catch (Exception e) {
-			LOG.severe("Error in main");
-			LOG.log(Level.SEVERE, "Exception", e);
+			OsmAppPreprocessor.LOG.severe("Error in main");
+			OsmAppPreprocessor.LOG.log(Level.SEVERE, "Exception", e);
 		}
 	}
 	
@@ -56,7 +44,7 @@ public class OsmAppPreprocessorPass5 {
 	        
 		
 		{
-			LOG.info("Start reading nodes");
+			OsmAppPreprocessor.LOG.info("Start reading nodes");
 			ObjectInputStream nodeReader = new ObjectInputStream(
 					new FileInputStream(
 							outDir + "\\pass4-nodes.bin"));
@@ -67,11 +55,11 @@ public class OsmAppPreprocessorPass5 {
 			nodesEdgeOffset = (int[]) nodeReader.readObject();
 
 			nodeReader.close();
-			LOG.info("Finished reading nodes");
+			OsmAppPreprocessor.LOG.info("Finished reading nodes");
 		}
 
 		{
-			LOG.info("Start reading edges");
+			OsmAppPreprocessor.LOG.info("Start reading edges");
 			ObjectInputStream edgeReader = new ObjectInputStream(
 					new FileInputStream(
 							outDir + "\\pass4-edges.bin"));
@@ -82,11 +70,11 @@ public class OsmAppPreprocessorPass5 {
 			edgesMaxSpeeds = (byte[]) edgeReader.readObject();
 
 			edgeReader.close();
-			LOG.info("Finished reading edges");
+			OsmAppPreprocessor.LOG.info("Finished reading edges");
 		}
 
 		
-		LOG.info("Start finding min/max");
+		OsmAppPreprocessor.LOG.info("Start finding min/max");
 		float minLat = Float.MAX_VALUE;
 		float maxLat = Float.MIN_VALUE;
 		float minLon = Float.MAX_VALUE;
@@ -115,11 +103,11 @@ public class OsmAppPreprocessorPass5 {
 		minLon = minLonI * gridRaster;
 		maxLon = (maxLonI * gridRaster);
 		
-		LOG.info("Finished finding min/max");
+		OsmAppPreprocessor.LOG.info("Finished finding min/max");
 		
 		
 
-		LOG.info("Start finding grid nodes");
+		OsmAppPreprocessor.LOG.info("Start finding grid nodes");
 		int nodeCounter = 0;
 		newNodeIndices = new int[nodeCount];
 		newNodeIndicesInverse = new int[nodeCount];
@@ -167,18 +155,18 @@ public class OsmAppPreprocessorPass5 {
 				gridIndex++;
 			}
 			
-			LOG.info(iLat * 100 / (maxLatI - minLatI) + "% finding grid nodes");
+			OsmAppPreprocessor.LOG.info(iLat * 100 / (maxLatI - minLatI) + "% finding grid nodes");
 		}		
 		
 		if(nodeCounter != nodeCount) {
 			throw new RuntimeException("nodeIndex != nodeCount");
 		}
-		LOG.info("Finished finding grid nodes");
-		LOG.info("Largest grid: " + largestGrid);
+		OsmAppPreprocessor.LOG.info("Finished finding grid nodes");
+		OsmAppPreprocessor.LOG.info("Largest grid: " + largestGrid);
 		
 		
 		// Update node coordinates
-    	LOG.info("Start updating nodes");
+    	OsmAppPreprocessor.LOG.info("Start updating nodes");
 		{
 			float[] nodesLatNew = new float[nodeCount];
 			for (int iN = 0; iN < nodeCount; iN++) {
@@ -194,13 +182,13 @@ public class OsmAppPreprocessorPass5 {
 			}
 			nodesLon = nodesLonNew;
 		}
-    	LOG.info("Finished updating nodes");
+    	OsmAppPreprocessor.LOG.info("Finished updating nodes");
 	    
 
 	    int[] edgesTargetGrid = new int[edgeCount];
 	    int[] edgesTargetGridIndex = new int[edgeCount];
 	    {
-	    LOG.info("Start updating edges");
+	    OsmAppPreprocessor.LOG.info("Start updating edges");
 		// Update node edge tagets and offsets
 	    int[] nodesEdgeOffsetNew = new int[nodeCount];
 	    int[] edgesTargetNew = new int[edgeCount];
@@ -232,13 +220,13 @@ public class OsmAppPreprocessorPass5 {
 	    edgesInfobits = edgesInfobitsNew;
 	    edgesLengths = edgesLengthsNew;
 	    edgesMaxSpeeds = edgesMaxSpeedsNew;
-    	LOG.info("Finshed updating edges");
+    	OsmAppPreprocessor.LOG.info("Finshed updating edges");
 	    }
 		
 
 		// Output
 		{
-			LOG.info("Start writing grid");
+			OsmAppPreprocessor.LOG.info("Start writing grid");
 			ObjectOutputStream os = new ObjectOutputStream(
 					new FileOutputStream(outDir + "\\grid-final.bin"));
 			os.writeFloat(gridRaster);
@@ -249,12 +237,12 @@ public class OsmAppPreprocessorPass5 {
 			os.writeObject(gridNodeOffsets);
 	        os.writeObject(gridNodeCounts);
 			os.close();
-			LOG.info("Finished serializing grid");
+			OsmAppPreprocessor.LOG.info("Finished serializing grid");
 		}
 		
 		// Output
 		{
-			LOG.info("Start writing grid2");
+			OsmAppPreprocessor.LOG.info("Start writing grid2");
 			ObjectOutputStream os = new ObjectOutputStream(
 					new FileOutputStream(outDir + "\\grids\\grids.index"));
 			os.writeFloat(gridRaster);
@@ -263,22 +251,22 @@ public class OsmAppPreprocessorPass5 {
 			os.writeInt(maxLatI - minLatI);
 			os.writeInt(maxLonI - minLonI);
 			os.close();
-			LOG.info("Finished serializing grid2");
+			OsmAppPreprocessor.LOG.info("Finished serializing grid2");
 		}
 		
 		{
-	        LOG.info("Start serializing nodes");    
+	        OsmAppPreprocessor.LOG.info("Start serializing nodes");    
 	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\nodes-final.bin"));
 	        os.writeObject(nodeCount);
 	        os.writeObject(nodesLat);   
 	        os.writeObject(nodesLon);        
 	        os.writeObject(nodesEdgeOffset);      
 	        os.close();
-	        LOG.info("Finished serializing nodes");    
+	        OsmAppPreprocessor.LOG.info("Finished serializing nodes");    
 		}
 		
 		{
-	        LOG.info("Start serializing edges");    
+	        OsmAppPreprocessor.LOG.info("Start serializing edges");    
 	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\edges-final.bin"));
 	        os.writeObject(edgeCount);
 	        os.writeObject(edgesTarget);   
@@ -286,14 +274,14 @@ public class OsmAppPreprocessorPass5 {
 	        os.writeObject(edgesLengths);          
 	        os.writeObject(edgesMaxSpeeds);      
 	        os.close();
-	        LOG.info("Finished serializing edges");  
+	        OsmAppPreprocessor.LOG.info("Finished serializing edges");  
 		}
 		
 		
 		
 		// Save grid files 
 		{
-	        LOG.info("Start exporting grids"); 
+	        OsmAppPreprocessor.LOG.info("Start exporting grids"); 
 
 			gridIndex = 0;
 			for(int iLat = 0; iLat < (maxLatI - minLatI); iLat++) {
@@ -358,16 +346,16 @@ public class OsmAppPreprocessorPass5 {
 				                    (iN + 1 < gridNodesEdgeOffset.length && iEdge < gridNodesEdgeOffset[iN + 1])
 				                    || (iN + 1 == gridNodesEdgeOffset.length && iEdge < gridEdgeCount); // Last node in offset array
 				                    iEdge++) {
-					    	 //LOG.info(gridEdgesTargetGrid[iEdge] + "!=" + gridIndex + "||" + gridEdgesTargetGridIndex[iEdge] + "!=" +  iN);
+					    	 //OsmAppPreprocessor.LOG.info(gridEdgesTargetGrid[iEdge] + "!=" + gridIndex + "||" + gridEdgesTargetGridIndex[iEdge] + "!=" +  iN);
 					    	 //assert(gridEdgesTargetGrid[iEdge] != gridIndex || gridEdgesTargetGridIndex[iEdge] != iN);
 					    	 if(gridEdgesTargetNodeGrid[iEdge] == nodeGridIndex) {
-					    		 LOG.severe("Warning: Loop at " + gridIndex + ":" + iN);
+					    		 OsmAppPreprocessor.LOG.severe("Warning: Loop at " + gridIndex + ":" + iN);
 					    	 }
 				             //long a = (((long)gridEdgesTargetGrid[iEdge]) << 32) | (gridEdgesTargetGridIndex[iEdge] & 0xffffffffL);
 				             //long b = (((long)gridIndex) << 32) | (iN & 0xffffffffL);
 				             //assert a != b;
 					    	 
-					    	 //LOG.info(iN + " to " + gridEdgesTargetGridIndex[iEdge]);
+					    	 //OsmAppPreprocessor.LOG.info(iN + " to " + gridEdgesTargetGridIndex[iEdge]);
 					     }
 					}
 			        
@@ -389,13 +377,13 @@ public class OsmAppPreprocessorPass5 {
 					
 					gridIndex++;
 				}
-				LOG.info(iLat * 100 / (maxLatI - minLatI) + "% exporting grids");
+				OsmAppPreprocessor.LOG.info(iLat * 100 / (maxLatI - minLatI) + "% exporting grids");
 			}
 			
-	        LOG.info("Finished exporting grids");  
-	        LOG.info("Grids: " + gridIndex + "(" + (maxLatI - minLatI) + "*" + (maxLonI - minLonI) + ")");
+	        OsmAppPreprocessor.LOG.info("Finished exporting grids");  
+	        OsmAppPreprocessor.LOG.info("Grids: " + gridIndex + "(" + (maxLatI - minLatI) + "*" + (maxLonI - minLonI) + ")");
 		}
 		
-		LOG.info("Finished Pass5");
+		OsmAppPreprocessor.LOG.info("Finished Pass5");
 	}
 }

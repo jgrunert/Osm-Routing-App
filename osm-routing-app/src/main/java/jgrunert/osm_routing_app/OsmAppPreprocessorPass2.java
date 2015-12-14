@@ -11,10 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.FileHandler;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.domain.v0_6.Entity;
@@ -48,18 +45,10 @@ public class OsmAppPreprocessorPass2 {
 	static List<Long> waypointIds = new ArrayList<>();
 	
 	static boolean showedNodeIndexError = false;
-	
-	private static final Logger LOG = Logger.getLogger(OsmAppPreprocessorPass2.class.getName()); 
-	
+
 	
 	public static void main(String[] args) {
 		try {
-
-			FileHandler fh = new FileHandler("pass2.log");
-			fh.setFormatter(new SimpleFormatter());
-			LOG.addHandler(fh);
-			LOG.info("Starting pass2");
-			
 			String outDir = "D:\\Jonas\\OSM\\germany";
 			//String outDir = "D:\\Jonas\\OSM\\hamburg";
 			//String outDir = "D:\\Jonas\\OSM\\bawue";
@@ -70,8 +59,8 @@ public class OsmAppPreprocessorPass2 {
 			
 			doPass(inFile, outDir);
 		} catch (Exception e) {
-			LOG.severe("Failure at main");
-			LOG.log(Level.SEVERE, "Exception", e);
+			OsmAppPreprocessor.LOG.severe("Failure at main");
+			OsmAppPreprocessor.LOG.log(Level.SEVERE, "Exception", e);
 		}
 	}
 		
@@ -82,10 +71,10 @@ public class OsmAppPreprocessorPass2 {
 		long startTime = System.currentTimeMillis();
 		
 		
-		LOG.info("OSM Preprocessor Pass2 v01");
+		OsmAppPreprocessor.LOG.info("OSM Preprocessor Pass2 v01");
 		
 
-		LOG.info("Start processing nodes");
+		OsmAppPreprocessor.LOG.info("Start processing nodes");
 		DataInputStream waynodeIdReader = new DataInputStream(new FileInputStream(outDir + "\\pass1-waynodeIds.bin"));
 		int waypointCount = waynodeIdReader.readInt();
 		List<Long> waypointIdsSet = new ArrayList<>(waypointCount);
@@ -93,7 +82,7 @@ public class OsmAppPreprocessorPass2 {
 		for(int i = 0; i < waypointCount; i++) {
 			waypointIdsSet.add(waynodeIdReader.readLong());
 			if(i % percTmp100 == 0) {
-				LOG.info(i / percTmp100 + "% load waypointIdsSet");
+				OsmAppPreprocessor.LOG.info(i / percTmp100 + "% load waypointIdsSet");
 			}
 		}
 		waynodeIdReader.close();
@@ -102,7 +91,7 @@ public class OsmAppPreprocessorPass2 {
 		
 		// Pass 1.2: 
 		{
-			LOG.info("Starting Pass 2");
+			OsmAppPreprocessor.LOG.info("Starting Pass 2");
 			
 			
 			DataOutputStream connectionWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass2-waynodes.bin"));
@@ -120,7 +109,7 @@ public class OsmAppPreprocessorPass2 {
 						
 						if(nodeIndex >= 0) {
 							if(nodeIndex != relevantWayNodeCounter && !showedNodeIndexError) {
-								LOG.severe("Invalid nodeIndex: " + nodeIndex + " instead of " + relevantWayNodeCounter);
+								OsmAppPreprocessor.LOG.severe("Invalid nodeIndex: " + nodeIndex + " instead of " + relevantWayNodeCounter);
 								showedNodeIndexError = true;
 							}
 								
@@ -130,7 +119,7 @@ public class OsmAppPreprocessorPass2 {
 								connectionWriter.writeFloat((float)node.getLongitude());	
 								connectionWriter.writeLong(node.getId());							
 							} catch (IOException e) {
-								LOG.log(Level.SEVERE, "Exception", e);
+								OsmAppPreprocessor.LOG.log(Level.SEVERE, "Exception", e);
 							}
 							relevantWayNodeCounter++;	
 						}
@@ -140,9 +129,9 @@ public class OsmAppPreprocessorPass2 {
 					
 					elementsPass2++;
 					if ((elementsPass2 % 100000) == 0) {
-						LOG.info("Loaded " + elementsPass2 + " elements ("
+						OsmAppPreprocessor.LOG.info("Loaded " + elementsPass2 + " elements ("
 										+ (int) (((float) elementsPass2 / totalElements) * 100) + "%)");
-						LOG.info("" + relevantWayNodeCounter);
+						OsmAppPreprocessor.LOG.info("" + relevantWayNodeCounter);
 					}
 				}
 
@@ -175,34 +164,34 @@ public class OsmAppPreprocessorPass2 {
 				try {
 					readerThread.join();
 				} catch (InterruptedException e) {
-					LOG.log(Level.SEVERE, "Exception", e);	
+					OsmAppPreprocessor.LOG.log(Level.SEVERE, "Exception", e);	
 					return;
 				}
 			}			
 			
 			
 			if(relevantWayNodeCounter < waypointIdsSet.size()) {
-				LOG.severe("Not all relevantWayNodes have nodes in file: " + 
+				OsmAppPreprocessor.LOG.severe("Not all relevantWayNodes have nodes in file: " + 
 						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
 			}
 			if(relevantWayNodeCounter > waypointIdsSet.size()) {
-				LOG.severe("Duplicate nodes for relevantWayNodes in file: " + 
+				OsmAppPreprocessor.LOG.severe("Duplicate nodes for relevantWayNodes in file: " + 
 						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
 			}
 			
-			LOG.info("Pass 2 finished");
+			OsmAppPreprocessor.LOG.info("Pass 2 finished");
 
 			connectionWriter.close();
 		}
 		
 		
-		LOG.info("Pass 2 finished");
-		LOG.info("Relevant ways: " + relevantWays + ", total ways: " + ways);
-		LOG.info("Relevant waynodes: " + relevantWayNodeCounter + ", total nodes: " + nodes);
-		LOG.info("Max nodes per way: " + maxNodesPerWay);
-		LOG.info("Max ways per node: " + maxWaysPerNode);
+		OsmAppPreprocessor.LOG.info("Pass 2 finished");
+		OsmAppPreprocessor.LOG.info("Relevant ways: " + relevantWays + ", total ways: " + ways);
+		OsmAppPreprocessor.LOG.info("Relevant waynodes: " + relevantWayNodeCounter + ", total nodes: " + nodes);
+		OsmAppPreprocessor.LOG.info("Max nodes per way: " + maxNodesPerWay);
+		OsmAppPreprocessor.LOG.info("Max ways per node: " + maxWaysPerNode);
 		
-		LOG.info("Finished in "
+		OsmAppPreprocessor.LOG.info("Finished in "
 				+ (System.currentTimeMillis() - startTime) + "ms");
 	}
 	
@@ -231,174 +220,4 @@ public class OsmAppPreprocessorPass2 {
 //		}
 	}
 	
-
-	
-	static final int SPEED_WALK = 0;
-	static final int SPEED_LIVINGSTREET = 5;
-	static final int SPEED_UNLIMITED = 255;
-	
-	private static HighwayInfos evaluateHighway(String highwayTag, String maxspeedTag, 
-			String sidewalkTag, String onewayTag) {
-		
-		String originalMaxSpeed = maxspeedTag;
-
-		// Try to find out maxspeed
-		Short maxSpeed;
-		if(maxspeedTag != null) {			
-			if(maxspeedTag.equals("none") || maxspeedTag.equals("signals") || 
-					maxspeedTag.equals("variable") || maxspeedTag.equals("unlimited")) {
-				// No speed limitation
-				maxSpeed = 255;
-			}
-			else if(maxspeedTag.contains("living_street")) {
-				maxSpeed = SPEED_LIVINGSTREET;
-			}
-			else if(maxspeedTag.contains("walk") || maxspeedTag.contains("foot")) {
-				maxSpeed = SPEED_WALK;
-			}
-			else {
-				try {
-					boolean mph = false;
-					// Try to parse speed limit
-					if (maxspeedTag.contains("mph")) {
-						mph = true;
-						maxspeedTag = maxspeedTag.replace("mph", "");
-					}
-					if (maxspeedTag.contains("km/h"))
-						maxspeedTag = maxspeedTag.replace("km/h", "");
-					if (maxspeedTag.contains("kmh"))
-						maxspeedTag = maxspeedTag.replace("kmh", "");
-					if (maxspeedTag.contains("."))
-						maxspeedTag = maxspeedTag.split("\\.")[0];
-					if (maxspeedTag.contains(","))
-						maxspeedTag = maxspeedTag.split(",")[0];
-					if (maxspeedTag.contains(";"))
-						maxspeedTag = maxspeedTag.split(";")[0];
-					if (maxspeedTag.contains("-"))
-						maxspeedTag = maxspeedTag.split("-")[0];
-					if (maxspeedTag.contains(" "))
-						maxspeedTag = maxspeedTag.split(" ")[0];
-
-					maxSpeed = Short.parseShort(maxspeedTag);
-					if(mph) {
-						maxSpeed = (short)(maxSpeed * 1.60934);
-					}
-				} catch (Exception e) {
-					LOG.severe("Illegal maxspeed: " + originalMaxSpeed);
-					maxSpeed = null;
-				}
-			}
-		} else {
-			maxSpeed = null;
-		}
-		
-		
-		// Try to find out if has sidewalk
-		boolean sidewalk;
-		if(sidewalkTag != null) {
-			sidewalk = !(sidewalkTag.equals("no") || sidewalkTag.equals("none"));
-		}
-		else {
-			sidewalk = false;
-		}
-		
-		
-		// Try to find out if is oneway
-		Boolean oneway;
-		if(onewayTag != null) {
-			oneway = onewayTag.equals("yes");
-		}
-		else {
-			oneway = null;
-		}
-		
-		
-		// Try to classify highway
-		if(highwayTag.equals("track")) {
-			// track
-			if(maxSpeed == null)
-				maxSpeed = 10;
-			if(oneway == null)
-				oneway = false;
-			
-			return new HighwayInfos(true, true, oneway, maxSpeed);
-		}
-		else if(highwayTag.equals("residential")) {
-			// residential road
-			if(maxSpeed == null)
-				maxSpeed = 50;
-			if(oneway == null)
-				oneway = false;
-			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
-		}
-		else if(highwayTag.equals("service")) {
-			// service road
-			if(maxSpeed == null)
-				maxSpeed = 30;
-			if(oneway == null)
-				oneway = false;
-			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
-		}
-		else if(highwayTag.equals("footway") || highwayTag.equals("path") || highwayTag.equals("steps") ||
-				highwayTag.equals("bridleway") || highwayTag.equals("pedestrian")) {
-			// footway etc.
-			if(maxSpeed == null)
-				maxSpeed = 0;
-			if(oneway == null)
-				oneway = false;
-			
-			return new HighwayInfos(false, true, oneway, maxSpeed);
-		}
-		else if(highwayTag.startsWith("primary") || highwayTag.startsWith("secondary") || 
-		   highwayTag.startsWith("tertiary")) {
-			// country road etc
-			if(maxSpeed == null)
-				maxSpeed = 100;
-			if(oneway == null)
-				oneway = false;
-			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
-		}
-		else if(highwayTag.equals("unclassified")) {
-			// unclassified (small road)
-			if(maxSpeed == null)
-				maxSpeed = 50;
-			if(oneway == null)
-				oneway = false;
-			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
-		}
-		else if(highwayTag.equals("living_street")) {
-			// living street
-			if(maxSpeed == null)
-				maxSpeed = SPEED_LIVINGSTREET;
-			if(oneway == null)
-				oneway = false;
-			
-			return new HighwayInfos(true, true, oneway, maxSpeed);
-		}
-		else if(highwayTag.startsWith("motorway")) {
-			// track
-			if(maxSpeed == null)
-				maxSpeed = 255;
-			if(oneway == null)
-				oneway = true;
-			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
-		}
-		else if(highwayTag.startsWith("trunk")) {
-			// trunk road
-			if(maxSpeed == null)
-				maxSpeed = 255;
-			if(oneway == null)
-				oneway = false;
-			
-			return new HighwayInfos(true, sidewalk, oneway, maxSpeed);
-		}
-		
-		// Ignore this road if no useful classification available
-		return null;
-	}
 }

@@ -10,10 +10,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.FileHandler;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.domain.v0_6.Entity;
@@ -46,31 +43,22 @@ public class OsmAppPreprocessorPass1 {
 
 	static List<HighwayInfos> highways = new ArrayList<>();
 	static List<Long> waypointIds = new ArrayList<>();
-	
-	private static final Logger LOG = Logger.getLogger(OsmAppPreprocessorPass1.class.getName()); 
-	
+
 	
 	public static void main(String[] args) {
 		try {
-
-			FileHandler fh = new FileHandler("pass1.log");
-			fh.setFormatter(new SimpleFormatter());
-			LOG.addHandler(fh);
-			LOG.info("Starting pass1");
-			
-			
 			//String outDir = "D:\\Jonas\\OSM\\germany";
-			//String outDir = "D:\\Jonas\\OSM\\hamburg";
-			String outDir = "D:\\Jonas\\OSM\\bawue";
+			String outDir = "D:\\Jonas\\OSM\\hamburg";
+			//String outDir = "D:\\Jonas\\OSM\\bawue";
 			
 			//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
-					//String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
-			String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-latest.osm.pbf";
+			String inFile = "D:\\Jonas\\OSM\\hamburg-latest.osm.pbf";
+			//String inFile = "D:\\Jonas\\OSM\\baden-wuerttemberg-latest.osm.pbf";
 			
 			doPass(inFile, outDir);
 		} catch (Exception e) {
-			LOG.severe("Failure at main");
-			LOG.log(Level.SEVERE, "Exception", e);
+			OsmAppPreprocessor.LOG.severe("Failure at main");
+			OsmAppPreprocessor.LOG.log(Level.SEVERE, "Exception", e);
 		}
 	}
 		
@@ -83,7 +71,7 @@ public class OsmAppPreprocessorPass1 {
 		long startTime = System.currentTimeMillis();
 		
 		
-		LOG.info("OSM Preprocessor Pass1 v03");
+		OsmAppPreprocessor.LOG.info("OSM Preprocessor Pass1 v03");
 		
 		
 		//Map<Long, Short> waysPerNode = new HashMap<>();
@@ -92,7 +80,7 @@ public class OsmAppPreprocessorPass1 {
 		
 		// Pass 1 - read highways
 		{
-		LOG.info("Starting Pass 1");
+		OsmAppPreprocessor.LOG.info("Starting Pass 1");
 		
 		//PrintWriter highwayCsvWriter = new PrintWriter(new File(outDir + "\\highways-processed.csv"));
 		
@@ -155,7 +143,7 @@ public class OsmAppPreprocessorPass1 {
 									//Short ways = waysPerNode.get(waynode.getNodeId());
 									//if(ways == null) { ways = 0; }
 									//ways++;
-									//LOG.info(ways);
+									//OsmAppPreprocessor.LOG.info(ways);
 									//maxWaysPerNode = Math.max(maxWaysPerNode, ways);
 									//waysPerNode.put(waynode.getNodeId(), ways);
 									//waynodes.add(waynode.getNodeId());		
@@ -181,7 +169,7 @@ public class OsmAppPreprocessorPass1 {
 				
 				elementsPass1++;
 				if ((elementsPass1 % 100000) == 0) {
-					LOG.info("Loaded " + elementsPass1 + " elements ("
+					OsmAppPreprocessor.LOG.info("Loaded " + elementsPass1 + " elements ("
 									+ (int) (((float) elementsPass1 / totalElements) * 100) + "%)");
 				}
 			}
@@ -222,20 +210,20 @@ public class OsmAppPreprocessorPass1 {
 		
 		//highwayCsvWriter.close();
 		
-		LOG.info("Finised pass 1");
-		LOG.info("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
+		OsmAppPreprocessor.LOG.info("Finised pass 1");
+		OsmAppPreprocessor.LOG.info("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
 		}
 		
 		
 		
 		// Between pass 1 and 2
 		// Sort waypointIds
-		LOG.info("Start sorting waypointIds with size " + waypointIds.size());
+		OsmAppPreprocessor.LOG.info("Start sorting waypointIds with size " + waypointIds.size());
 		Collections.sort(waypointIds);
-		LOG.info("Sorted waypointIds");
+		OsmAppPreprocessor.LOG.info("Sorted waypointIds");
 				
 		// Create sorted waypointIdsSet. It maps old to new indices: newIndex == waypointIdsSet.indexOf(oldIndex)
-		LOG.info("Start creating waypointIdsSet");
+		OsmAppPreprocessor.LOG.info("Start creating waypointIdsSet");
 		List<Long> waypointIdsSet = new ArrayList<>();
 		long lastIndex = waypointIds.get(0);
 		waypointIdsSet.add(lastIndex);
@@ -245,13 +233,13 @@ public class OsmAppPreprocessorPass1 {
 				waypointIdsSet.add(lastIndex);
 			}
 		}
-		LOG.info("Finished creating waypointIdsSet with size " + waypointIdsSet.size());
-		LOG.info("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
+		OsmAppPreprocessor.LOG.info("Finished creating waypointIdsSet with size " + waypointIdsSet.size());
+		OsmAppPreprocessor.LOG.info("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
 		
 		// TODO Sort by location? Sort by ways (in next step)? Are ways sorted?
 				
 		// Save waypointIdsSet	
-		LOG.info("Start saving waypointIdsSet");
+		OsmAppPreprocessor.LOG.info("Start saving waypointIdsSet");
 		DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass1-waynodeIds.bin"));
 		waypointIdsWriter.writeInt(waypointIdsSet.size());
 		int percTmp10 = waypointIdsSet.size() / 10;
@@ -261,11 +249,11 @@ public class OsmAppPreprocessorPass1 {
 			waypointIdsWriter.writeLong(id);
 			percCounter++;
 			if(percCounter % percTmp10 == 0) {
-				LOG.info(percCounter / percTmp100 + "% save waypointIdsSet");
+				OsmAppPreprocessor.LOG.info(percCounter / percTmp100 + "% save waypointIdsSet");
 			}
 		}
 		waypointIdsWriter.close();
-		LOG.info("Finished saving waypointIdsSet");
+		OsmAppPreprocessor.LOG.info("Finished saving waypointIdsSet");
 		
 		
 		
@@ -274,7 +262,7 @@ public class OsmAppPreprocessorPass1 {
 		DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass1-highways.bin"));	
 		highwayBinWriter.writeInt(highways.size());
 		
-		LOG.info("Start finding waysOfNodes");
+		OsmAppPreprocessor.LOG.info("Start finding waysOfNodes");
 		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waypointIdsSet.size());
 		for(int i = 0; i < waypointIdsSet.size(); i++) {
 			waysOfNodes.add(new LinkedList<Integer>());
@@ -301,24 +289,24 @@ public class OsmAppPreprocessorPass1 {
 			hw.wayNodes.clear();
 			hw.wayNodes = null;
 			if(i % percAmnt == 0) {
-				LOG.info((i / percAmnt) + "%  finding waysOfNodes");
+				OsmAppPreprocessor.LOG.info((i / percAmnt) + "%  finding waysOfNodes");
 			}
 		}
 		highwayBinWriter.close();
-		LOG.info("Finished finding waysOfNodes");
-		LOG.info("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
+		OsmAppPreprocessor.LOG.info("Finished finding waysOfNodes");
+		OsmAppPreprocessor.LOG.info("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
 
 		
 		// Clean up highways
-		LOG.info("Start clean up highways");
+		OsmAppPreprocessor.LOG.info("Start clean up highways");
 		highways.clear();
 		highways = null;
 		System.gc();
-		LOG.info("Finished clean up highways");
+		OsmAppPreprocessor.LOG.info("Finished clean up highways");
 		
 		
 		// Save waysOfNodes
-		LOG.info("Start saving waysOfNodes");
+		OsmAppPreprocessor.LOG.info("Start saving waysOfNodes");
 		DataOutputStream waysOfNodesWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass1-waysOfNodes.bin"));
 		waysOfNodesWriter.writeInt(waysOfNodes.size());
 		percTmp100 = waysOfNodes.size() / 100;
@@ -329,29 +317,29 @@ public class OsmAppPreprocessorPass1 {
 				waysOfNodesWriter.writeInt(id);				
 			}
 			if(i % percTmp100 == 0) {
-				LOG.info(i / percTmp100 + "% save waysOfNodes");
+				OsmAppPreprocessor.LOG.info(i / percTmp100 + "% save waysOfNodes");
 			}
 		}	
 		waysOfNodesWriter.close();
-		LOG.info("Finished saving waysOfNodesWriter");
+		OsmAppPreprocessor.LOG.info("Finished saving waysOfNodesWriter");
 		
 
 		// Clean up waysOfNodes
-		LOG.info("Start clean up waysOfNodes");
+		OsmAppPreprocessor.LOG.info("Start clean up waysOfNodes");
 		waysOfNodes.clear();
 		waysOfNodes = null;
 		System.gc();
-		LOG.info("Finished clean up waysOfNodes");
+		OsmAppPreprocessor.LOG.info("Finished clean up waysOfNodes");
 		
 		
 		
-		LOG.info("Pass 1 finished");
-		LOG.info("Relevant ways: " + relevantWays + ", total ways: " + ways);
-		LOG.info("Relevant waynodes: " + relevantWayNodeCounter + ", total nodes: " + nodes);
-		LOG.info("Max nodes per way: " + maxNodesPerWay);
-		LOG.info("Max ways per node: " + maxWaysPerNode);
+		OsmAppPreprocessor.LOG.info("Pass 1 finished");
+		OsmAppPreprocessor.LOG.info("Relevant ways: " + relevantWays + ", total ways: " + ways);
+		OsmAppPreprocessor.LOG.info("Relevant waynodes: " + relevantWayNodeCounter + ", total nodes: " + nodes);
+		OsmAppPreprocessor.LOG.info("Max nodes per way: " + maxNodesPerWay);
+		OsmAppPreprocessor.LOG.info("Max ways per node: " + maxWaysPerNode);
 		
-		LOG.info("Finished in "
+		OsmAppPreprocessor.LOG.info("Finished in "
 				+ (System.currentTimeMillis() - startTime) + "ms");
 	}
 	
@@ -435,7 +423,7 @@ public class OsmAppPreprocessorPass1 {
 						maxSpeed = (short)(maxSpeed * 1.60934);
 					}
 				} catch (Exception e) {
-					LOG.severe("Illegal maxspeed: " + originalMaxSpeed);
+					OsmAppPreprocessor.LOG.severe("Illegal maxspeed: " + originalMaxSpeed);
 					maxSpeed = null;
 				}
 			}

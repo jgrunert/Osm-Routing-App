@@ -7,14 +7,21 @@ import java.util.logging.SimpleFormatter;
 
 public class OsmAppPreprocessor {
 	
-	private static final Logger LOG = Logger.getLogger(OsmAppPreprocessor.class.getName()); 
+	public static final Logger LOG = Logger.getLogger("OsmAppPreprocessor"); 
+	
+	static {
+		FileHandler fh;
+		try {
+			fh = new FileHandler("passes.log");
+			fh.setFormatter(new SimpleFormatter());
+			LOG.addHandler(fh);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
 	public static void main(String[] args) {
 		try {		
-
-			FileHandler fh = new FileHandler("passes.log");
-			fh.setFormatter(new SimpleFormatter());
-			LOG.addHandler(fh);
 			LOG.info("Starting passes");
 			
 			//String inFile = "D:\\Jonas\\OSM\\germany-latest.osm.pbf";
