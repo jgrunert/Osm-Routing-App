@@ -4,30 +4,18 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-
-
-
-
-
-
-
-
-
-
-
-
 import java.util.Set;
-
-import net.sf.geographiclib.Geodesic;
-import net.sf.geographiclib.GeodesicData;
-
-import org.openstreetmap.osmosis.core.domain.v0_6.WayNode;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class OsmAppPreprocessorPass3 {
+	
+	private static final Logger LOG = Logger.getLogger(OsmAppPreprocessorPass3.class.getName()); 
 
 
 	private static float[] lats;
@@ -36,21 +24,27 @@ public class OsmAppPreprocessorPass3 {
 	
 	public static void main(String[] args) {
 		try {
+
+			FileHandler fh = new FileHandler("pass3.log");
+			fh.setFormatter(new SimpleFormatter());
+			LOG.addHandler(fh);
+			LOG.info("Starting pass3");
+			
 			//String outDir = "D:\\Jonas\\OSM\\germany";
 			String outDir = "D:\\Jonas\\OSM\\hamburg";
 			//String outDir = "D:\\Jonas\\OSM\\bawue";
 			
 			doPass(outDir);
 		} catch (Exception e) {
-			System.err.println("Error in main");
-			e.printStackTrace();
+			LOG.severe("Error in main");
+			LOG.log(Level.SEVERE, "Exception", e);
 		}
 	}
 	
 	
 	public static void doPass(String outDir) throws Exception {
 
-		System.out.println("OSM Preprocessor Pass3 v02");
+		LOG.info("OSM Preprocessor Pass3 v02");
 		
 		
 		// Load highways
@@ -58,7 +52,7 @@ public class OsmAppPreprocessorPass3 {
 		int highwayCount = highwayReader.readInt();
 		List<HighwayInfos2> highways = new ArrayList<>(highwayCount);
 		
-		System.out.println("Start reading highways: " + highwayCount);
+		LOG.info("Start reading highways: " + highwayCount);
 		int perc100 = highwayCount / 100;
 		for(int i = 0; i < highwayCount; i++) {
 
@@ -77,18 +71,18 @@ public class OsmAppPreprocessorPass3 {
 			highways.add(new HighwayInfos2(infoBits, oneway, maxSpeed, wayNodes));
 			
 			if(i % perc100 == 0) {
-				System.out.println(i / perc100 + "% reading highways");
+				LOG.info(i / perc100 + "% reading highways");
 			}
 		}
 		highwayReader.close();
-		System.out.println("Finished reading highways: " + highwayCount);
+		LOG.info("Finished reading highways: " + highwayCount);
 		
 		
 		
 		// Load node coords
 		// Load and process waynodes
 		{
-			System.out.println("Start loading node coords");
+			LOG.info("Start loading node coords");
 			DataInputStream nodeReader = new DataInputStream(
 					new FileInputStream(outDir + "\\pass2-waynodes.bin"));
 			int nodeCount = nodeReader.readInt();
@@ -101,7 +95,7 @@ public class OsmAppPreprocessorPass3 {
 			for (int iNode = 0; iNode < nodeCount; iNode++) {
 				int nodeIndex = nodeReader.readInt();
 				if (nodeIndex != iNode) {
-					System.err.println("Wrong nodeIndex: " + nodeIndex
+					LOG.severe("Wrong nodeIndex: " + nodeIndex
 							+ " instead of " + iNode);
 				}
 
@@ -109,7 +103,7 @@ public class OsmAppPreprocessorPass3 {
 				lons[iNode] = nodeReader.readFloat();
 				nodeReader.readLong(); // Ignore old id
 			}
-			System.out.println("Finished loading node coords");
+			LOG.info("Finished loading node coords");
 		}
 		
 		
@@ -117,7 +111,7 @@ public class OsmAppPreprocessorPass3 {
 		// Load waysOfNodes
 		DataInputStream waysOfNodesReader = new DataInputStream(new FileInputStream(outDir + "\\pass1-waysOfNodes.bin"));
 		int waynodeCount = waysOfNodesReader.readInt();
-		System.out.println("Start reading waysOfNodes: " + waynodeCount);
+		LOG.info("Start reading waysOfNodes: " + waynodeCount);
 		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waynodeCount);
 		perc100 = waynodeCount / 100;
 		for(int i = 0; i < waynodeCount; i++) {
@@ -129,21 +123,21 @@ public class OsmAppPreprocessorPass3 {
 			waysOfNodes.add(nodeWays);
 			
 			if(i % perc100 == 0) {
-				System.out.println(i / perc100 + "% reading waysOfNodes");
+				LOG.info(i / perc100 + "% reading waysOfNodes");
 			}
 		}	
 		waysOfNodesReader.close();
-		System.out.println("Finished reading waysOfNodes");
+		LOG.info("Finished reading waysOfNodes");
 		
 		
 
 		// Load and process waynodes
-		System.out.println("Start processing nodes");
+		LOG.info("Start processing nodes");
 		DataInputStream nodeReader = new DataInputStream(new FileInputStream(outDir + "\\pass2-waynodes.bin"));
 		int nodeCount = nodeReader.readInt();
 		
 		if(nodeCount != waysOfNodes.size()) {
-			System.err.println("nodeCount != waysOfNodes.size(): " + nodeCount + " and " + waysOfNodes.size());
+			LOG.severe("nodeCount != waysOfNodes.size(): " + nodeCount + " and " + waysOfNodes.size());
 		}
 		
 		DataOutputStream edgeWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-edges.bin"));
@@ -156,7 +150,7 @@ public class OsmAppPreprocessorPass3 {
 
 			int nodeIndex = nodeReader.readInt();
 			if(nodeIndex != iNode) {
-				System.err.println("Wrong nodeIndex: " + nodeIndex + " instead of " + iNode);
+				LOG.severe("Wrong nodeIndex: " + nodeIndex + " instead of " + iNode);
 			}
 			
 			float lat = nodeReader.readFloat();
@@ -218,31 +212,31 @@ public class OsmAppPreprocessorPass3 {
 				}
 				
 				if(!containsNode) {
-					System.err.println("Node cannot find entry in his wayNodes");
+					LOG.severe("Node cannot find entry in his wayNodes");
 				}
 			}
 			
 			if(iNode % perc100 == 0) {
-				System.out.println((iNode / perc100) + "%  processing nodes");
+				LOG.info((iNode / perc100) + "%  processing nodes");
 			}
 		}		
 
 		nodeReader.close();
 		nodeWriter.close();
 		edgeWriter.close();
-		System.out.println("Finished processing nodes");
-		System.out.println("Longest edge: " + maxDist);
+		LOG.info("Finished processing nodes");
+		LOG.info("Longest edge: " + maxDist);
 		
 		// Write edges again to file with number of edges at beginning (TODO Better way?)
-		System.out.println("Start writing edges to final file");
+		LOG.info("Start writing edges to final file");
 		DataOutputStream edgeWriter2 = new DataOutputStream(new FileOutputStream(outDir + "\\pass3-edges-count.bin"));
 		edgeWriter2.writeInt(edgeCounter);
 		edgeWriter2.close();
-		System.out.println("Finished writing edges to final file");
+		LOG.info("Finished writing edges to final file");
 
-		System.out.println("Finished");		
-		System.out.println("Nodes: " + nodeCount);
-		System.out.println("Edges: " + edgeCounter);
+		LOG.info("Finished");		
+		LOG.info("Nodes: " + nodeCount);
+		LOG.info("Edges: " + edgeCounter);
 	}
 	
 	
@@ -251,7 +245,7 @@ public class OsmAppPreprocessorPass3 {
 		 float dist = getNodeDist(lats[i1], lons[i1], lats[i2], lons[i2]);
 		 if(dist > maxDist) {
 			 maxDist = dist;
-			 //System.out.println(maxDist);
+			 //LOG.info(maxDist);
 		 }
 	     return dist;
 	}

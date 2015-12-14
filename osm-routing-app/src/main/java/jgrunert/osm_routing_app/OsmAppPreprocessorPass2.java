@@ -7,24 +7,18 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.domain.v0_6.Entity;
 import org.openstreetmap.osmosis.core.domain.v0_6.Node;
-import org.openstreetmap.osmosis.core.domain.v0_6.Relation;
-import org.openstreetmap.osmosis.core.domain.v0_6.Tag;
-import org.openstreetmap.osmosis.core.domain.v0_6.Way;
 import org.openstreetmap.osmosis.core.domain.v0_6.WayNode;
 import org.openstreetmap.osmosis.core.task.v0_6.RunnableSource;
 import org.openstreetmap.osmosis.core.task.v0_6.Sink;
@@ -55,9 +49,17 @@ public class OsmAppPreprocessorPass2 {
 	
 	static boolean showedNodeIndexError = false;
 	
+	private static final Logger LOG = Logger.getLogger(OsmAppPreprocessorPass2.class.getName()); 
+	
 	
 	public static void main(String[] args) {
 		try {
+
+			FileHandler fh = new FileHandler("pass2.log");
+			fh.setFormatter(new SimpleFormatter());
+			LOG.addHandler(fh);
+			LOG.info("Starting pass2");
+			
 			String outDir = "D:\\Jonas\\OSM\\germany";
 			//String outDir = "D:\\Jonas\\OSM\\hamburg";
 			//String outDir = "D:\\Jonas\\OSM\\bawue";
@@ -68,8 +70,8 @@ public class OsmAppPreprocessorPass2 {
 			
 			doPass(inFile, outDir);
 		} catch (Exception e) {
-			System.err.println("Failure at main");
-			e.printStackTrace();
+			LOG.severe("Failure at main");
+			LOG.log(Level.SEVERE, "Exception", e);
 		}
 	}
 		
@@ -80,10 +82,10 @@ public class OsmAppPreprocessorPass2 {
 		long startTime = System.currentTimeMillis();
 		
 		
-		System.out.println("OSM Preprocessor Pass2 v01");
+		LOG.info("OSM Preprocessor Pass2 v01");
 		
 
-		System.out.println("Start processing nodes");
+		LOG.info("Start processing nodes");
 		DataInputStream waynodeIdReader = new DataInputStream(new FileInputStream(outDir + "\\pass1-waynodeIds.bin"));
 		int waypointCount = waynodeIdReader.readInt();
 		List<Long> waypointIdsSet = new ArrayList<>(waypointCount);
@@ -91,7 +93,7 @@ public class OsmAppPreprocessorPass2 {
 		for(int i = 0; i < waypointCount; i++) {
 			waypointIdsSet.add(waynodeIdReader.readLong());
 			if(i % percTmp100 == 0) {
-				System.out.println(i / percTmp100 + "% load waypointIdsSet");
+				LOG.info(i / percTmp100 + "% load waypointIdsSet");
 			}
 		}
 		waynodeIdReader.close();
@@ -100,7 +102,7 @@ public class OsmAppPreprocessorPass2 {
 		
 		// Pass 1.2: 
 		{
-			System.out.println("Starting Pass 2");
+			LOG.info("Starting Pass 2");
 			
 			
 			DataOutputStream connectionWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass2-waynodes.bin"));
@@ -118,7 +120,7 @@ public class OsmAppPreprocessorPass2 {
 						
 						if(nodeIndex >= 0) {
 							if(nodeIndex != relevantWayNodeCounter && !showedNodeIndexError) {
-								System.err.println("Invalid nodeIndex: " + nodeIndex + " instead of " + relevantWayNodeCounter);
+								LOG.severe("Invalid nodeIndex: " + nodeIndex + " instead of " + relevantWayNodeCounter);
 								showedNodeIndexError = true;
 							}
 								
@@ -128,7 +130,7 @@ public class OsmAppPreprocessorPass2 {
 								connectionWriter.writeFloat((float)node.getLongitude());	
 								connectionWriter.writeLong(node.getId());							
 							} catch (IOException e) {
-								e.printStackTrace();
+								LOG.log(Level.SEVERE, "Exception", e);
 							}
 							relevantWayNodeCounter++;	
 						}
@@ -138,10 +140,9 @@ public class OsmAppPreprocessorPass2 {
 					
 					elementsPass2++;
 					if ((elementsPass2 % 100000) == 0) {
-						System.out
-								.println("Loaded " + elementsPass2 + " elements ("
+						LOG.info("Loaded " + elementsPass2 + " elements ("
 										+ (int) (((float) elementsPass2 / totalElements) * 100) + "%)");
-						System.out.println(relevantWayNodeCounter);
+						LOG.info("" + relevantWayNodeCounter);
 					}
 				}
 
@@ -174,34 +175,34 @@ public class OsmAppPreprocessorPass2 {
 				try {
 					readerThread.join();
 				} catch (InterruptedException e) {
-					e.printStackTrace();	
+					LOG.log(Level.SEVERE, "Exception", e);	
 					return;
 				}
 			}			
 			
 			
 			if(relevantWayNodeCounter < waypointIdsSet.size()) {
-				System.err.println("Not all relevantWayNodes have nodes in file: " + 
+				LOG.severe("Not all relevantWayNodes have nodes in file: " + 
 						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
 			}
 			if(relevantWayNodeCounter > waypointIdsSet.size()) {
-				System.err.println("Duplicate nodes for relevantWayNodes in file: " + 
+				LOG.severe("Duplicate nodes for relevantWayNodes in file: " + 
 						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
 			}
 			
-			System.out.println("Pass 2 finished");
+			LOG.info("Pass 2 finished");
 
 			connectionWriter.close();
 		}
 		
 		
-		System.out.println("Pass 2 finished");
-		System.out.println("Relevant ways: " + relevantWays + ", total ways: " + ways);
-		System.out.println("Relevant waynodes: " + relevantWayNodeCounter + ", total nodes: " + nodes);
-		System.out.println("Max nodes per way: " + maxNodesPerWay);
-		System.out.println("Max ways per node: " + maxWaysPerNode);
+		LOG.info("Pass 2 finished");
+		LOG.info("Relevant ways: " + relevantWays + ", total ways: " + ways);
+		LOG.info("Relevant waynodes: " + relevantWayNodeCounter + ", total nodes: " + nodes);
+		LOG.info("Max nodes per way: " + maxNodesPerWay);
+		LOG.info("Max ways per node: " + maxWaysPerNode);
 		
-		System.out.println("Finished in "
+		LOG.info("Finished in "
 				+ (System.currentTimeMillis() - startTime) + "ms");
 	}
 	
@@ -283,7 +284,7 @@ public class OsmAppPreprocessorPass2 {
 						maxSpeed = (short)(maxSpeed * 1.60934);
 					}
 				} catch (Exception e) {
-					System.err.println("Illegal maxspeed: " + originalMaxSpeed);
+					LOG.severe("Illegal maxspeed: " + originalMaxSpeed);
 					maxSpeed = null;
 				}
 			}

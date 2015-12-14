@@ -12,3 +12,5 @@ JMapViewer/releases
 .gradle/
 .idea/
 build/
+*.log
+*.lck

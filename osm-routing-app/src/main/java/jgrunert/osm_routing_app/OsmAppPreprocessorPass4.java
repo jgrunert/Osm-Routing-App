@@ -5,27 +5,39 @@ import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class OsmAppPreprocessorPass4 {
+	
+	private static final Logger LOG = Logger.getLogger(OsmAppPreprocessorPass4.class.getName()); 
 	
 	
 	public static void main(String[] args) {
 		try {
+
+			FileHandler fh = new FileHandler("pass4.log");
+			fh.setFormatter(new SimpleFormatter());
+			LOG.addHandler(fh);
+			LOG.info("Starting pass4");
+			
 			//String outDir = "D:\\Jonas\\OSM\\germany";
 			String outDir = "D:\\Jonas\\OSM\\hamburg";
 			//String outDir = "D:\\Jonas\\OSM\\bawue";
 			
 			doPass(outDir);
 		} catch (Exception e) {
-			System.err.println("Error in main");
-			e.printStackTrace();
+			LOG.severe("Error in main");
+			LOG.log(Level.SEVERE, "Exception", e);
 		}
 	}
 	
 	
 	public static void doPass(String outDir) throws Exception {
 	{
-		System.out.println("Start reading nodes");
+		LOG.info("Start reading nodes");
         DataInputStream nodeReader = new DataInputStream(new FileInputStream(outDir + "\\pass3-nodes.bin"));
         
         int nodeCount = nodeReader.readInt();
@@ -39,22 +51,22 @@ public class OsmAppPreprocessorPass4 {
             nodesLon[i] = nodeReader.readFloat();
             nodesEdgeOffset[i] = nodeReader.readInt();
 			if(i % perc100 == 0) {
-				System.out.println((i / perc100) + "%  reading nodes");
+				LOG.info((i / perc100) + "%  reading nodes");
 			}
         }
         
         nodeReader.close();
-        System.out.println("Finished reading nodes");
+        LOG.info("Finished reading nodes");
         
 
-        System.out.println("Start serializing nodes");    
+        LOG.info("Start serializing nodes");    
         ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\pass4-nodes.bin"));
         os.writeObject(nodeCount);
         os.writeObject(nodesLat);   
         os.writeObject(nodesLon);        
         os.writeObject(nodesEdgeOffset);      
         os.close();
-        System.out.println("Finished serializing nodes");       
+        LOG.info("Finished serializing nodes");       
 		}
         
 
@@ -66,7 +78,7 @@ public class OsmAppPreprocessorPass4 {
 			edgeCountReader.close();
 
 			// Read edges
-			System.out.println("Start reading edges");
+			LOG.info("Start reading edges");
 			DataInputStream edgeReader = new DataInputStream(
 					new FileInputStream(outDir + "\\pass3-edges.bin"));
 			int[] edgesTarget = new int[edgeCount];
@@ -78,21 +90,21 @@ public class OsmAppPreprocessorPass4 {
 			for (int i = 0; i < edgeCount; i++) {
 				edgesTarget[i] = edgeReader.readInt();
 				if (edgesTarget[i] == 0) {
-					System.out.println(i);
+					LOG.info("" + i);
 				}
 				edgesInfobits[i] = edgeReader.readByte();
 				edgeLengths[i] = edgeReader.readFloat();
 				edgeMaxSpeeds[i] = edgeReader.readByte();
 				if (i % perc100 == 0) {
-					System.out.println((i / perc100) + "% reading edges");
+					LOG.info((i / perc100) + "% reading edges");
 				}
 			}
 
 			// Serialize edges
 			edgeReader.close();
-			System.out.println("Finished reading edges");
+			LOG.info("Finished reading edges");
 
-			System.out.println("Start serializing edges");
+			LOG.info("Start serializing edges");
 			ObjectOutputStream os = new ObjectOutputStream(
 					new FileOutputStream(outDir + "\\pass4-edges.bin"));
 			os.writeObject(edgeCount);
@@ -101,7 +113,7 @@ public class OsmAppPreprocessorPass4 {
 			os.writeObject(edgeLengths);
 			os.writeObject(edgeMaxSpeeds);
 			os.close();
-			System.out.println("Finished serializing edges");
+			LOG.info("Finished serializing edges");
 		}
 	}
 }
