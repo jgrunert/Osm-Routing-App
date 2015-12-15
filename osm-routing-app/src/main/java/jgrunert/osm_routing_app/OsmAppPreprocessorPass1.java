@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -286,8 +287,7 @@ public class OsmAppPreprocessorPass1 {
 					highwayBinWriter.writeInt(-1);					
 				}
 			}
-			hw.wayNodes.clear();
-			hw.wayNodes = null;
+			highways.set(i, null);
 			if(i % percAmnt == 0) {
 				OsmAppPreprocessor.LOG.info((i / percAmnt) + "%  finding waysOfNodes");
 			}
@@ -301,21 +301,22 @@ public class OsmAppPreprocessorPass1 {
 		OsmAppPreprocessor.LOG.info("Start clean up highways");
 		highways.clear();
 		highways = null;
-		System.gc();
 		OsmAppPreprocessor.LOG.info("Finished clean up highways");
 		
 		
 		// Save waysOfNodes
 		OsmAppPreprocessor.LOG.info("Start saving waysOfNodes");
-		DataOutputStream waysOfNodesWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass1-waysOfNodes.bin"));
+		ObjectOutputStream waysOfNodesWriter = new ObjectOutputStream(new FileOutputStream(outDir + "\\pass1-waysOfNodes.bin"));
 		waysOfNodesWriter.writeInt(waysOfNodes.size());
 		percTmp100 = waysOfNodes.size() / 100;
 		for(int i = 0; i < waysOfNodes.size(); i++) {
 			List<Integer> nodeWays = waysOfNodes.get(i);
-			waysOfNodesWriter.writeInt(nodeWays.size());
-			for(int id : nodeWays) {
-				waysOfNodesWriter.writeInt(id);				
-			}
+			waysOfNodesWriter.writeObject(nodeWays.toArray(new Integer[0]));
+//			waysOfNodesWriter.writeInt(nodeWays.size());
+//			for(int id : nodeWays) {
+//				waysOfNodesWriter.writeInt(id);				
+//			}
+			waysOfNodes.set(i, null);
 			if(i % percTmp100 == 0) {
 				OsmAppPreprocessor.LOG.info(i / percTmp100 + "% save waysOfNodes");
 			}
@@ -328,7 +329,6 @@ public class OsmAppPreprocessorPass1 {
 		OsmAppPreprocessor.LOG.info("Start clean up waysOfNodes");
 		waysOfNodes.clear();
 		waysOfNodes = null;
-		System.gc();
 		OsmAppPreprocessor.LOG.info("Finished clean up waysOfNodes");
 		
 		
@@ -493,8 +493,7 @@ public class OsmAppPreprocessorPass1 {
 			
 			return new HighwayInfos(false, true, oneway, maxSpeed);
 		}
-		else if(highwayTag.startsWith("primary") || highwayTag.startsWith("secondary") || 
-		   highwayTag.startsWith("tertiary")) {
+		else if(highwayTag.startsWith("primary")) {
 			// country road etc
 			if(maxSpeed == null)
 				maxSpeed = 100;
@@ -502,6 +501,15 @@ public class OsmAppPreprocessorPass1 {
 				oneway = false;
 			
 			return new HighwayInfos(true, (sidewalk == SidwalkMode.Yes), oneway, maxSpeed);
+		}
+		else if(highwayTag.startsWith("secondary") || highwayTag.startsWith("tertiary")) {
+					// country road etc
+					if(maxSpeed == null)
+						maxSpeed = 100;
+					if(oneway == null)
+						oneway = false;
+					
+					return new HighwayInfos(true, (sidewalk != SidwalkMode.No), oneway, maxSpeed);
 		}
 		else if(highwayTag.equals("unclassified")) {
 			// unclassified (small road)

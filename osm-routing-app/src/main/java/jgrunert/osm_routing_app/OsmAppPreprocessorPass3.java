@@ -4,7 +4,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +32,7 @@ public class OsmAppPreprocessorPass3 {
 	}
 	
 	
+	@SuppressWarnings("unchecked")
 	public static void doPass(String outDir) throws Exception {
 
 		OsmAppPreprocessor.LOG.info("OSM Preprocessor Pass3 v02");
@@ -90,6 +93,10 @@ public class OsmAppPreprocessorPass3 {
 				lats[iNode] = nodeReader.readFloat();
 				lons[iNode] = nodeReader.readFloat();
 				nodeReader.readLong(); // Ignore old id
+				
+				if(iNode % perc100 == 0) {
+					OsmAppPreprocessor.LOG.info(iNode / perc100 + "% loadin node coords");
+				}
 			}
 			OsmAppPreprocessor.LOG.info("Finished loading node coords");
 		}
@@ -97,18 +104,19 @@ public class OsmAppPreprocessorPass3 {
 		
 		
 		// Load waysOfNodes
-		DataInputStream waysOfNodesReader = new DataInputStream(new FileInputStream(outDir + "\\pass1-waysOfNodes.bin"));
+		ObjectInputStream waysOfNodesReader = new ObjectInputStream(new FileInputStream(outDir + "\\pass1-waysOfNodes.bin"));
 		int waynodeCount = waysOfNodesReader.readInt();
 		OsmAppPreprocessor.LOG.info("Start reading waysOfNodes: " + waynodeCount);
 		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waynodeCount);
 		perc100 = waynodeCount / 100;
 		for(int i = 0; i < waynodeCount; i++) {
-			int waysCount = waysOfNodesReader.readInt();
-			List<Integer> nodeWays = new ArrayList<Integer>(waysCount);			
-			for(int iNd = 0; iNd < waysCount; iNd++) {
-				nodeWays.add(waysOfNodesReader.readInt());
-			}
-			waysOfNodes.add(nodeWays);
+			//int waysCount = waysOfNodesReader.readInt();
+			//Object[] nodesArray = (waysOfNodesReader.readObject();
+			//List<Integer> nodeWays = new ArrayList<Integer>(Arrays.asList((Integer[])waysOfNodesReader.readObject()));			
+//			for(int iNd = 0; iNd < waysCount; iNd++) {
+//				nodeWays.add(waysOfNodesReader.readInt());
+//			}
+			waysOfNodes.add(Arrays.asList((Integer[])waysOfNodesReader.readObject()));
 			
 			if(i % perc100 == 0) {
 				OsmAppPreprocessor.LOG.info(i / perc100 + "% reading waysOfNodes");
