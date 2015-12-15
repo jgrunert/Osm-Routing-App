@@ -8,14 +8,14 @@ import java.util.logging.Level;
 
 public class OsmAppPreprocessorPass5 {
 
-	private static final float gridRaster = 0.10f;
+	private static final float gridRaster = 0.20f;
 	
 	
 	public static void main(String[] args) {
 		try {
-			//String outDir = "D:\\Jonas\\OSM\\germany";
+			String outDir = "D:\\Jonas\\OSM\\germany";
 			//String outDir = "D:\\Jonas\\OSM\\hamburg";
-			String outDir = "D:\\Jonas\\OSM\\bawue";
+			//String outDir = "D:\\Jonas\\OSM\\bawue";
 			
 			doPass(outDir);
 		} catch (Exception e) {

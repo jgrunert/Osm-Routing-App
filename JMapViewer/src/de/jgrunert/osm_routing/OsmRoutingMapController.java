@@ -1,6 +1,7 @@
 // License: GPL. For details, see Readme.txt file.
 package de.jgrunert.osm_routing;
 
+import java.awt.Color;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -55,8 +56,8 @@ MouseWheelListener {
     
     
     // General constants
-    //private static final String MAP_DIR = "D:\\Jonas\\OSM\\germany";
-    private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
+    private static final String MAP_DIR = "D:\\Jonas\\OSM\\germany";
+    //private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
     //private static final String MAP_DIR = "D:\\Jonas\\OSM\\hamburg";
     
     
@@ -65,7 +66,7 @@ MouseWheelListener {
     private static final short PED_MAXSPEED = 5;
     private static int ROUTE_HEAP_CAPACITY = 1000000;
     // Number of grids to buffer
-    private static int GRID_BUFFER_SIZE = 200;
+    private static int GRID_BUFFER_SIZE = 2000;
     
     
     // Start and end for route
@@ -352,7 +353,7 @@ MouseWheelListener {
                 continue;
             }
                         
-           float dist = Utils.calcNodeDist(lat, lon, grid.nodesLat[iN], grid.nodesLon[iN]);
+           float dist = Utils.calcNodeDistFast(lat, lon, grid.nodesLat[iN], grid.nodesLon[iN]);
             if(dist < smallestDist) {
                 smallestDist = dist;
                 nextIndex = iN;
@@ -490,7 +491,8 @@ MouseWheelListener {
         // DebugDisplay
         Random rd = new Random(123);
         float debugDispProp = 0.9999f;
-        int maxMarkerCountdown = 50;
+        int maxMarkerCount = 200;
+        int maxMarkerCountdown = maxMarkerCount;
 
 
         int startGridIndex = (int)(startNodeGridIndex >> 32);
@@ -573,7 +575,8 @@ MouseWheelListener {
             
             // Display
             if (maxMarkerCountdown > 0 && rd.nextFloat() > debugDispProp) {
-                MapMarkerDot dot = new MapMarkerDot(getNodeCoordinates(visGrid, visNodeIndex));
+                MapMarkerDot dot = new MapMarkerDot(new Color(255 - (255 * maxMarkerCountdown / maxMarkerCount), 0, (255 * maxMarkerCountdown / maxMarkerCount)),
+                        getNodeCoordinates(visGrid, visNodeIndex));
                 map.addMapMarker(dot);
                 routeDots.add(dot);
                 maxMarkerCountdown--;
@@ -652,7 +655,7 @@ MouseWheelListener {
                 
                 // Caching h or holding visited in a nodes does not make sense
                 // Re-visiting rate seems to be below 1:10 and maps get very slow and memory consuming
-                float h = Utils.calcNodeDist(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon) * hFactor;
+                float h = Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon) * hFactor;
 
                 if (openList.contains(nbNodeGridIndex)) {
                     hReuse++;
@@ -719,6 +722,16 @@ MouseWheelListener {
 
                 i = pre;
             }
+            
+            
+            // For testing: Connect debug markers
+//            for(int iM = 0; iM < routeDots.size() - 1; iM++) {
+//
+//                MapPolygonImpl routPoly = new MapPolygonImpl(new Color(255 - (255 * iM / routeDots.size()), 0, 255 * iM / routeDots.size()),
+//                        routeDots.get(iM).getCoordinate(), routeDots.get(iM).getCoordinate(), routeDots.get(iM+1).getCoordinate());
+//                routeLines.add(routPoly);
+//                map.addMapPolygon(routPoly);
+//            }
         } else {
             System.err.println("No way found");
         }

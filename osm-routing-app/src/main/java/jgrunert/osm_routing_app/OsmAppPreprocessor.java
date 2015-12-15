@@ -35,7 +35,7 @@ public class OsmAppPreprocessor {
 			LOG.info("In: " + inFile);
 			LOG.info("Out: " + outDir);
 			
-			OsmAppPreprocessorPass1.doPass(inFile, outDir);
+			//OsmAppPreprocessorPass1.doPass(inFile, outDir);
 			OsmAppPreprocessorPass2.doPass(inFile, outDir);
 			OsmAppPreprocessorPass3.doPass(outDir);
 			OsmAppPreprocessorPass4.doPass(outDir);

@@ -20,6 +20,12 @@ import org.openstreetmap.gui.jmapviewer.interfaces.MapPolygon;
 public class MapPolygonImpl extends MapObjectImpl implements MapPolygon {
 
     private List<? extends ICoordinate> points;
+    
+    private final Color optColor;
+
+    public MapPolygonImpl(Color optColor, ICoordinate ... points) {
+        this(optColor, null, null, points);
+    }
 
     public MapPolygonImpl(ICoordinate ... points) {
         this(null, null, points);
@@ -49,9 +55,20 @@ public class MapPolygonImpl extends MapObjectImpl implements MapPolygon {
         this(layer, name, Arrays.asList(points), getDefaultStyle());
     }
 
+    public MapPolygonImpl(Color optColor, Layer layer, String name, ICoordinate ... points) {
+        this(optColor, layer, name, Arrays.asList(points), getDefaultStyle());
+    }
+
     public MapPolygonImpl(Layer layer, String name, List<? extends ICoordinate> points, Style style) {
         super(layer, name, style);
         this.points = points;
+        this.optColor = null;
+    }
+
+    public MapPolygonImpl(Color optColor, Layer layer, String name, List<? extends ICoordinate> points, Style style) {
+        super(layer, name, style);
+        this.points = points;
+        this.optColor = optColor;
     }
 
     @Override
@@ -71,8 +88,13 @@ public class MapPolygonImpl extends MapObjectImpl implements MapPolygon {
     @Override
     public void paint(Graphics g, Polygon polygon) {
         // Prepare graphics
-        Color oldColor = g.getColor();
-        g.setColor(getColor());
+        Color oldColor;
+        if (optColor == null) {
+            oldColor = g.getColor();
+        } else {
+            oldColor = optColor;
+        }
+        g.setColor(optColor);
 
         Stroke oldStroke = null;
         if (g instanceof Graphics2D) {

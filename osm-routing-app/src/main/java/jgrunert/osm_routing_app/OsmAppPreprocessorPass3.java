@@ -78,10 +78,11 @@ public class OsmAppPreprocessorPass3 {
 					new FileInputStream(outDir + "\\pass2-waynodes.bin"));
 			int nodeCount = nodeReader.readInt();
 
+			// TODO Faster, serialize
 			lats = new float[nodeCount];
 			lons = new float[nodeCount];
 
-			int edgeCounter = 0;
+			//int edgeCounter = 0;
 			perc100 = nodeCount / 100;
 			for (int iNode = 0; iNode < nodeCount; iNode++) {
 				int nodeIndex = nodeReader.readInt();
@@ -95,7 +96,7 @@ public class OsmAppPreprocessorPass3 {
 				nodeReader.readLong(); // Ignore old id
 				
 				if(iNode % perc100 == 0) {
-					OsmAppPreprocessor.LOG.info(iNode / perc100 + "% loadin node coords");
+					OsmAppPreprocessor.LOG.info(iNode / perc100 + "% loading node coords");
 				}
 			}
 			OsmAppPreprocessor.LOG.info("Finished loading node coords");
