@@ -428,6 +428,10 @@ MouseWheelListener {
     byte edgeFilterBitValue;  
     int allMaxSpeed;
     int allMinSpeed;
+
+    long visNodeGridIndex;
+    int visGridIndex;
+    int visNodeIndex;
     
     long target;
     int visitedCount;
@@ -571,9 +575,7 @@ MouseWheelListener {
         // Find route with A*
         while (!routeDistHeap.isEmpty()) {
             // Remove and get index
-            long visNodeGridIndex = routeDistHeap.removeFirst();
-            int visGridIndex;
-            int visNodeIndex;
+            visNodeGridIndex = routeDistHeap.removeFirst();
             //System.out.println("VIS: " + visNodeGridIndex);
             //System.out.println(nextIndex);
             
@@ -584,27 +586,7 @@ MouseWheelListener {
 //                nbCount = 0;
 //                nbIndex = -1;
 //                
-                visGridIndex = (int)(visNodeGridIndex >> 32);
-                visNodeIndex = (int)(long)(visNodeGridIndex);
-//                
-                if(visGridIndex != oldVisGridIndex) {
-                    oldVisGridIndex = visGridIndex;
-                    visGrid = getGrid(visGridIndex);
-                    visGridRB = routingGridBuffers.get(visGridIndex);  
-                    if(visGridRB == null) {
-                        visGridRB = new MapGridRoutingBuffer(visGrid.nodeCount);
-                        routingGridBuffers.put(visGridIndex, visGridRB);
-                    }
-                    gridChanges++;
-                } else {
-                    gridStays++;
-                }               
-//
-//
-                // Mark as closed/visited
-                visGridRB.nodesRouteClosedList[visNodeIndex] = true;
-                openList.remove(visNodeGridIndex);
-                visitedCount++;
+
 //                
 //
 //                // Iterate over edges to neighbors
@@ -692,11 +674,11 @@ MouseWheelListener {
             
             
             // Visit node/neighbors
-            if(visitNode(visNodeGridIndex, visGridIndex, visNodeIndex)) {
+            if(visitNode()) {
                 found = true;
                 break;
             }
-            visitNodeEdges(visNodeGridIndex, visGridIndex, visNodeIndex);
+            visitNodeEdges();
             
             
             // Display
@@ -778,19 +760,42 @@ MouseWheelListener {
     
     
 
-    private boolean visitNode(long visNodeGridIndex, int visGridIndex, int visNodeIndex) {
-//        if(visGridIndex != oldVisGridIndex) {
-//            oldVisGridIndex = visGridIndex;
-//            visGrid = getGrid(visGridIndex);
-//            visGridRB = routingGridBuffers.get(visGridIndex);  
-//            if(visGridRB == null) {
-//                visGridRB = new MapGridRoutingBuffer(visGridIndex);
-//                routingGridBuffers.put(visGridIndex, visGridRB);
-//            }
-//            gridChanges++;
-//        } else {
-//            gridStays++;
-//        }
+    private boolean visitNode() 
+    {                
+        visGridIndex = (int) (visNodeGridIndex >> 32);
+        visNodeIndex = (int) (long) (visNodeGridIndex);
+
+        if (visGridIndex != oldVisGridIndex) {
+            oldVisGridIndex = visGridIndex;
+            visGrid = getGrid(visGridIndex);
+            visGridRB = routingGridBuffers.get(visGridIndex);
+            if (visGridRB == null) {
+                visGridRB = new MapGridRoutingBuffer(visGrid.nodeCount);
+                routingGridBuffers.put(visGridIndex, visGridRB);
+            }
+            gridChanges++;
+        } else {
+            gridStays++;
+        }
+
+    // Mark as closed/visited
+    visGridRB.nodesRouteClosedList[visNodeIndex] = true;
+    openList.remove(visNodeGridIndex);
+    visitedCount++;
+        
+        
+        if(visGridIndex != oldVisGridIndex) {
+            oldVisGridIndex = visGridIndex;
+            visGrid = getGrid(visGridIndex);
+            visGridRB = routingGridBuffers.get(visGridIndex);  
+            if(visGridRB == null) {
+                visGridRB = new MapGridRoutingBuffer(visGridIndex);
+                routingGridBuffers.put(visGridIndex, visGridRB);
+            }
+            gridChanges++;
+        } else {
+            gridStays++;
+        }
         //System.out.println(visGridIndex);
         
         // Update visitTimestamp to mark that grid is still in use
@@ -805,7 +810,7 @@ MouseWheelListener {
         return false;
     }
     
-    private void visitNodeEdges(long visNodeGridIndex, int visGridIndex, int visNodeIndex) 
+    private void visitNodeEdges() 
     {
         // Get distance of node from start, remove and get index
         float nodeDist = visGridRB.nodesRouteDists[visNodeIndex];
