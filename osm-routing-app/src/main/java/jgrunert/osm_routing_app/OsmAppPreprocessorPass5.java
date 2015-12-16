@@ -8,7 +8,7 @@ import java.util.logging.Level;
 
 public class OsmAppPreprocessorPass5 {
 
-	private static final float gridRaster = 0.4f;
+	private static final float gridRaster = 0.05f;
 	
 	
 	public static void main(String[] args) {
@@ -244,7 +244,7 @@ public class OsmAppPreprocessorPass5 {
 		{
 			OsmAppPreprocessor.LOG.info("Start writing grid2");
 			ObjectOutputStream os = new ObjectOutputStream(
-					new FileOutputStream(outDir + "\\grids_010\\grids.index"));
+					new FileOutputStream(outDir + "\\grids\\grids.index"));
 			os.writeFloat(gridRaster);
 			os.writeFloat(minLat);
 			os.writeFloat(minLon);
