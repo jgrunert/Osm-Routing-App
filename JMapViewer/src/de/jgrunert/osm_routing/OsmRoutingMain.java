@@ -17,20 +17,13 @@ import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 
-import org.openstreetmap.gui.jmapviewer.Coordinate;
 import org.openstreetmap.gui.jmapviewer.JMapViewer;
 import org.openstreetmap.gui.jmapviewer.JMapViewerTree;
-import org.openstreetmap.gui.jmapviewer.Layer;
-import org.openstreetmap.gui.jmapviewer.LayerGroup;
-import org.openstreetmap.gui.jmapviewer.MapMarkerCircle;
-import org.openstreetmap.gui.jmapviewer.MapMarkerDot;
-import org.openstreetmap.gui.jmapviewer.MapPolygonImpl;
-import org.openstreetmap.gui.jmapviewer.MapRectangleImpl;
 import org.openstreetmap.gui.jmapviewer.OsmTileLoader;
 import org.openstreetmap.gui.jmapviewer.events.JMVCommandEvent;
 import org.openstreetmap.gui.jmapviewer.interfaces.JMapViewerEventListener;
-import org.openstreetmap.gui.jmapviewer.interfaces.MapPolygon;
 import org.openstreetmap.gui.jmapviewer.interfaces.TileLoader;
 import org.openstreetmap.gui.jmapviewer.interfaces.TileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.BingAerialTileSource;
@@ -38,8 +31,8 @@ import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOpenAerialTileSource
 import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOsmTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
 
-import de.jgrunert.osm_routing.OsmRoutingMapController.RoutingMode;
-import de.jgrunert.osm_routing.OsmRoutingMapController.TransportMode;
+import de.jgrunert.osm_routing.IRouteSolver.RoutingMode;
+import de.jgrunert.osm_routing.IRouteSolver.TransportMode;
 
 /**
  * Demonstrates the usage of {@link JMapViewer}
@@ -194,7 +187,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
         buttonCalcCarFast.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                mapController.calculateRoute(TransportMode.Car, RoutingMode.Fastest);
+                mapController.getRouteSolver().startCalculateRoute(TransportMode.Car, RoutingMode.Fastest);
             }
         });
         panelBottom.add(buttonCalcCarFast);
@@ -203,7 +196,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
         buttonCalcCarShort.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                mapController.calculateRoute(TransportMode.Car, RoutingMode.Shortest);
+                mapController.getRouteSolver().startCalculateRoute(TransportMode.Car, RoutingMode.Shortest);
             }
         });
         panelBottom.add(buttonCalcCarShort);
@@ -212,7 +205,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
         buttonCalcPedShort.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                mapController.calculateRoute(TransportMode.Pedestrian, RoutingMode.Shortest);
+                mapController.getRouteSolver().startCalculateRoute(TransportMode.Pedestrian, RoutingMode.Shortest);
             }
         });
         panelBottom.add(buttonCalcPedShort);
@@ -221,7 +214,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
         buttonCalcManiacFast.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                mapController.calculateRoute(TransportMode.Maniac, RoutingMode.Fastest);
+                mapController.getRouteSolver().startCalculateRoute(TransportMode.Maniac, RoutingMode.Fastest);
             }
         });
         panelBottom.add(buttonCalcManiacFast);
@@ -230,16 +223,15 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
         buttonCalcManiacShort.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                mapController.calculateRoute(TransportMode.Maniac, RoutingMode.Shortest);
+                mapController.getRouteSolver().startCalculateRoute(TransportMode.Maniac, RoutingMode.Shortest);
             }
         });
         panelBottom.add(buttonCalcManiacShort);
 
         add(treeMap, BorderLayout.CENTER);
 
-        // TODO Testing
-        map().addMapMarker(new MapMarkerDot("A", new Coordinate(48.68, 9.00)));
-        map().addMapMarker(new MapMarkerDot("B", new Coordinate(48.84, 9.26)));
+        //map().addMapMarker(new MapMarkerDot("A", new Coordinate(48.68, 9.00)));
+        //map().addMapMarker(new MapMarkerDot("B", new Coordinate(48.84, 9.26)));
         
         map().addMouseListener(new MouseAdapter() {
             @Override
@@ -263,6 +255,18 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
                 if (showToolTip.isSelected()) map().setToolTipText(map().getPosition(p).toString());
             }
         });
+        
+        
+        // Poll timer
+        Timer timer = new Timer(500, 
+                new ActionListener() {
+                    
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        System.out.println(mapController.getRouteSolver().getRoutingState());
+                    }
+                });
+        timer.start();         
     }
 
     private JMapViewer map() {
