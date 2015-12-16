@@ -208,16 +208,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
         });
         panelBottom.add(buttonCalcCarShort);
 
-        JButton buttonCalcPedFast = new JButton("Pedestrian: Fast");
-        buttonCalcPedFast.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                mapController.calculateRoute(TransportMode.Pedestrian, RoutingMode.Shortest);
-            }
-        });
-        panelBottom.add(buttonCalcPedFast);
-
-        JButton buttonCalcPedShort = new JButton("Pedestrian: Short");
+        JButton buttonCalcPedShort = new JButton("Pedestrian");
         buttonCalcPedShort.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {

@@ -56,7 +56,7 @@ MouseWheelListener {
     
     
     // General constants
-    private static final String MAP_DIR = "D:\\Jonas\\OSM\\germany";
+    private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\germany\\grids_020";
     //private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
     //private static final String MAP_DIR = "D:\\Jonas\\OSM\\hamburg";
     
@@ -156,7 +156,7 @@ MouseWheelListener {
     {
         System.out.println("Start loading grid index");
         try (ObjectInputStream gridReader =
-                new ObjectInputStream(new FileInputStream(MAP_DIR + "\\grids\\grids.index"))) {
+                new ObjectInputStream(new FileInputStream(MAP_GRIDS_DIR + "\\grids.index"))) {
             gridRaster = gridReader.readFloat();
             gridMinLat = gridReader.readFloat();
             gridMinLon = gridReader.readFloat();
@@ -208,7 +208,7 @@ MouseWheelListener {
                 System.out.println("Unloaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size());
             }
             
-            MapGrid loaded = new MapGrid(gridIndex, gridVisitTimestamp, MAP_DIR + "\\grids\\" + gridIndex + ".grid");
+            MapGrid loaded = new MapGrid(gridIndex, gridVisitTimestamp, MAP_GRIDS_DIR + "\\" + gridIndex + ".grid");
             grids.set(gridIndex, loaded);
             loadedGrids.add(loaded);
             gridLoadOperations++;
@@ -421,6 +421,44 @@ MouseWheelListener {
     
   
     
+    
+
+    // Edge bitfilter and speed
+    byte edgeFilterBitMask;
+    byte edgeFilterBitValue;  
+    int allMaxSpeed;
+    int allMinSpeed;
+    
+    boolean found;
+    long target;
+    int visitedCount;
+    int hCalc;
+    int hReuse;
+    int gridChanges;
+    int gridStays;
+    int firstVisits;
+    int againVisits;
+
+    Map<Integer, MapGridRoutingBuffer> routingGridBuffers; // Stores all buffers for all grids involved in routing
+    Set<Long> openList; // Stores all open nodes and their heuristic
+
+    int startGridIndex;
+    //int startNodeIndex = (int)(long)(startNodeGridIndex);
+    MapGrid startGrid;
+
+    int targetGridIndex;
+    int targetNodeIndex;
+    MapGrid targetGrid;
+    float targetLat;
+    float targetLon;
+    
+    int oldVisGridIndex;
+    MapGrid visGrid;
+    MapGridRoutingBuffer visGridRB;
+    
+    RoutingMode routeMode;
+    
+    
     public void calculateRouteAStar(TransportMode transportMode, RoutingMode routeMode) {
 
         if (startNodeGridIndex == null || targetNodeGridIndex == null) {
@@ -428,12 +466,10 @@ MouseWheelListener {
             return;
         }
         
+        this.routeMode = routeMode;
         
         // Edge bitfilter and speed
-        final byte edgeFilterBitMask;
-        final byte edgeFilterBitValue;  
-        final int allMaxSpeed;
-        final int allMinSpeed = PED_MAXSPEED;
+        allMinSpeed = PED_MAXSPEED;
         
         switch (transportMode) {
         case Car:
@@ -495,20 +531,20 @@ MouseWheelListener {
         int maxMarkerCountdown = maxMarkerCount;
 
 
-        int startGridIndex = (int)(startNodeGridIndex >> 32);
+        startGridIndex = (int)(startNodeGridIndex >> 32);
         //int startNodeIndex = (int)(long)(startNodeGridIndex);
-        MapGrid startGrid = getGrid(startGridIndex);
+        startGrid = getGrid(startGridIndex);
 
-        int targetGridIndex = (int)(targetNodeGridIndex >> 32);
-        int targetNodeIndex = (int)(long)(targetNodeGridIndex);
-        MapGrid targetGrid = getGrid(targetGridIndex);
-        float targetLat = targetGrid.nodesLat[targetNodeIndex];
-        float targetLon = targetGrid.nodesLon[targetNodeIndex];
+        targetGridIndex = (int)(targetNodeGridIndex >> 32);
+        targetNodeIndex = (int)(long)(targetNodeGridIndex);
+        targetGrid = getGrid(targetGridIndex);
+        targetLat = targetGrid.nodesLat[targetNodeIndex];
+        targetLon = targetGrid.nodesLon[targetNodeIndex];
         
         // Reset buffers and 
         routeDistHeap.resetEmpty();
-        Map<Integer, MapGridRoutingBuffer> routingGridBuffers = new HashMap<>(); // Stores all buffers for all grids involved in routing
-        Set<Long> openList = new HashSet<>(); // Stores all open nodes and their heuristic
+        routingGridBuffers = new HashMap<>(); // Stores all buffers for all grids involved in routing
+        openList = new HashSet<>(); // Stores all open nodes and their heuristic
         // TODO routingGridBuffers offloading (if no more nodes of this grid open? does this ever happen?)
         
         // Add start node  
@@ -517,19 +553,19 @@ MouseWheelListener {
         routingGridBuffers.put(startGridIndex, startGridRB);
         openList.add(startNodeGridIndex);
         
-        boolean found = false;
-        long target = (long)targetNodeGridIndex;
-        int visitedCount = 0;
-        int hCalc = 0;
-        int hReuse = 0;
-        int gridChanges = 0;
-        int gridStays = 0;
-        int firstVisits = 0;
-        int againVisits = 0;
+        found = false;
+        target = (long)targetNodeGridIndex;
+        visitedCount = 0;
+        hCalc = 0;
+        hReuse = 0;
+        gridChanges = 0;
+        gridStays = 0;
+        firstVisits = 0;
+        againVisits = 0;
         
-        int oldVisGridIndex = startGridIndex;
-        MapGrid visGrid = startGrid;
-        MapGridRoutingBuffer visGridRB = startGridRB;
+        oldVisGridIndex = startGridIndex;
+        visGrid = startGrid;
+        visGridRB = startGridRB;
         
         // Find route with A*
         while (!routeDistHeap.isEmpty()) {
@@ -538,40 +574,13 @@ MouseWheelListener {
             int visGridIndex = (int)(visNodeGridIndex >> 32);
             int visNodeIndex = (int)(long)(visNodeGridIndex);
             //System.out.println("VIS: " + visNodeGridIndex);
+            //System.out.println(nextIndex);
             
-            if(visGridIndex != oldVisGridIndex) {
-                oldVisGridIndex = visGridIndex;
-                visGrid = getGrid(visGridIndex);
-                visGridRB = routingGridBuffers.get(visGridIndex);  
-                if(visGridRB == null) {
-                    visGridRB = new MapGridRoutingBuffer(visGridIndex);
-                    routingGridBuffers.put(visGridIndex, visGridRB);
-                }
-                gridChanges++;
-            } else {
-                gridStays++;
-            }
             
-            // Update visitTimestamp to mark that grid is still in use
-            visGrid.visitTimestamp = ++gridVisitTimestamp;
-           
-
-            // Get distance of node from start, remove and get index
-            float nodeDist = visGridRB.nodesRouteDists[visNodeIndex];
-
-            // Found! Break loop
-            if (visNodeGridIndex == target) {
-                System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize() + " still in heap");
-                System.out.println("Cost: " + nodeDist);
-                found = true;
+            if(visitNode(visNodeGridIndex, visGridIndex, visNodeIndex)) {
                 break;
             }
-
-            // Mark as closed/visited
-            visGridRB.nodesRouteClosedList[visNodeIndex] = true;
-            openList.remove(visNodeGridIndex);
-            visitedCount++;
-
+            
             
             // Display
             if (maxMarkerCountdown > 0 && rd.nextFloat() > debugDispProp) {
@@ -580,102 +589,6 @@ MouseWheelListener {
                 map.addMapMarker(dot);
                 routeDots.add(dot);
                 maxMarkerCountdown--;
-            }
-            //System.out.println(nextIndex);
-
-            
-            // Iterate over edges to neighbors
-            for (int iEdge = visGrid.nodesEdgeOffset[visNodeIndex]; 
-                    (visNodeIndex + 1 < visGrid.nodesEdgeOffset.length && iEdge < visGrid.nodesEdgeOffset[visNodeIndex + 1])
-                    || (visNodeIndex + 1 == visGrid.nodesEdgeOffset.length && iEdge < visGrid.edgeCount); // Last node in offset array
-                    iEdge++) {
-                // Skip if edge not accessible
-                if ((visGrid.edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
-                    continue;
-                }
-                
-                // Get neighbor
-                long nbNodeGridIndex = visGrid.edgesTargetNodeGridIndex[iEdge];
-                int nbGridIndex = (int)(nbNodeGridIndex >> 32);
-                int nbNodeIndex = (int)(long)(nbNodeGridIndex);
-
-                // Skip loop edges
-                if(nbNodeGridIndex == visNodeGridIndex) {
-                    System.err.println("Warning: Loop edge - skipping");
-                    continue;
-                }
-                
-                // Get neighbor grid routing buffer
-                MapGrid nbGrid;
-                if(nbGridIndex == visGridIndex) {
-                    nbGrid = visGrid;
-                } else {
-                    nbGrid = getGrid(nbGridIndex);
-                }     
-                
-                // Get neighbor grid routing buffer
-                MapGridRoutingBuffer nbGridRB;
-                if(nbGridIndex == visGridIndex) {
-                    nbGridRB = visGridRB;
-                } else {
-                    nbGridRB = routingGridBuffers.get(nbGridIndex);
-                    if(nbGridRB == null) {
-                        nbGridRB = new MapGridRoutingBuffer(nbGrid.nodeCount);
-                        routingGridBuffers.put(nbGridIndex, nbGridRB);
-                    }
-                }
-                
-                // Continue if target node node already in closed list
-                if (nbGridRB.nodesRouteClosedList[nbNodeIndex]) {
-                    continue;
-                }
-                
-                // Distance/Time calculation, depending on routing mode
-                final float nbDist;
-                // Factor for heuristic
-                final float hFactor;
-                //float h;
-                float edgeDist = visGrid.edgesLengths[iEdge];
-                if (routeMode == RoutingMode.Fastest) {
-                    // Fastest route
-                    float maxSpeed = (float) Byte.toUnsignedLong(visGrid.edgesMaxSpeeds[iEdge]);
-                    maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
-                    nbDist = nodeDist + (edgeDist / maxSpeed);
-                    //float motorwayBoost = (maxSpeed > 10) ? (maxSpeed > 50) ? (maxSpeed > 100) ? 1.6f : 1.3f : 1.2f : 1.0f; 
-                    //float motorwayBoost = (maxSpeed > 100) ? 1.5f : 1.0f; 
-                    //hFactor = 1.0f / allMaxSpeed / motorwayBoost;
-                    hFactor = 1.0f / allMaxSpeed;
-                } else if (routeMode == RoutingMode.Shortest) {
-                    // Shortest route
-                    nbDist = nodeDist + edgeDist;
-                    hFactor = 1.0f;
-                } else {
-                    throw new RuntimeException("Unsupported routing mode: " + routeMode);
-                }
-                
-                // Caching h or holding visited in a nodes does not make sense
-                // Re-visiting rate seems to be below 1:10 and maps get very slow and memory consuming
-                float h = Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon) * hFactor;
-
-                if (openList.contains(nbNodeGridIndex)) {
-                    hReuse++;
-                    // Point open and not closed - update if necessary
-                    if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbDist + h)) {
-                        nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
-                        nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
-                    }
-                    againVisits++;
-                } else {    
-                    // Point not found yet - add to heap and open list
-                    hCalc++;
-                    // Add
-                    routeDistHeap.add(nbNodeGridIndex, nbDist + h);
-                    //nodesRouteOpenList[nbIndex] = true;
-                    nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
-                    nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
-                    openList.add(nbNodeGridIndex);
-                    firstVisits++;
-                }
             }
         }
 
@@ -686,6 +599,7 @@ MouseWheelListener {
         System.out.println("firstVisits: " + firstVisits);
         System.out.println("againVisits: " + againVisits);
         System.out.println("MaxHeapSize: " + routeDistHeap.getSizeUsageMax());
+        
         
         // TODO Time and dist and output (as table?)
         if (found) {
@@ -735,6 +649,144 @@ MouseWheelListener {
         } else {
             System.err.println("No way found");
         }
+        
+        
+        // Cleanup
+        routingGridBuffers = null;
+        openList = null;
+    }
+
+    private boolean visitNode(long visNodeGridIndex, int visGridIndex, int visNodeIndex) {
+        if(visGridIndex != oldVisGridIndex) {
+            oldVisGridIndex = visGridIndex;
+            visGrid = getGrid(visGridIndex);
+            visGridRB = routingGridBuffers.get(visGridIndex);  
+            if(visGridRB == null) {
+                visGridRB = new MapGridRoutingBuffer(visGridIndex);
+                routingGridBuffers.put(visGridIndex, visGridRB);
+            }
+            gridChanges++;
+        } else {
+            gridStays++;
+        }
+        //System.out.println(visGridIndex);
+        
+        // Update visitTimestamp to mark that grid is still in use
+        visGrid.visitTimestamp = ++gridVisitTimestamp;
+         
+
+        // Get distance of node from start, remove and get index
+        float nodeDist = visGridRB.nodesRouteDists[visNodeIndex];
+
+        // Found! Break loop
+        if (visNodeGridIndex == target) {
+            System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize() + " still in heap");
+            System.out.println("Cost: " + nodeDist);
+            found = true;
+            return true;
+        }
+
+        // Mark as closed/visited
+        visGridRB.nodesRouteClosedList[visNodeIndex] = true;
+        openList.remove(visNodeGridIndex);
+        visitedCount++;
+
+
+        
+        // Iterate over edges to neighbors
+        for (int iEdge = visGrid.nodesEdgeOffset[visNodeIndex]; 
+                (visNodeIndex + 1 < visGrid.nodesEdgeOffset.length && iEdge < visGrid.nodesEdgeOffset[visNodeIndex + 1])
+                || (visNodeIndex + 1 == visGrid.nodesEdgeOffset.length && iEdge < visGrid.edgeCount); // Last node in offset array
+                iEdge++) {
+            // Skip if edge not accessible
+            if ((visGrid.edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
+                continue;
+            }
+            
+            // Get neighbor
+            long nbNodeGridIndex = visGrid.edgesTargetNodeGridIndex[iEdge];
+            int nbGridIndex = (int)(nbNodeGridIndex >> 32);
+            int nbNodeIndex = (int)(long)(nbNodeGridIndex);
+
+            // Skip loop edges
+            if(nbNodeGridIndex == visNodeGridIndex) {
+                System.err.println("Warning: Loop edge - skipping");
+                continue;
+            }
+            
+            // Get neighbor grid routing buffer
+            MapGrid nbGrid;
+            if(nbGridIndex == visGridIndex) {
+                nbGrid = visGrid;
+            } else {
+                nbGrid = getGrid(nbGridIndex);
+            }     
+            
+            // Get neighbor grid routing buffer
+            MapGridRoutingBuffer nbGridRB;
+            if(nbGridIndex == visGridIndex) {
+                nbGridRB = visGridRB;
+            } else {
+                nbGridRB = routingGridBuffers.get(nbGridIndex);
+                if(nbGridRB == null) {
+                    nbGridRB = new MapGridRoutingBuffer(nbGrid.nodeCount);
+                    routingGridBuffers.put(nbGridIndex, nbGridRB);
+                }
+            }
+            
+            // Continue if target node node already in closed list
+            if (nbGridRB.nodesRouteClosedList[nbNodeIndex]) {
+                continue;
+            }
+            
+            // Distance/Time calculation, depending on routing mode
+            final float nbDist;
+            // Factor for heuristic
+            final float hFactor;
+            //float h;
+            float edgeDist = visGrid.edgesLengths[iEdge];
+            if (routeMode == RoutingMode.Fastest) {
+                // Fastest route
+                float maxSpeed = (float) Byte.toUnsignedLong(visGrid.edgesMaxSpeeds[iEdge]);
+                maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
+                nbDist = nodeDist + (edgeDist / maxSpeed);
+                //float motorwayBoost = (maxSpeed > 10) ? (maxSpeed > 50) ? (maxSpeed > 100) ? 1.6f : 1.3f : 1.2f : 1.0f; 
+                //float motorwayBoost = (maxSpeed > 110) ? 1.5f : 1.0f; 
+                //hFactor = 1.0f / allMaxSpeed / motorwayBoost;
+                hFactor = 1.0f / allMaxSpeed;
+            } else if (routeMode == RoutingMode.Shortest) {
+                // Shortest route
+                nbDist = nodeDist + edgeDist;
+                hFactor = 1.0f;
+            } else {
+                throw new RuntimeException("Unsupported routing mode: " + routeMode);
+            }
+            
+            // Caching h or holding visited in a nodes does not make sense
+            // Re-visiting rate seems to be below 1:10 and maps get very slow and memory consuming
+            float h = Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon) * hFactor;
+
+            if (openList.contains(nbNodeGridIndex)) {
+                hReuse++;
+                // Point open and not closed - update if necessary
+                if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbDist + h)) {
+                    nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
+                    nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
+                }
+                againVisits++;
+            } else {    
+                // Point not found yet - add to heap and open list
+                hCalc++;
+                // Add
+                routeDistHeap.add(nbNodeGridIndex, nbDist + h);
+                //nodesRouteOpenList[nbIndex] = true;
+                nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
+                nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
+                openList.add(nbNodeGridIndex);
+                firstVisits++;
+            }
+        }
+        return false;
     }
     
     

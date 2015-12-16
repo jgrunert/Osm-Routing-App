@@ -186,7 +186,7 @@ public class NodeDistHeap {
             // make sure to update loop counter/index of where last el is put
             i = smallerChild;
         }
-        
+       
 //        sum += System.nanoTime() - beg;        
 //        if(sum > 300000000) {
 //            System.out.println("HEAP: " + (double)sum / invocs);

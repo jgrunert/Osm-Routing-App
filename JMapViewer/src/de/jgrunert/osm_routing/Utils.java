@@ -254,12 +254,12 @@ public class Utils {
 //        
 //        System.out.println(test1 + " vs " + test2);
 
+
 //        sum += System.nanoTime() - beg;        
 //        if(sum > 200000000) {
-//            System.out.println("ATAN: " + (double)sum / invocs);
+//            System.out.println("DIST: " + (double)sum / invocs);
 //            throw new RuntimeException();
-//        }   
-          
+//        }     
 
         return dist;
     }
