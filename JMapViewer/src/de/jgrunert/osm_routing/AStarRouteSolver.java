@@ -12,9 +12,6 @@ import java.util.Random;
 import java.util.Set;
 
 import org.openstreetmap.gui.jmapviewer.Coordinate;
-import org.openstreetmap.gui.jmapviewer.JMapViewer;
-import org.openstreetmap.gui.jmapviewer.MapMarkerDot;
-import org.openstreetmap.gui.jmapviewer.MapPolygonImpl;
 
 
 /**
@@ -42,17 +39,32 @@ public class AStarRouteSolver implements IRouteSolver {
     // Start and end for route
     private Long startNodeGridIndex = null;
     @Override
-    public void setStartNode(long nodeGridIndex) { startNodeGridIndex = nodeGridIndex; }
+    public void setStartNode(long nodeGridIndex) { startNodeGridIndex = nodeGridIndex; needsDispalyRefresh = true; }
     private Long targetNodeGridIndex = null;
     @Override
-    public void setTargetNode(long nodeGridIndex) { targetNodeGridIndex = nodeGridIndex; }
+    public void setTargetNode(long nodeGridIndex) { targetNodeGridIndex = nodeGridIndex; needsDispalyRefresh = true; }
     
+    @Override
+    public Coordinate getStartCoordinate() {
+        if(startNodeGridIndex == null) { return null; }
+        return getNodeCoordinates(startNodeGridIndex); 
+    }
+    @Override
+    public Coordinate getTargetCoordinate() {
+        if(targetNodeGridIndex == null) { return null; }
+        return getNodeCoordinates(targetNodeGridIndex); 
+    }
     
     // Debugging and routing preview
     private List<Coordinate> routingPreviewDots = new LinkedList<>();
     private static final double routingPreviewDotPropability = 0.999;
     @Override
-    public List<Coordinate> getRoutingPreviewDots() { return routingPreviewDots; }
+    public synchronized List<Coordinate> getRoutingPreviewDots() { return new ArrayList<>(routingPreviewDots); }
+    private synchronized void addNewPreviewDot(Coordinate dot) { routingPreviewDots.add(dot); }
+    
+    private volatile boolean needsDispalyRefresh = false;
+    public boolean getNeedsDispalyRefresh() { return needsDispalyRefresh; }
+    public void resetNeedsDispalyRefresh() { needsDispalyRefresh = false; }
     
     // Final route
     private List<Coordinate> calculatedRoute = new LinkedList<>();
@@ -105,6 +117,7 @@ public class AStarRouteSolver implements IRouteSolver {
         targetNodeGridIndex = findNextNode(49.15f, 9.22f, (byte)0, (byte)0);
         
         state = RoutingState.Standby;
+        needsDispalyRefresh = true;
     }
     
 
@@ -346,9 +359,13 @@ public class AStarRouteSolver implements IRouteSolver {
      * Calculates a route using an improved A Star algorithm
      */
     @Override
-    public void startCalculateRoute(TransportMode transportMode, RoutingMode routeMode) {
+    public synchronized void startCalculateRoute(TransportMode transportMode, RoutingMode routeMode) {
 
-
+        if(state != RoutingState.Standby) {
+            System.err.println("Routing not available");
+            return;
+        }
+        
         if (startNodeGridIndex == null || targetNodeGridIndex == null) {
             System.err.println("Cannot calculate route: Must select any start and target");
             return;
@@ -357,6 +374,7 @@ public class AStarRouteSolver implements IRouteSolver {
         this.state = RoutingState.Routing;
         this.routeMode = routeMode;
         this.startTime = System.currentTimeMillis();
+        needsDispalyRefresh = true;
         
         // Edge bitfilter and speed
         allMinSpeed = PED_MAXSPEED;
@@ -440,6 +458,20 @@ public class AStarRouteSolver implements IRouteSolver {
         visGridRB = startGridRB;
         
         
+        Thread routingThread = new Thread(new Runnable() {            
+            @Override
+            public void run() {
+                System.out.println("Start doRouting thread");
+                doRouting();
+                System.out.println("Finishing doRouting thread");
+            }
+        });
+        routingThread.setName("RoutingThread");
+        routingThread.start();
+    }
+
+
+    private void doRouting() {
         // Find route with A*
         while (!routeDistHeap.isEmpty()) {
             // Remove and get index
@@ -590,6 +622,7 @@ public class AStarRouteSolver implements IRouteSolver {
         routingGridBuffers = null;
         openList = null;
         this.state = RoutingState.Standby;
+        needsDispalyRefresh = true;
         System.out.println("Finished routing after " + (System.currentTimeMillis() - startTime) + "ms");
     }
 
@@ -655,7 +688,7 @@ public class AStarRouteSolver implements IRouteSolver {
     visitedCount++;
 
         if (rd.nextFloat() > routingPreviewDotPropability) {
-            routingPreviewDots.add(getNodeCoordinates(visGrid, visNodeIndex));
+            addNewPreviewDot(getNodeCoordinates(visGrid, visNodeIndex));
         }
         
         if(visGridIndex != oldVisGridIndex) {

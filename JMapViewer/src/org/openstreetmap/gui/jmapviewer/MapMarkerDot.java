@@ -20,7 +20,7 @@ public class MapMarkerDot extends MapMarkerCircle {
     public final Color optColor;
 
     public MapMarkerDot(Coordinate coord) {
-        this(null, null, coord);
+        this(null, null, null, coord);
     }
     
     public MapMarkerDot(Color color, Coordinate coord) {
@@ -30,6 +30,10 @@ public class MapMarkerDot extends MapMarkerCircle {
 
     public MapMarkerDot(String name, Coordinate coord) {
         this(null, name, coord);
+    }
+    
+    public MapMarkerDot(String name, Color color, Coordinate coord) {
+        this(color, null, name, coord);
     }
 
     public MapMarkerDot(Layer layer, Coordinate coord) {
