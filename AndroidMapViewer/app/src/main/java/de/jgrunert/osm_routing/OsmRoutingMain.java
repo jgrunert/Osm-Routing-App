@@ -341,7 +341,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
             Coordinate lastCoord = null;
             for(Coordinate coord : mapController.getRouteSolver().getCalculatedRoute()) {
                 if(lastCoord != null) {
-                    MapPolygonImpl routPoly = new MapPolygonImpl(lastCoord, coord, coord);
+                    MapPolygonImpl routPoly = new MapPolygonImpl(Color.BLUE, lastCoord, coord, coord);
                     routeLines.add(routPoly);
                     map().addMapPolygon(routPoly);
                 }
