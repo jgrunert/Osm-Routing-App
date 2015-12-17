@@ -180,6 +180,18 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
             }
         });
         panelTop.add(doFastForward);
+        
+        final JCheckBox doMotorwayBoost = new JCheckBox("MotorwayBoost");
+        doMotorwayBoost.setSelected(mapController.getRouteSolver().isDoMotorwayBoost());
+        doMotorwayBoost.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapController.getRouteSolver().setDoMotorwayBoost(doMotorwayBoost.isSelected());
+            }
+        });
+        panelTop.add(doMotorwayBoost);
+        
+        
 //        final JCheckBox showZoomControls = new JCheckBox("Show zoom controls");
 //        showZoomControls.setSelected(map().getZoomControlsVisible());
 //        showZoomControls.addActionListener(new ActionListener() {
@@ -346,6 +358,15 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
                 MapMarkerDot dot = new MapMarkerDot(
                         new Color(255 - 255 *(routingPreviewDots.size() - i) / MAX_ROUTE_PREVIEW_DOTS, 0, 255 *(routingPreviewDots.size() - i) / MAX_ROUTE_PREVIEW_DOTS),   
                         routingPreviewDots.get(i));
+                map().addMapMarker(dot);
+                routeDots.add(dot);
+            }
+        }
+        
+        if(mapController.getRouteSolver().getRoutingState() == RoutingState.Routing) {
+            Coordinate candCoord = mapController.getRouteSolver().getBestCandidateCoords();
+            if (candCoord != null) {
+                MapMarkerDot dot = new MapMarkerDot(Color.GREEN, candCoord);
                 map().addMapMarker(dot);
                 routeDots.add(dot);
             }

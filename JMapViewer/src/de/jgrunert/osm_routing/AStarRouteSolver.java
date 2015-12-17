@@ -29,11 +29,11 @@ public class AStarRouteSolver implements IRouteSolver {
     
     
     // Routing constants
-    private static final short CAR_MAXSPEED = 150;
+    private static final short CAR_MAXSPEED = 130;
     private static final short PED_MAXSPEED = 5;
     private static int ROUTE_HEAP_CAPACITY = 1000000;
     // Number of grids to buffer
-    private static int GRID_BUFFER_SIZE = 500;
+    private static int GRID_BUFFER_SIZE = 300;
     
     
     // Start and end for route
@@ -62,6 +62,13 @@ public class AStarRouteSolver implements IRouteSolver {
     public synchronized List<Coordinate> getRoutingPreviewDots() { return new ArrayList<>(routingPreviewDots); }
     private synchronized void addNewPreviewDot(Coordinate dot) { routingPreviewDots.add(dot); }
     
+    private Long bestCandidateNode;    
+    @Override
+    public Coordinate getBestCandidateCoords() {
+        if(bestCandidateNode == null) { return null; }
+        return getNodeCoordinates(bestCandidateNode); 
+    }
+    
     private volatile boolean needsDispalyRefresh = false;
     @Override
     public boolean getNeedsDispalyRefresh() { return needsDispalyRefresh; }
@@ -82,11 +89,24 @@ public class AStarRouteSolver implements IRouteSolver {
     
     
     private boolean doFastFollow = true;       
+    @Override
     public boolean isDoFastFollow() {
         return doFastFollow;
     }
+    @Override
     public void setDoFastFollow(boolean doFastFollow) {
         this.doFastFollow = doFastFollow;
+    }
+    
+   
+    private boolean doMotorwayBoost = true;       
+    @Override
+    public boolean isDoMotorwayBoost() {
+        return doMotorwayBoost;
+    }
+    @Override
+    public void setDoMotorwayBoost(boolean doMotorwayBoost) {
+        this.doMotorwayBoost = doMotorwayBoost;
     }
     
     
@@ -349,12 +369,14 @@ public class AStarRouteSolver implements IRouteSolver {
     Set<Long> openList; // Stores all open nodes and their heuristic
 
     int startGridIndex;
-    //int startNodeIndex = (int)(long)(startNodeGridIndex);
+    int startNodeIndex;
     MapGrid startGrid;
 
     int targetGridIndex;
     int targetNodeIndex;
     MapGrid targetGrid;
+    float startLat;
+    float startLon;
     float targetLat;
     float targetLon;
     
@@ -430,8 +452,11 @@ public class AStarRouteSolver implements IRouteSolver {
         routingPreviewDots.clear();
 
         startGridIndex = (int)(startNodeGridIndex >> 32);
+        startNodeIndex = (int)(long)(startNodeGridIndex);
         //int startNodeIndex = (int)(long)(startNodeGridIndex);
         startGrid = getGrid(startGridIndex);
+        startLat = startGrid.nodesLat[startNodeIndex];
+        startLon = startGrid.nodesLon[startNodeIndex];
 
         targetGridIndex = (int)(targetNodeGridIndex >> 32);
         targetNodeIndex = (int)(long)(targetNodeGridIndex);
@@ -481,124 +506,21 @@ public class AStarRouteSolver implements IRouteSolver {
 
 
     private void doRouting() {
+        
         // Find route with A*
         while (!routeDistHeap.isEmpty()) {
             // Remove and get index
             visNodeGridIndex = routeDistHeap.removeFirst();
-            //System.out.println("VIS: " + visNodeGridIndex);
-            //System.out.println(nextIndex);
-            
-            // Fast follow
-//            int nbCount;
-//            long nbIndex;
-//            while(true) {
-//                nbCount = 0;
-//                nbIndex = -1;
-//                
-
-//                
-//
-//                // Iterate over edges to neighbors
-//                for (int iEdge = visGrid.nodesEdgeOffset[visNodeIndex]; 
-//                        (visNodeIndex + 1 < visGrid.nodesEdgeOffset.length && iEdge < visGrid.nodesEdgeOffset[visNodeIndex + 1])
-//                        || (visNodeIndex + 1 == visGrid.nodesEdgeOffset.length && iEdge < visGrid.edgeCount); // Last node in offset array
-//                        iEdge++) {
-//                    
-//                    // Skip if edge not accessible
-//                    if ((visGrid.edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
-//                        continue;
-//                    }
-//                    
-//                    // Get neighbor
-//                    long nbNodeGridIndex = visGrid.edgesTargetNodeGridIndex[iEdge];
-//                    int nbGridIndex = (int)(nbNodeGridIndex >> 32);
-//                    int nbNodeIndex = (int)(long)(nbNodeGridIndex);
-//
-//                    // Skip loop edges
-//                    if(nbNodeGridIndex == visNodeGridIndex) {
-//                        System.err.println("Warning: Loop edge - skipping");
-//                        continue;
-//                    }
-//                    
-//                    // Get neighbor grid routing buffer
-//                    MapGrid nbGrid;
-//                    if(nbGridIndex == visGridIndex) {
-//                        nbGrid = visGrid;
-//                    } else {
-//                        nbGrid = getGrid(nbGridIndex);
-//                    }     
-//                    
-//                    // Get neighbor grid routing buffer
-//                    MapGridRoutingBuffer nbGridRB;
-//                    if(nbGridIndex == visGridIndex) {
-//                        nbGridRB = visGridRB;
-//                    } else {
-//                        nbGridRB = routingGridBuffers.get(nbGridIndex);
-//                        if(nbGridRB == null) {
-//                            nbGridRB = new MapGridRoutingBuffer(nbGrid.nodeCount);
-//                            routingGridBuffers.put(nbGridIndex, nbGridRB);
-//                        }
-//                    }
-//                    
-//                    // Continue if target node node already in closed list
-//                    if (nbGridRB.nodesRouteClosedList[nbNodeIndex]) {
-//                        continue;
-//                    }
-//                    
-//
-//                    nbCount++;
-//                    if(nbCount > 1) {
-//                        break;
-//                    }
-//                    
-//                    nbIndex = visGrid.edgesTargetNodeGridIndex[iEdge];
-//                }
-//                
-//                // TODO Update Dist and more for node?
-//
-//
-//
-//                // Mark as closed/visited
-//                visGridRB.nodesRouteClosedList[visNodeIndex] = true;
-//                openList.remove(visNodeGridIndex);
-//                visitedCount++;
-//                if (maxMarkerCountdown > 0 && rd.nextFloat() > debugDispProp) {
-//                    MapMarkerDot dot = new MapMarkerDot(new Color(255 - (255 * Math.max(maxMarkerCountdown, 0) / maxMarkerCount), 0, 
-//                            (255 * Math.max(maxMarkerCountdown, 0) / maxMarkerCount)),
-//                            getNodeCoordinates(visGrid, visNodeIndex));
-//                    map.addMapMarker(dot);
-//                    routeDots.add(dot);
-//                    maxMarkerCountdown--;
-//                }
-//                
-//                if(nbCount == 1) {
-//                    visNodeGridIndex = nbIndex;
-//                    fastFollows++;
-//                    System.out.println("fol: " + fastFollows + " " + visNodeGridIndex);
-//                } else {
-//                    System.out.println("out: " + fastFollows);
-//                    break;
-//                }
-//            }
-            
-            
+            bestCandidateNode = visNodeGridIndex;
+        
             // Visit node/neighbors
             if(visitNode()) {
                 found = true;
                 break;
             }
-            visitNodeEdges();
-            
-            
-            // Display
-//            if (maxMarkerCountdown > 0 && rd.nextFloat() > debugDispProp) {
-//                MapMarkerDot dot = new MapMarkerDot(new Color(255 - (255 * maxMarkerCountdown / maxMarkerCount), 0, (255 * maxMarkerCountdown / maxMarkerCount)),
-//                        getNodeCoordinates(visGrid, visNodeIndex));
-//                map.addMapMarker(dot);
-//                routeDots.add(dot);
-//                maxMarkerCountdown--;
-//            }
+            visitNodeEdges();            
         }
+        
 
         System.out.println("H calc: " + hCalc);
         System.out.println("H reuse: " + hReuse);
@@ -856,24 +778,41 @@ public class AStarRouteSolver implements IRouteSolver {
             
             // Distance/Time calculation, depending on routing mode
             final float nbDist = nodeDist + calcNodeDist(iEdge);
-            
-            
-            final float hFactor;
-            if (routeMode == RoutingMode.Fastest) {
-                // Fastest route heuristic
-                //float motorwayBoost = (maxSpeed > 10) ? (maxSpeed > 50) ? (maxSpeed > 100) ? 1.6f : 1.3f : 1.2f : 1.0f; 
-                //float motorwayBoost = (maxSpeed > 110) ? 1.5f : 1.0f; 
-                //hFactor = 1.0f / allMaxSpeed / motorwayBoost;
-                hFactor = 1.0f / allMaxSpeed;
-            } else {
-                // Shortest route heuristic
-                hFactor = 1.0f;
-            }
-                
-            
+
+                        
             // Caching h or holding visited in a nodes does not make sense
             // Re-visiting rate seems to be below 1:10 and maps get very slow and memory consuming
-            float h = Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon) * hFactor;
+            float h = Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon);
+            
+            float MOTORWAY_BOOST_SUSPEND_RADIUS = 40000;
+            float MOTORWAY_BOOST_DECREASE_RADIUS = 200000;
+            
+            if (routeMode == RoutingMode.Fastest) {
+                // Underestimate if using fast routing
+                if (doMotorwayBoost && h > MOTORWAY_BOOST_SUSPEND_RADIUS) {
+                    // Do motorway boost (non-motorway overestimate) if enabled and not near start or target
+                    float distToStart =
+                            Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex],
+                                    startLat, startLon);
+                    if (distToStart > MOTORWAY_BOOST_SUSPEND_RADIUS) {
+                        float distsMax = Math.min(h, distToStart);
+                        
+                        float maxSpeed = (float) Byte.toUnsignedLong(visGrid.edgesMaxSpeeds[iEdge]);
+                        float boostFactor =  Math.min(1.0f, distsMax / MOTORWAY_BOOST_DECREASE_RADIUS);
+                        //float motorwayBoost = (maxSpeed >= 120) ? 0.0f : 0.15f * boostFactor;
+                        float motorwayBoost = (maxSpeed > 50) ? 
+                                                    (maxSpeed >= 120) ? 0.0f : 0.10f * boostFactor : 
+                                                                0.30f * boostFactor; 
+                        //System.out.println(motorwayBoost);
+                        h = h / allMaxSpeed * (1.0f + motorwayBoost);
+                    } else {
+                        h = h/ allMaxSpeed;                    
+                    }
+                } else {
+                    h = h/ allMaxSpeed;
+                }
+            }
+            
 
             if (openList.contains(nbNodeGridIndex)) {
                 hReuse++;

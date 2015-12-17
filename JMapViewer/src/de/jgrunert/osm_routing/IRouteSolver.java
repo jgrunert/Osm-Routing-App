@@ -31,8 +31,12 @@ public interface IRouteSolver {
     Long findNextNode(float lat, float lon, byte filterBitMask, byte filterBitValue);
     
     void startCalculateRoute(TransportMode transportMode, RoutingMode routeMode);
-    
+
+    Coordinate getBestCandidateCoords();
     
     boolean isDoFastFollow();
     void setDoFastFollow(boolean doFastFollow);
+    
+    boolean isDoMotorwayBoost();
+    void setDoMotorwayBoost(boolean doMotorwayBoost);
 }
