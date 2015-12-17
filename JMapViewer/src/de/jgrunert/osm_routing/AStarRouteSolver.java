@@ -63,7 +63,9 @@ public class AStarRouteSolver implements IRouteSolver {
     private synchronized void addNewPreviewDot(Coordinate dot) { routingPreviewDots.add(dot); }
     
     private volatile boolean needsDispalyRefresh = false;
+    @Override
     public boolean getNeedsDispalyRefresh() { return needsDispalyRefresh; }
+    @Override
     public void resetNeedsDispalyRefresh() { needsDispalyRefresh = false; }
     
     // Final route
@@ -250,6 +252,7 @@ public class AStarRouteSolver implements IRouteSolver {
      * @param coord
      * @return Index of next point
      */
+    @Override
     public Long findNextNode(float lat, float lon, byte filterBitMask, byte filterBitValue) 
     {
         // Get grid
@@ -397,18 +400,16 @@ public class AStarRouteSolver implements IRouteSolver {
             break;
         }
         
-        
-        Coordinate startCoord = getNodeCoordinates(startNodeGridIndex);
-        Coordinate targetCoord = getNodeCoordinates(targetNodeGridIndex);
+
         
         // Find better start and end points if not suitable
         if(!checkNodeWithFilter(getGrid((int)(startNodeGridIndex >> 32)), (int)(long)startNodeGridIndex, edgeFilterBitMask, edgeFilterBitValue)) {
+            Coordinate startCoord = getNodeCoordinates(startNodeGridIndex);
             startNodeGridIndex = findNextNode((float)startCoord.getLat(), (float)startCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
-            startCoord = getNodeCoordinates(startNodeGridIndex);
         }
         if(!checkNodeWithFilter(getGrid((int)(targetNodeGridIndex >> 32)), (int)(long)targetNodeGridIndex, edgeFilterBitMask, edgeFilterBitValue)) {
+            Coordinate targetCoord = getNodeCoordinates(targetNodeGridIndex);
             targetNodeGridIndex = findNextNode((float)targetCoord.getLat(), (float)targetCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
-            getNodeCoordinates(targetNodeGridIndex);
         }   
         
 
