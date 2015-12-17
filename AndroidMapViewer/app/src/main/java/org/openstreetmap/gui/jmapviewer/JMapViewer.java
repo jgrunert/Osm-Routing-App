@@ -108,6 +108,7 @@ public class JMapViewer extends JPanel implements TileLoaderListener {
      */
     public JMapViewer(String cacheFolder, boolean doCaching) {
         this(new MemoryTileCache(), cacheFolder, doCaching);
+        //new DefaultMapController(this);
     }
 
     /**

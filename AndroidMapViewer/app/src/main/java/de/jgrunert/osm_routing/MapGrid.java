@@ -56,8 +56,9 @@ public class MapGrid {
 
         this.index = index;
         this.visitTimestamp = gridOperationTimestamp;
-
-        ObjectInputStream gridReader = new ObjectInputStream(new FileInputStream(gridFile));
+        
+        try (ObjectInputStream gridReader = new ObjectInputStream(new FileInputStream(gridFile))) 
+        {
             this.loaded = true;
             this.nodeCount = gridReader.readInt();
             this.edgeCount = gridReader.readInt();
@@ -71,6 +72,7 @@ public class MapGrid {
             this.edgesMaxSpeeds = (byte[]) gridReader.readObject();
 
             gridReader.close();
+        }
     }
 
 }
