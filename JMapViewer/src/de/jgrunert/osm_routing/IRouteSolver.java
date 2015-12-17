@@ -31,4 +31,8 @@ public interface IRouteSolver {
     Long findNextNode(float lat, float lon, byte filterBitMask, byte filterBitValue);
     
     void startCalculateRoute(TransportMode transportMode, RoutingMode routeMode);
+    
+    
+    boolean isDoFastFollow();
+    void setDoFastFollow(boolean doFastFollow);
 }

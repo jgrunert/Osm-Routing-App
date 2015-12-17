@@ -12,7 +12,6 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 import javax.swing.JButton;
@@ -171,6 +170,16 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
             }
         });
         panelTop.add(showTileGrid);
+        
+        final JCheckBox doFastForward = new JCheckBox("FastFollow");
+        doFastForward.setSelected(mapController.getRouteSolver().isDoFastFollow());
+        doFastForward.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapController.getRouteSolver().setDoFastFollow(doFastForward.isSelected());
+            }
+        });
+        panelTop.add(doFastForward);
 //        final JCheckBox showZoomControls = new JCheckBox("Show zoom controls");
 //        showZoomControls.setSelected(map().getZoomControlsVisible());
 //        showZoomControls.addActionListener(new ActionListener() {
@@ -313,8 +322,6 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
     
     private void refreshRouteDisplay() 
     {
-        System.out.println("Refreshing display");
-        
         clearRouteDisplay();
         
         if(mapController.getRouteSolver().getRoutingState() == RoutingState.Standby) 

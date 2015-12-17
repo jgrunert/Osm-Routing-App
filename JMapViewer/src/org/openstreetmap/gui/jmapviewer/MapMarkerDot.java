@@ -13,6 +13,7 @@ import org.openstreetmap.gui.jmapviewer.interfaces.MapMarker;
  * @author Jan Peter Stotz
  *
  */
+@SuppressWarnings("javadoc")
 public class MapMarkerDot extends MapMarkerCircle {
 
     public static final int DOT_RADIUS = 5;
