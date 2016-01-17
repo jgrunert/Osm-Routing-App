@@ -60,6 +60,9 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
     private final JLabel mperpLabelName;
     private final JLabel mperpLabelValue;
     
+    private final JLabel routeDistLabel;
+    private final JLabel routeTimeLabel;
+    
     private static final int MAX_ROUTE_PREVIEW_DOTS = 50;
     
     
@@ -189,7 +192,11 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
                 mapController.getRouteSolver().setDoMotorwayBoost(doMotorwayBoost.isSelected());
             }
         });
-        panelTop.add(doMotorwayBoost);
+
+        routeDistLabel = new JLabel("0 km");
+        panelBottom.add(routeDistLabel);
+        routeTimeLabel = new JLabel("0:00");
+        panelBottom.add(routeTimeLabel);
         
         
 //        final JCheckBox showZoomControls = new JCheckBox("Show zoom controls");
@@ -346,7 +353,12 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
                     map().addMapPolygon(routPoly);
                 }
                 lastCoord = coord;
-            }           
+            }         
+            
+            routeDistLabel.setText(((int)mapController.getRouteSolver().getDistOfRoute() / 1000.0f) + " km");
+            int timeHours = (int)mapController.getRouteSolver().getTimeOfRoute();
+            int timeMinutes = (int)(60 * (mapController.getRouteSolver().getTimeOfRoute() - timeHours));
+            routeTimeLabel.setText(timeHours + ":" + timeMinutes + " h");
         }
         
 

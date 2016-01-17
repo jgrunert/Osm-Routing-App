@@ -83,6 +83,13 @@ public class AStarRouteSolver implements IRouteSolver {
     public float distOfRoute = 0.0f; // Route distance in metres
     public float timeOfRoute = 0.0f; // Route time in hours
     
+    public float getDistOfRoute() {
+        return distOfRoute;
+    }
+    public float getTimeOfRoute() {
+        return timeOfRoute;
+    }
+    
     
     private volatile RoutingState state = RoutingState.NotReady;
     @Override

@@ -39,4 +39,7 @@ public interface IRouteSolver {
     
     boolean isDoMotorwayBoost();
     void setDoMotorwayBoost(boolean doMotorwayBoost);
+        
+    float getDistOfRoute();
+    float getTimeOfRoute();
 }
