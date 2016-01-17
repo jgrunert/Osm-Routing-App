@@ -209,8 +209,7 @@ public class AStarRouteSolver implements IRouteSolver {
                 // Unload
                 grids.set(toUnload.index, new MapGrid(toUnload.index));
                 System.out.println("Unloaded grid " + gridIndex +
-                        ". Grids loaded: " + loadedGrids.size() +
-                        ". Heap-Total: " + (Runtime.getRuntime().totalMemory() / 1048576));
+                        ". Grids loaded: " + loadedGrids.size());
             }
             
             MapGrid loaded = new MapGrid(gridIndex, gridVisitTimestamp, MAP_GRIDS_DIR + "\\" + gridIndex + ".grid");
@@ -218,8 +217,7 @@ public class AStarRouteSolver implements IRouteSolver {
             loadedGrids.add(loaded);
             gridLoadOperations++;
             System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size() +
-                    ". Load operations: " + gridLoadOperations +
-                    ". Heap-Total: " + (Runtime.getRuntime().totalMemory() / 1048576));
+                    ". Load operations: " + gridLoadOperations);
             return loaded;
         } catch (Exception e) {
             System.err.println("Failed to load grid");
@@ -526,7 +524,7 @@ public class AStarRouteSolver implements IRouteSolver {
                 break;
             }
             visitNodeEdges();            
-        }
+        }        
         
 
         System.out.println("H calc: " + hCalc);
@@ -539,18 +537,10 @@ public class AStarRouteSolver implements IRouteSolver {
         System.out.println("MaxHeapSize: " + routeDistHeap.getSizeUsageMax());
         
         
-        // TODO Time and dist and output (as table?)
+        // If found reconstruct route
         if (found) {
             // Reconstruct route
             reconstructRoute();
-            // For testing: Connect debug markers
-//            for(int iM = 0; iM < routeDots.size() - 1; iM++) {
-//
-//                MapPolygonImpl routPoly = new MapPolygonImpl(new Color(255 - (255 * iM / routeDots.size()), 0, 255 * iM / routeDots.size()),
-//                        routeDots.get(iM).getCoordinate(), routeDots.get(iM).getCoordinate(), routeDots.get(iM+1).getCoordinate());
-//                routeLines.add(routPoly);
-//                map.addMapPolygon(routPoly);
-//            }
         } else {
             System.err.println("No way found");
         }
@@ -573,6 +563,8 @@ public class AStarRouteSolver implements IRouteSolver {
         }
         
         // TODO Calculate dist and time
+        float distOfRoute = 0.0f;
+        float timeOfRoute = 0.0f;
         
         long i = targetNodeGridIndex;
         while (i != startNodeGridIndex) {
@@ -595,6 +587,11 @@ public class AStarRouteSolver implements IRouteSolver {
 //            } else {
 //                preGrid = getGrid(preGridIndex);
 //            }
+            
+//            float distToStart =
+//                    Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex],
+//                            startLat, startLon);
+//            float maxSpeed = (float) Byte.toUnsignedLong(visGrid.edgesMaxSpeeds[iEdge]);
 
             Coordinate coord = new Coordinate(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);            
             calculatedRoute.add(coord);
@@ -709,8 +706,8 @@ public class AStarRouteSolver implements IRouteSolver {
             if (nbCount == 1) {
                 if (nextVisitNodeGridIndex != target) {
                     nextVisitGridRB.nodesPreBuffer[nextVisitNodeIndex] = visNodeGridIndex;
-                    nextVisitGridRB.nodesRouteDists[nextVisitNodeIndex] =
-                            visGridRB.nodesRouteDists[visNodeIndex] + calcNodeDist(nbEdge);
+                    nextVisitGridRB.nodesRouteCosts[nextVisitNodeIndex] =
+                            visGridRB.nodesRouteCosts[visNodeIndex] + calcNodeDist(nbEdge);
 
                     visNodeGridIndex = nextVisitNodeGridIndex;
                     //visGridIndex = (int) (visNodeGridIndex >> 32);
@@ -735,7 +732,7 @@ public class AStarRouteSolver implements IRouteSolver {
     private void visitNodeEdges() 
     {
         // Get distance of node from start, remove and get index
-        float nodeDist = visGridRB.nodesRouteDists[visNodeIndex];
+        float nodeCost = visGridRB.nodesRouteCosts[visNodeIndex];
 
         // Iterate over edges to neighbors
         for (int iEdge = visGrid.nodesEdgeOffset[visNodeIndex]; 
@@ -784,7 +781,7 @@ public class AStarRouteSolver implements IRouteSolver {
             }
             
             // Distance/Time calculation, depending on routing mode
-            final float nbDist = nodeDist + calcNodeDist(iEdge);
+            final float nbCost = nodeCost + calcNodeDist(iEdge);
 
                         
             // Caching h or holding visited in a nodes does not make sense
@@ -793,6 +790,9 @@ public class AStarRouteSolver implements IRouteSolver {
             
             float MOTORWAY_BOOST_SUSPEND_RADIUS = 40000;
             float MOTORWAY_BOOST_DECREASE_RADIUS = 200000;
+
+            float maxSpeed = (float) Byte.toUnsignedLong(visGrid.edgesMaxSpeeds[iEdge]);
+            float realMaxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
             
             if (routeMode == RoutingMode.Fastest) {
                 // Underestimate if using fast routing
@@ -804,7 +804,6 @@ public class AStarRouteSolver implements IRouteSolver {
                     if (distToStart > MOTORWAY_BOOST_SUSPEND_RADIUS) {
                         float distsMax = Math.min(h, distToStart);
                         
-                        float maxSpeed = (float) Byte.toUnsignedLong(visGrid.edgesMaxSpeeds[iEdge]);
                         float boostFactor =  Math.min(1.0f, distsMax / MOTORWAY_BOOST_DECREASE_RADIUS);
                         //float motorwayBoost = (maxSpeed >= 120) ? 0.0f : 0.15f * boostFactor;
                         float motorwayBoost = (maxSpeed > 50) ? 
@@ -824,19 +823,19 @@ public class AStarRouteSolver implements IRouteSolver {
             if (openList.contains(nbNodeGridIndex)) {
                 hReuse++;
                 // Point open and not closed - update if necessary
-                if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbDist + h)) {
+                if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbCost + h)) {
                     nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
-                    nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
+                    nbGridRB.nodesRouteCosts[nbNodeIndex] = nbCost;
                 }
                 againVisits++;
             } else {    
                 // Point not found yet - add to heap and open list
                 hCalc++;
                 // Add
-                routeDistHeap.add(nbNodeGridIndex, nbDist + h);
+                routeDistHeap.add(nbNodeGridIndex, nbCost + h);
                 //nodesRouteOpenList[nbIndex] = true;
                 nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
-                nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
+                nbGridRB.nodesRouteCosts[nbNodeIndex] = nbCost;
                 openList.add(nbNodeGridIndex);
                 firstVisits++;
             }

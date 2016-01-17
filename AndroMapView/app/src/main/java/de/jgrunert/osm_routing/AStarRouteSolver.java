@@ -813,7 +813,7 @@ public class AStarRouteSolver implements IRouteSolver {
                     if (distToStart > MOTORWAY_BOOST_SUSPEND_RADIUS) {
                         float distsMax = Math.min(h, distToStart);
                         
-                        float maxSpeed = (float) (visGrid.edgesMaxSpeeds[iEdge] & 0xFF); // TODO Test
+                        float maxSpeed = (float) (visGrid.edgesMaxSpeeds[iEdge] & 0xFF);
                         float boostFactor =  Math.min(1.0f, distsMax / MOTORWAY_BOOST_DECREASE_RADIUS);
                         //float motorwayBoost = (maxSpeed >= 120) ? 0.0f : 0.15f * boostFactor;
                         float motorwayBoost = (maxSpeed > 50) ? 
@@ -857,7 +857,7 @@ public class AStarRouteSolver implements IRouteSolver {
         float edgeDist = visGrid.edgesLengths[iEdge];
         if (routeMode == RoutingMode.Fastest) {
             // Fastest route
-            float maxSpeed = (float) (visGrid.edgesMaxSpeeds[iEdge] & 0xFF); // TODO Test
+            float maxSpeed = (float) (visGrid.edgesMaxSpeeds[iEdge] & 0xFF);
             maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
             return (edgeDist / maxSpeed);
         } else if (routeMode == RoutingMode.Shortest) {
