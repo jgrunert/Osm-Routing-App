@@ -231,7 +231,9 @@ public class AStarRouteSolver implements IRouteSolver {
             grids.set(gridIndex, loaded);
             loadedGrids.add(loaded);
             gridLoadOperations++;
-            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size() + ". Load operations: " + gridLoadOperations);
+            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size() +
+                    ". Load operations: " + gridLoadOperations +
+                    ". Heap-Size: " + (Runtime.getRuntime().totalMemory() / 1048576) + "Mb");
             return loaded;
         } catch (Exception e) {
             System.err.println("Failed to load grid");

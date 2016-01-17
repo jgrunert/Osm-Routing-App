@@ -192,6 +192,7 @@ public class OsmRoutingMain extends JFrame implements JMapViewerEventListener  {
                 mapController.getRouteSolver().setDoMotorwayBoost(doMotorwayBoost.isSelected());
             }
         });
+        panelTop.add(doMotorwayBoost);
 
         routeDistLabel = new JLabel("0 km");
         panelBottom.add(routeDistLabel);
