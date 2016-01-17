@@ -80,6 +80,9 @@ public class AStarRouteSolver implements IRouteSolver {
     @Override
     public List<Coordinate> getCalculatedRoute() { return calculatedRoute; }
     
+    public float distOfRoute = 0.0f; // Route distance in metres
+    public float timeOfRoute = 0.0f; // Route time in hours
+    
     
     private volatile RoutingState state = RoutingState.NotReady;
     @Override
@@ -561,10 +564,11 @@ public class AStarRouteSolver implements IRouteSolver {
         if(!found) {
             return;
         }
+
+
+        distOfRoute = 0.0f; // Route distance in metres
+        timeOfRoute = 0.0f; // Route time in hours
         
-        // TODO Calculate dist and time
-        float distOfRoute = 0.0f;
-        float timeOfRoute = 0.0f;
         
         long i = targetNodeGridIndex;
         while (i != startNodeGridIndex) {
@@ -573,31 +577,38 @@ public class AStarRouteSolver implements IRouteSolver {
             int iNodeIndex = (int)(long)(i);
             MapGrid iGrid = getGrid(iGridIndex);
             MapGridRoutingBuffer iGridRB = routingGridBuffers.get(iGridIndex);
-            
-            //System.out.println(iGridRB.nodesRouteClosedList[iNodeIndex]);
-            //System.out.println(iGridRB.nodesRouteDists[iNodeIndex]);
-            
-            long pre = iGridRB.nodesPreBuffer[iNodeIndex];
-//            assert pre != i;
-//            int preGridIndex = (int)(pre >> 32);
-//            int preNodeIndex = (int)(long)(pre);
-//            MapGrid preGrid;
-//            if(iGridIndex == preGridIndex) {
-//                preGrid = iGrid;
-//            } else {
-//                preGrid = getGrid(preGridIndex);
-//            }
-            
-//            float distToStart =
-//                    Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex],
-//                            startLat, startLon);
-//            float maxSpeed = (float) Byte.toUnsignedLong(visGrid.edgesMaxSpeeds[iEdge]);
 
+
+            long pre = iGridRB.nodesPreBuffer[iNodeIndex];
+            int edge = iGridRB.nodesRouteEdges[iNodeIndex];            
+            iGridIndex = (int)(pre >> 32);
+            iNodeIndex = (int)(long)(pre);
+            iGrid = getGrid(iGridIndex);
+            iGridRB = routingGridBuffers.get(iGridIndex);
+            
+            
+            // Calculate distance and time
+            float dist = iGrid.edgesLengths[edge];
+            distOfRoute += dist;
+            
+            float maxSpeed = (float) Byte.toUnsignedLong(iGrid.edgesMaxSpeeds[edge]);
+            maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
+            
+            timeOfRoute += (dist / 1000.0f) / maxSpeed;
+            
+            
+            // Route point coordinates (for view)
             Coordinate coord = new Coordinate(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);            
             calculatedRoute.add(coord);
             
             i = pre;
         }
+        
+        
+        System.out.println("Route Distance: " + ((int)distOfRoute / 1000.0f) + "km");        
+        int timeHours = (int)timeOfRoute;
+        int timeMinutes = (int)(60 * (timeOfRoute - timeHours));
+        System.out.println("Route time: " + timeHours + ":" + timeMinutes);
     }
     
     
@@ -706,8 +717,10 @@ public class AStarRouteSolver implements IRouteSolver {
             if (nbCount == 1) {
                 if (nextVisitNodeGridIndex != target) {
                     nextVisitGridRB.nodesPreBuffer[nextVisitNodeIndex] = visNodeGridIndex;
+                    nextVisitGridRB.nodesRouteEdges[nextVisitNodeIndex] = nbEdge;
                     nextVisitGridRB.nodesRouteCosts[nextVisitNodeIndex] =
                             visGridRB.nodesRouteCosts[visNodeIndex] + calcNodeDist(nbEdge);
+                    
 
                     visNodeGridIndex = nextVisitNodeGridIndex;
                     //visGridIndex = (int) (visNodeGridIndex >> 32);
@@ -825,6 +838,7 @@ public class AStarRouteSolver implements IRouteSolver {
                 // Point open and not closed - update if necessary
                 if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbCost + h)) {
                     nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
+                    nbGridRB.nodesRouteEdges[nbNodeIndex] = iEdge;
                     nbGridRB.nodesRouteCosts[nbNodeIndex] = nbCost;
                 }
                 againVisits++;
@@ -835,6 +849,7 @@ public class AStarRouteSolver implements IRouteSolver {
                 routeDistHeap.add(nbNodeGridIndex, nbCost + h);
                 //nodesRouteOpenList[nbIndex] = true;
                 nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
+                nbGridRB.nodesRouteEdges[nbNodeIndex] = iEdge;
                 nbGridRB.nodesRouteCosts[nbNodeIndex] = nbCost;
                 openList.add(nbNodeGridIndex);
                 firstVisits++;

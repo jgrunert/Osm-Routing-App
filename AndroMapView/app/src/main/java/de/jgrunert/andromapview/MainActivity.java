@@ -65,6 +65,6 @@ public class MainActivity extends ActionBarActivity {
         routeSolver.setStartNode(startNode);
         routeSolver.setTargetNode(targetNode);
 
-        routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Fastest);
+        routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Shortest);
     }
 }

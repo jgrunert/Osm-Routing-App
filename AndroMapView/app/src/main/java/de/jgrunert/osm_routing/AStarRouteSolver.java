@@ -85,7 +85,10 @@ public class AStarRouteSolver implements IRouteSolver {
     private List<Coordinate> calculatedRoute = new LinkedList<Coordinate>();
     @Override
     public List<Coordinate> getCalculatedRoute() { return calculatedRoute; }
-    
+
+    public float distOfRoute = 0.0f; // Route distance in metres
+    public float timeOfRoute = 0.0f; // Route time in hours
+
     
     private volatile RoutingState state = RoutingState.NotReady;
     @Override
@@ -574,15 +577,18 @@ public class AStarRouteSolver implements IRouteSolver {
     }
 
     private void reconstructRoute() {
-        
+
         calculatedRoute.clear();
-        
+
         if(!found) {
             return;
         }
-        
-        // TODO Calculate dist and time
-        
+
+
+        distOfRoute = 0.0f; // Route distance in metres
+        timeOfRoute = 0.0f; // Route time in hours
+
+
         long i = targetNodeGridIndex;
         while (i != startNodeGridIndex) {
 
@@ -590,26 +596,38 @@ public class AStarRouteSolver implements IRouteSolver {
             int iNodeIndex = (int)(long)(i);
             MapGrid iGrid = getGrid(iGridIndex);
             MapGridRoutingBuffer iGridRB = routingGridBuffers.get(iGridIndex);
-            
-            //System.out.println(iGridRB.nodesRouteClosedList[iNodeIndex]);
-            //System.out.println(iGridRB.nodesRouteDists[iNodeIndex]);
-            
-            long pre = iGridRB.nodesPreBuffer[iNodeIndex];
-//            assert pre != i;
-//            int preGridIndex = (int)(pre >> 32);
-//            int preNodeIndex = (int)(long)(pre);
-//            MapGrid preGrid;
-//            if(iGridIndex == preGridIndex) {
-//                preGrid = iGrid;
-//            } else {
-//                preGrid = getGrid(preGridIndex);
-//            }
 
-            Coordinate coord = new Coordinate(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);            
+
+            long pre = iGridRB.nodesPreBuffer[iNodeIndex];
+            int edge = iGridRB.nodesRouteEdges[iNodeIndex];
+            iGridIndex = (int)(pre >> 32);
+            iNodeIndex = (int)(long)(pre);
+            iGrid = getGrid(iGridIndex);
+            iGridRB = routingGridBuffers.get(iGridIndex);
+
+
+            // Calculate distance and time
+            float dist = iGrid.edgesLengths[edge];
+            distOfRoute += dist;
+
+            float maxSpeed = (float) (iGrid.edgesMaxSpeeds[edge] & 0xFF);
+            maxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
+
+            timeOfRoute += (dist / 1000.0f) / maxSpeed;
+
+
+            // Route point coordinates (for view)
+            Coordinate coord = new Coordinate(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);
             calculatedRoute.add(coord);
-            
+
             i = pre;
         }
+
+
+        System.out.println("Route Distance: " + ((int)distOfRoute / 1000.0f) + "km");
+        int timeHours = (int)timeOfRoute;
+        int timeMinutes = (int)(60 * (timeOfRoute - timeHours));
+        System.out.println("Route time: " + timeHours + ":" + timeMinutes);
     }
     
     
@@ -718,8 +736,9 @@ public class AStarRouteSolver implements IRouteSolver {
             if (nbCount == 1) {
                 if (nextVisitNodeGridIndex != target) {
                     nextVisitGridRB.nodesPreBuffer[nextVisitNodeIndex] = visNodeGridIndex;
-                    nextVisitGridRB.nodesRouteDists[nextVisitNodeIndex] =
-                            visGridRB.nodesRouteDists[visNodeIndex] + calcNodeDist(nbEdge);
+                    nextVisitGridRB.nodesRouteEdges[nextVisitNodeIndex] = nbEdge;
+                    nextVisitGridRB.nodesRouteCosts[nextVisitNodeIndex] =
+                            visGridRB.nodesRouteCosts[visNodeIndex] + calcNodeDist(nbEdge);
 
                     visNodeGridIndex = nextVisitNodeGridIndex;
                     //visGridIndex = (int) (visNodeGridIndex >> 32);
@@ -744,7 +763,7 @@ public class AStarRouteSolver implements IRouteSolver {
     private void visitNodeEdges() 
     {
         // Get distance of node from start, remove and get index
-        float nodeDist = visGridRB.nodesRouteDists[visNodeIndex];
+        float nodeCost = visGridRB.nodesRouteCosts[visNodeIndex];
 
         // Iterate over edges to neighbors
         for (int iEdge = visGrid.nodesEdgeOffset[visNodeIndex]; 
@@ -793,7 +812,7 @@ public class AStarRouteSolver implements IRouteSolver {
             }
             
             // Distance/Time calculation, depending on routing mode
-            final float nbDist = nodeDist + calcNodeDist(iEdge);
+            final float nbCost = nodeCost + calcNodeDist(iEdge);
 
                         
             // Caching h or holding visited in a nodes does not make sense
@@ -833,19 +852,21 @@ public class AStarRouteSolver implements IRouteSolver {
             if (openList.contains(nbNodeGridIndex)) {
                 hReuse++;
                 // Point open and not closed - update if necessary
-                if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbDist + h)) {
-                    nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
-                    nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
+                if (routeDistHeap.decreaseKeyIfSmaller(nbNodeGridIndex, nbCost + h)) {
+                    nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex;
+                    nbGridRB.nodesRouteEdges[nbNodeIndex] = iEdge;
+                    nbGridRB.nodesRouteCosts[nbNodeIndex] = nbCost;
                 }
                 againVisits++;
             } else {    
                 // Point not found yet - add to heap and open list
                 hCalc++;
                 // Add
-                routeDistHeap.add(nbNodeGridIndex, nbDist + h);
+                routeDistHeap.add(nbNodeGridIndex, nbCost + h);
                 //nodesRouteOpenList[nbIndex] = true;
-                nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex; 
-                nbGridRB.nodesRouteDists[nbNodeIndex] = nbDist;
+                nbGridRB.nodesPreBuffer[nbNodeIndex] = visNodeGridIndex;
+                nbGridRB.nodesRouteEdges[nbNodeIndex] = iEdge;
+                nbGridRB.nodesRouteCosts[nbNodeIndex] = nbCost;
                 openList.add(nbNodeGridIndex);
                 firstVisits++;
             }
