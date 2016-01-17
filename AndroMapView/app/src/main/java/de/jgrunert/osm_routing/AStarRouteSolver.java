@@ -38,6 +38,8 @@ public class AStarRouteSolver implements IRouteSolver {
     private static final short CAR_MAXSPEED = 130;
     private static final short PED_MAXSPEED = 5;
     private static int ROUTE_HEAP_CAPACITY = 1000000;
+    // Number of grids to buffer
+    private static int GRID_BUFFER_SIZE = 300;
     
     
     // Start and end for route
@@ -132,18 +134,13 @@ public class AStarRouteSolver implements IRouteSolver {
     // Heap for rout finding
     NodeDistHeap routeDistHeap;
 
-    private final long maxMemoryThreshold;
-    private static final double MaxMemoryThresholdFactor = 0.3;
-    
-    
+
     /**
      * Constructor, loads grid data
      */
     public AStarRouteSolver() {
 
         System.out.println("Max memory: " + (Runtime.getRuntime().maxMemory() / 1048576) + "Mb");
-        maxMemoryThreshold = (long)(Runtime.getRuntime().maxMemory() * MaxMemoryThresholdFactor);
-        System.out.println("Setting maxMemoryThreshold to: " + (Runtime.getRuntime().maxMemory() / 1048576) + "Mb");
 
         try {            
             intializeGrids();    
@@ -208,7 +205,7 @@ public class AStarRouteSolver implements IRouteSolver {
      */
     private MapGrid loadGrid(int gridIndex) {
         try {
-            while(Runtime.getRuntime().freeMemory() < 10485760) {
+            while(loadedGrids.size() >= GRID_BUFFER_SIZE) {
                 // Unload grid if to many grids in buffer
                 
                 // Find grid longest time not used
@@ -224,28 +221,14 @@ public class AStarRouteSolver implements IRouteSolver {
                 
                 // Unload
                 grids.set(toUnload.index, new MapGrid(toUnload.index));
-                System.out.println("Unloaded grid " + gridIndex +
-                        ". Grids loaded: " + loadedGrids.size() +
-                        ". Heap-Total: " + (Runtime.getRuntime().totalMemory() / 1048576));
-
-                System.gc();
-                System.out.println("-----");
-                System.out.println("alloc " + Debug.getNativeHeapAllocatedSize() / 1048576);
-                System.out.println("available " + Debug.getNativeHeapSize() / 1048576);
-                System.out.println("free " + Debug.getNativeHeapFreeSize() / 1048576);
-                System.out.println("avail2 " + Runtime.getRuntime().maxMemory() / 1048576);
-                System.out.println("free2 " + Runtime.getRuntime().freeMemory() / 1048576);
-
-
+                System.out.println("Unloaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size());
             }
             
             MapGrid loaded = new MapGrid(gridIndex, gridVisitTimestamp,new File(MAP_BASE_DIR, gridIndex + ".grid"));
             grids.set(gridIndex, loaded);
             loadedGrids.add(loaded);
             gridLoadOperations++;
-            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size() +
-                    ". Load operations: " + gridLoadOperations +
-                    ". Heap-Total: " + (Runtime.getRuntime().totalMemory() / 1048576));
+            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size() + ". Load operations: " + gridLoadOperations);
             return loaded;
         } catch (Exception e) {
             System.err.println("Failed to load grid");
