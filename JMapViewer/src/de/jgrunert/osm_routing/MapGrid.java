@@ -1,5 +1,7 @@
 package de.jgrunert.osm_routing;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
 
@@ -56,8 +58,8 @@ public class MapGrid {
 
         this.index = index;
         this.visitTimestamp = gridOperationTimestamp;
-        
-        try (ObjectInputStream gridReader = new ObjectInputStream(new FileInputStream(gridFile))) 
+
+        try (ObjectInputStream gridReader = new ObjectInputStream(new BufferedInputStream(new FileInputStream(gridFile)))) 
         {
             this.loaded = true;
             this.nodeCount = gridReader.readInt();

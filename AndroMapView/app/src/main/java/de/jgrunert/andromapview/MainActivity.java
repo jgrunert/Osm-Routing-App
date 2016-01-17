@@ -8,10 +8,11 @@ import android.view.View;
 import android.widget.EditText;
 
 import de.jgrunert.osm_routing.AStarRouteSolver;
+import de.jgrunert.osm_routing.IRouteSolver;
 
 public class MainActivity extends ActionBarActivity {
 
-    AStarRouteSolver solver = new AStarRouteSolver();
+    AStarRouteSolver routeSolver = new AStarRouteSolver();
 
 
     @Override
@@ -49,6 +50,21 @@ public class MainActivity extends ActionBarActivity {
         double lat2 = Double.parseDouble(((EditText) findViewById(R.id.editTextLat2)).getText().toString());
         double lon2 = Double.parseDouble(((EditText) findViewById(R.id.editTextLon2)).getText().toString());
 
+        Long startNode = routeSolver.findNextNode((float)lat1, (float)lon1, (byte)0, (byte)0);
+        Long targetNode = routeSolver.findNextNode((float)lat2, (float)lon2, (byte)0, (byte)0);
 
+        if(startNode == null) {
+            System.err.println("No start node found");
+            return;
+        }
+        if(targetNode == null) {
+            System.err.println("No target node found");
+            return;
+        }
+
+        routeSolver.setStartNode(startNode);
+        routeSolver.setTargetNode(targetNode);
+
+        routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Shortest);
     }
 }

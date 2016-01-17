@@ -23,7 +23,7 @@ import org.openstreetmap.gui.jmapviewer.Coordinate;
 public class AStarRouteSolver implements IRouteSolver {
     
     // General constants
-    private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\germany\\grids_020";
+    private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\germany\\germany_grids_020";
     //private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
     //private static final String MAP_DIR = "D:\\Jonas\\OSM\\hamburg";
     
@@ -208,14 +208,18 @@ public class AStarRouteSolver implements IRouteSolver {
                 
                 // Unload
                 grids.set(toUnload.index, new MapGrid(toUnload.index));
-                System.out.println("Unloaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size());
+                System.out.println("Unloaded grid " + gridIndex +
+                        ". Grids loaded: " + loadedGrids.size() +
+                        ". Heap-Total: " + (Runtime.getRuntime().totalMemory() / 1048576));
             }
             
             MapGrid loaded = new MapGrid(gridIndex, gridVisitTimestamp, MAP_GRIDS_DIR + "\\" + gridIndex + ".grid");
             grids.set(gridIndex, loaded);
             loadedGrids.add(loaded);
             gridLoadOperations++;
-            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size() + ". Load operations: " + gridLoadOperations);
+            System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size() +
+                    ". Load operations: " + gridLoadOperations +
+                    ". Heap-Total: " + (Runtime.getRuntime().totalMemory() / 1048576));
             return loaded;
         } catch (Exception e) {
             System.err.println("Failed to load grid");
@@ -490,6 +494,9 @@ public class AStarRouteSolver implements IRouteSolver {
         oldVisGridIndex = startGridIndex;
         visGrid = startGrid;
         visGridRB = startGridRB;
+        
+        System.out.println("Start routing from " + startLat + "/" + startLon + " to " + targetLat + "/" + targetLon);
+        System.out.flush();
         
         
         Thread routingThread = new Thread(new Runnable() {            

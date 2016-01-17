@@ -24,7 +24,8 @@
         android:layout_below="@+id/textView"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="36dp" />
+        android:layout_marginTop="36dp"
+        android:text="47.79998" />
 
     <EditText
         android:layout_width="wrap_content"
@@ -34,7 +35,8 @@
         android:id="@+id/editTextLon1"
         android:layout_below="@+id/editTextLat1"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
+        android:layout_alignParentStart="true"
+        android:text="8.998992" />
 
     <EditText
         android:layout_width="wrap_content"
@@ -44,7 +46,8 @@
         android:id="@+id/editTextLat2"
         android:layout_centerVertical="true"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
+        android:layout_alignParentStart="true"
+        android:text="49.150383" />
 
     <EditText
         android:layout_width="wrap_content"
@@ -54,7 +57,8 @@
         android:id="@+id/editTextLon2"
         android:layout_below="@+id/editTextLat2"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
+        android:layout_alignParentStart="true"
+        android:text="9.219987" />
 
     <Button
         android:layout_width="wrap_content"
