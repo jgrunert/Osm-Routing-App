@@ -39,7 +39,7 @@ public class AStarRouteSolver implements IRouteSolver {
     private static final short PED_MAXSPEED = 5;
     private static int ROUTE_HEAP_CAPACITY = 1000000;
     // Number of grids to buffer
-    private static int GRID_BUFFER_SIZE = 300;
+    private static int GRID_BUFFER_SIZE = 100;
     
     
     // Start and end for route
@@ -224,7 +224,7 @@ public class AStarRouteSolver implements IRouteSolver {
                 
                 // Unload
                 grids.set(toUnload.index, new MapGrid(toUnload.index));
-                System.out.println("Unloaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size());
+                System.out.println("Unloaded grid " + toUnload.index + ". Grids loaded: " + loadedGrids.size());
             }
             
             MapGrid loaded = new MapGrid(gridIndex, gridVisitTimestamp,new File(MAP_BASE_DIR, gridIndex + ".grid"));

@@ -1,6 +1,8 @@
 package de.jgrunert.andromapview;
 
+import android.content.Context;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -13,12 +15,26 @@ import de.jgrunert.osm_routing.IRouteSolver;
 public class MainActivity extends ActionBarActivity {
 
     AStarRouteSolver routeSolver = new AStarRouteSolver();
+    protected PowerManager.WakeLock mWakeLock;
 
+    /** Called when the activity is first created. */
+    @Override
+    public void onCreate(final Bundle icicle) {
+        super.onCreate(icicle);
+
+        setContentView(R.layout.activity_main);
+
+        /* This code together with the one in onDestroy()
+         * will make the screen be always on until this Activity gets destroyed. */
+        final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
+        this.mWakeLock.acquire();
+    }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+    public void onDestroy() {
+        this.mWakeLock.release();
+        super.onDestroy();
     }
 
     @Override
@@ -65,6 +81,6 @@ public class MainActivity extends ActionBarActivity {
         routeSolver.setStartNode(startNode);
         routeSolver.setTargetNode(targetNode);
 
-        routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Fastest);
+        routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Shortest);
     }
 }
