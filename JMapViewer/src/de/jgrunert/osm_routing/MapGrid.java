@@ -1,7 +1,6 @@
 package de.jgrunert.osm_routing;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
 

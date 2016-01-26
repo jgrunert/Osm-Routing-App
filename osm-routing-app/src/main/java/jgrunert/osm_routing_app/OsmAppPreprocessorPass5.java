@@ -8,7 +8,7 @@ import java.util.logging.Level;
 
 public class OsmAppPreprocessorPass5 {
 
-	private static final float gridRaster = 0.05f;
+	private static final float gridRaster = 0.20f;
 	
 	
 	public static void main(String[] args) {
@@ -47,7 +47,7 @@ public class OsmAppPreprocessorPass5 {
 			OsmAppPreprocessor.LOG.info("Start reading nodes");
 			ObjectInputStream nodeReader = new ObjectInputStream(
 					new FileInputStream(
-							outDir + "\\pass4-nodes.bin"));
+							outDir + "\\pass4B-nodes.bin"));
 
 			nodeCount = (Integer) nodeReader.readObject();
 			nodesLat = (float[]) nodeReader.readObject();
@@ -62,7 +62,7 @@ public class OsmAppPreprocessorPass5 {
 			OsmAppPreprocessor.LOG.info("Start reading edges");
 			ObjectInputStream edgeReader = new ObjectInputStream(
 					new FileInputStream(
-							outDir + "\\pass4-edges.bin"));
+							outDir + "\\pass4B-edges.bin"));
 			edgeCount = (Integer) edgeReader.readObject();
 			edgesTarget = (int[]) edgeReader.readObject();
 			edgesInfobits = (byte[]) edgeReader.readObject();

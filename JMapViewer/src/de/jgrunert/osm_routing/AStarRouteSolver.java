@@ -23,9 +23,9 @@ import org.openstreetmap.gui.jmapviewer.Coordinate;
 public class AStarRouteSolver implements IRouteSolver {
     
     // General constants
-    private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\germany\\germany_grids_020";
-    //private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
-    //private static final String MAP_DIR = "D:\\Jonas\\OSM\\hamburg";
+    private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\germany\\grids";
+    //private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\bawue\\grids";
+    //private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\hamburg\\grids";
     
     
     // Routing constants
@@ -649,7 +649,7 @@ public class AStarRouteSolver implements IRouteSolver {
             addNewPreviewDot(getNodeCoordinates(visGrid, visNodeIndex));
         }
         
-        // Check if found
+        // Check if target found
         if (visNodeGridIndex == target) {
             // Found! Return
             System.out.println("Found after " + visitedCount + " nodes visited. " + routeDistHeap.getSize()
@@ -665,11 +665,14 @@ public class AStarRouteSolver implements IRouteSolver {
             int nextVisitNodeIndex = -1;
             MapGridRoutingBuffer nextVisitGridRB = null;
             int nbEdge = -1;
+            
+            //System.out.println(visGrid.nodesEdgeOffset[visNodeIndex + 1] - visGrid.nodesEdgeOffset[visNodeIndex]);
 
             // Iterate over edges to neighbors
             for (int iEdge = visGrid.nodesEdgeOffset[visNodeIndex]; (visNodeIndex + 1 < visGrid.nodesEdgeOffset.length && iEdge < visGrid.nodesEdgeOffset[visNodeIndex + 1])
                     || (visNodeIndex + 1 == visGrid.nodesEdgeOffset.length && iEdge < visGrid.edgeCount); // Last node in offset array
             iEdge++) {
+                
                 // Skip if edge not accessible
                 if ((visGrid.edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
                     continue;
@@ -813,7 +816,7 @@ public class AStarRouteSolver implements IRouteSolver {
             float MOTORWAY_BOOST_DECREASE_RADIUS = 200000;
 
             float maxSpeed = (float) Byte.toUnsignedLong(visGrid.edgesMaxSpeeds[iEdge]);
-            float realMaxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
+            //float realMaxSpeed = Math.max(allMinSpeed, Math.min(allMaxSpeed, maxSpeed));
             
             if (routeMode == RoutingMode.Fastest) {
                 // Underestimate if using fast routing
