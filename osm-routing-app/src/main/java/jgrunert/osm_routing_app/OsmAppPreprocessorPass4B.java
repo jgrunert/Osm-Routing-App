@@ -300,7 +300,7 @@ public class OsmAppPreprocessorPass4B {
 		}
 		
 		// Free removedEdgeCoordsOffsets
-		removedEdgeCoordsOffsets = null;
+		edgeRemovedCoords = null;
 			
 		
 		// Update edge targets
@@ -347,6 +347,7 @@ public class OsmAppPreprocessorPass4B {
 		os.writeObject(edgesLengthsKept);
 		os.writeObject(edgesMaxSpeedsKept);
 		os.writeObject(removedEdgeCoordsOffsets);
+		// TODO: Not optimal to store lat/lon for each removed point at each edge: Duplicate storing
 		os.writeObject(removedEdgeCoordsLat);
 		os.writeObject(removedEdgeCoordsLon);
 		os.close();

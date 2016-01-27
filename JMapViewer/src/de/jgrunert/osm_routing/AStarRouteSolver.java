@@ -230,7 +230,7 @@ public class AStarRouteSolver implements IRouteSolver {
             loadedGrids.add(loaded);
             gridLoadOperations++;
             System.out.println("Loaded grid " + gridIndex + 
-                    " in " + (System.currentTimeMillis() - loadStart) + "ms " +
+                    //" in " + (System.currentTimeMillis() - loadStart) + "ms " +
                     ". Grids loaded: " + loadedGrids.size() +
                     ". Load operations: " + gridLoadOperations +
                     ". Heap-Size: " + (Runtime.getRuntime().totalMemory() / 1048576) + "Mb");
@@ -674,9 +674,10 @@ public class AStarRouteSolver implements IRouteSolver {
             //System.out.println(visGrid.nodesEdgeOffset[visNodeIndex + 1] - visGrid.nodesEdgeOffset[visNodeIndex]);
 
             // Iterate over edges to neighbors
-            for (int iEdge = visGrid.nodesEdgeOffset[visNodeIndex]; (visNodeIndex + 1 < visGrid.nodesEdgeOffset.length && iEdge < visGrid.nodesEdgeOffset[visNodeIndex + 1])
-                    || (visNodeIndex + 1 == visGrid.nodesEdgeOffset.length && iEdge < visGrid.edgeCount); // Last node in offset array
-            iEdge++) {
+            for (int iEdge = visGrid.nodesEdgeOffset[visNodeIndex]; 
+                    (visNodeIndex + 1 < visGrid.nodesEdgeOffset.length && iEdge < visGrid.nodesEdgeOffset[visNodeIndex + 1])
+                        || (visNodeIndex + 1 == visGrid.nodesEdgeOffset.length && iEdge < visGrid.edgeCount); // Last node in offset array
+                    iEdge++) {
                 // Skip if edge not accessible
                 if ((visGrid.edgesInfobits[iEdge] & edgeFilterBitMask) != edgeFilterBitValue) {
                     continue;

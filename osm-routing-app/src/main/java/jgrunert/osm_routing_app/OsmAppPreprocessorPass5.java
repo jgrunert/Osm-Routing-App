@@ -32,9 +32,6 @@ public class OsmAppPreprocessorPass5 {
 	    float[] nodesLat;
 	    float[] nodesLon;
 	    int[] nodesEdgeOffset;
-	    int[] removedEdgeCoordsOffsets;
-	    float[] removedEdgeCoordsLat;
-	    float[] removedEdgeCoordsLon;
 	    
 	    int[] newNodeIndices;
 	    int[] newNodeIndicesInverse;
@@ -44,6 +41,10 @@ public class OsmAppPreprocessorPass5 {
 	    byte[] edgesInfobits;
 	    float[] edgesLengths;
 	    byte[] edgesMaxSpeeds;
+	    
+	    int[] removedEdgeCoordsOffsets;
+	    float[] removedEdgeCoordsLat;
+	    float[] removedEdgeCoordsLon;
 	        
 		
 		{
@@ -201,8 +202,12 @@ public class OsmAppPreprocessorPass5 {
 	    byte[] edgesInfobitsNew = new byte[edgeCount];
 	    float[] edgesLengthsNew = new float[edgeCount];
 	    byte[] edgesMaxSpeedsNew = new byte[edgeCount];
+	    int[] removedEdgeCoordsOffsetsNew = new int[edgeCount];
+	    float[] removedEdgeCoordsLatNew = new float[removedEdgeCoordsLat.length];
+	    float[] removedEdgeCoordsLonNew = new float[removedEdgeCoordsLon.length];
 
 	    int edgeOffset = 0;
+	    int removedEdgeOffset = 0;
 	    for(int iNNew = 0; iNNew < nodeCount; iNNew++) 
 	    {
 	    	nodesEdgeOffsetNew[iNNew] = edgeOffset;
@@ -218,6 +223,17 @@ public class OsmAppPreprocessorPass5 {
 	        	edgesInfobitsNew[edgeOffset] = edgesInfobits[iEdge];
 	        	edgesLengthsNew[edgeOffset] = edgesLengths[iEdge];
 	        	edgesMaxSpeedsNew[edgeOffset] = edgesMaxSpeeds[iEdge];
+	        	
+	        	removedEdgeCoordsOffsetsNew[edgeOffset] = removedEdgeOffset;
+	        	for(int iEdgeRem = removedEdgeCoordsOffsets[iEdge]; 
+	        			(iEdge + 1 < removedEdgeCoordsOffsets.length && iEdgeRem < removedEdgeCoordsOffsets[iEdge + 1]) || 
+	        			  (iEdge + 1 == removedEdgeCoordsOffsets.length && iEdgeRem < removedEdgeCoordsLatNew.length); 
+	        			iEdgeRem++) {
+	        		removedEdgeCoordsLatNew[removedEdgeOffset] = removedEdgeCoordsLat[iEdgeRem];
+	        		removedEdgeCoordsLonNew[removedEdgeOffset] = removedEdgeCoordsLon[iEdgeRem];
+	        		removedEdgeOffset++;
+	        	}
+	        	
 	        	edgeOffset++;
 	        }
 	    }
@@ -226,26 +242,29 @@ public class OsmAppPreprocessorPass5 {
 	    edgesInfobits = edgesInfobitsNew;
 	    edgesLengths = edgesLengthsNew;
 	    edgesMaxSpeeds = edgesMaxSpeedsNew;
+	    removedEdgeCoordsOffsets = removedEdgeCoordsOffsetsNew;
+	    removedEdgeCoordsLat = removedEdgeCoordsLatNew;
+	    removedEdgeCoordsLon = removedEdgeCoordsLonNew;
     	OsmAppPreprocessor.LOG.info("Finshed updating edges");
 	    }
 		
+	    
+//		// Output
+//		{
+//			OsmAppPreprocessor.LOG.info("Start writing grid");
+//			ObjectOutputStream os = new ObjectOutputStream(
+//					new FileOutputStream(outDir + "\\grid-final.bin"));
+//			os.writeFloat(gridRaster);
+//			os.writeFloat(minLat);
+//			os.writeFloat(minLon);
+//			os.writeInt(maxLatI - minLatI);
+//			os.writeInt(maxLonI - minLonI);
+//			os.writeObject(gridNodeOffsets);
+//	        os.writeObject(gridNodeCounts);
+//			os.close();
+//			OsmAppPreprocessor.LOG.info("Finished serializing grid");
+//		}
 
-		// Output
-		{
-			OsmAppPreprocessor.LOG.info("Start writing grid");
-			ObjectOutputStream os = new ObjectOutputStream(
-					new FileOutputStream(outDir + "\\grid-final.bin"));
-			os.writeFloat(gridRaster);
-			os.writeFloat(minLat);
-			os.writeFloat(minLon);
-			os.writeInt(maxLatI - minLatI);
-			os.writeInt(maxLonI - minLonI);
-			os.writeObject(gridNodeOffsets);
-	        os.writeObject(gridNodeCounts);
-			os.close();
-			OsmAppPreprocessor.LOG.info("Finished serializing grid");
-		}
-		
 		// Output
 		{
 			OsmAppPreprocessor.LOG.info("Start writing grid2");
@@ -260,28 +279,28 @@ public class OsmAppPreprocessorPass5 {
 			OsmAppPreprocessor.LOG.info("Finished serializing grid2");
 		}
 		
-		{
-	        OsmAppPreprocessor.LOG.info("Start serializing nodes");    
-	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\nodes-final.bin"));
-	        os.writeObject(nodeCount);
-	        os.writeObject(nodesLat);   
-	        os.writeObject(nodesLon);        
-	        os.writeObject(nodesEdgeOffset);      
-	        os.close();
-	        OsmAppPreprocessor.LOG.info("Finished serializing nodes");    
-		}
-		
-		{
-	        OsmAppPreprocessor.LOG.info("Start serializing edges");    
-	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\edges-final.bin"));
-	        os.writeObject(edgeCount);
-	        os.writeObject(edgesTarget);   
-	        os.writeObject(edgesInfobits);        
-	        os.writeObject(edgesLengths);          
-	        os.writeObject(edgesMaxSpeeds);      
-	        os.close();
-	        OsmAppPreprocessor.LOG.info("Finished serializing edges");  
-		}
+//		{
+//	        OsmAppPreprocessor.LOG.info("Start serializing nodes");    
+//	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\nodes-final.bin"));
+//	        os.writeObject(nodeCount);
+//	        os.writeObject(nodesLat);   
+//	        os.writeObject(nodesLon);        
+//	        os.writeObject(nodesEdgeOffset);      
+//	        os.close();
+//	        OsmAppPreprocessor.LOG.info("Finished serializing nodes");    
+//		}
+//		
+//		{
+//	        OsmAppPreprocessor.LOG.info("Start serializing edges");    
+//	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\edges-final.bin"));
+//	        os.writeObject(edgeCount);
+//	        os.writeObject(edgesTarget);   
+//	        os.writeObject(edgesInfobits);        
+//	        os.writeObject(edgesLengths);          
+//	        os.writeObject(edgesMaxSpeeds);      
+//	        os.close();
+//	        OsmAppPreprocessor.LOG.info("Finished serializing edges");  
+//		}
 		
 		
 		
@@ -331,6 +350,7 @@ public class OsmAppPreprocessorPass5 {
 			        byte[] gridEdgesInfobits = new byte[gridEdgeCount];
 			        float[] gridEdgesLengths = new float[gridEdgeCount];
 			        byte[] gridEdgesMaxSpeeds = new byte[gridEdgeCount];
+				    
 					for(int iE = 0; iE < gridEdgeCount; iE++) {
 						int gridI = edgesTargetGrid[gridEdgeFirst + iE];
 						int nodeI = edgesTargetGridIndex[gridEdgeFirst + iE];
@@ -340,6 +360,43 @@ public class OsmAppPreprocessorPass5 {
 						gridEdgesInfobits[iE] = edgesInfobits[gridEdgeFirst + iE];
 						gridEdgesLengths[iE] = edgesLengths[gridEdgeFirst + iE];
 						gridEdgesMaxSpeeds[iE] = edgesMaxSpeeds[gridEdgeFirst + iE];
+					}
+					
+					
+					
+					// Extract removed edges infos
+					
+					// Get removed edge count in this grid
+					int gridRemovedEdgeCount = 0;					
+					for(int iE = 0; iE < gridEdgeCount; iE++) {
+						int iEOld = gridEdgeFirst + iE;
+						if(iEOld + 1 < removedEdgeCoordsOffsets.length) {
+							assert removedEdgeCoordsOffsets[iEOld + 1] >= removedEdgeCoordsOffsets[iEOld];
+							gridRemovedEdgeCount += removedEdgeCoordsOffsets[iEOld + 1] - removedEdgeCoordsOffsets[iEOld];
+						} else {
+							assert removedEdgeCoordsLat.length >= removedEdgeCoordsOffsets[iEOld];
+							gridRemovedEdgeCount += removedEdgeCoordsLat.length - removedEdgeCoordsOffsets[iEOld];							
+						}
+					}
+					
+					// Extract removed edge information
+				    int[] gridRemovedEdgeCoordsOffsets = new int[gridEdgeCount];
+				    float[] gridRemovedEdgeCoordsLat = new float[gridRemovedEdgeCount];
+				    float[] gridRemovedEdgeCoordsLon = new float[gridRemovedEdgeCount];
+					int gridRemovedEdgeCounter = 0;	
+				    
+					for(int iE = 0; iE < gridEdgeCount; iE++) {
+						gridRemovedEdgeCoordsOffsets[iE] = gridRemovedEdgeCounter;						
+						int iEOld = gridEdgeFirst + iE;
+						
+						for(int iEdgeRem = removedEdgeCoordsOffsets[iEOld]; 
+			        			(iEOld + 1 < removedEdgeCoordsOffsets.length && iEdgeRem < removedEdgeCoordsOffsets[iEOld + 1]) || 
+			        			  (iEOld + 1 == removedEdgeCoordsOffsets.length && iEdgeRem < removedEdgeCoordsLat.length); 
+			        			iEdgeRem++) {
+							gridRemovedEdgeCoordsLat[gridRemovedEdgeCounter] = removedEdgeCoordsLat[iEdgeRem];
+							gridRemovedEdgeCoordsLon[gridRemovedEdgeCounter] = removedEdgeCoordsLon[iEdgeRem];
+			        		gridRemovedEdgeCounter++;
+			        	}
 					}
 					
 					
@@ -365,7 +422,7 @@ public class OsmAppPreprocessorPass5 {
 					     }
 					}
 			        
-					
+					{
 					// Write output
 			        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\grids\\" + gridIndex + ".grid"));
 			        os.writeInt(gridNodeCount); // Node count
@@ -380,6 +437,17 @@ public class OsmAppPreprocessorPass5 {
 			        os.writeObject(gridEdgesLengths);
 			        os.writeObject(gridEdgesMaxSpeeds);
 					os.close();
+					}
+
+					{
+					// Write output
+			        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\grids\\" + gridIndex + ".grid2"));
+			        // Removed Edges
+			        os.writeObject(gridRemovedEdgeCoordsOffsets);
+			        os.writeObject(gridRemovedEdgeCoordsLat);
+			        os.writeObject(gridRemovedEdgeCoordsLon);
+					os.close();
+					}
 					
 					gridIndex++;
 				}
