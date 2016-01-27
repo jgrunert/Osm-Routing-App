@@ -582,15 +582,21 @@ public class AStarRouteSolver implements IRouteSolver {
         distOfRoute = 0.0f; // Route distance in metres
         timeOfRoute = 0.0f; // Route time in hours
         
+
+        int iNodeIndex = 0;
+        MapGrid iGrid = null;
         
         long i = targetNodeGridIndex;
         while (i != startNodeGridIndex) {
 
             int iGridIndex = (int)(i >> 32);
-            int iNodeIndex = (int)(long)(i);
-            MapGrid iGrid = getGrid(iGridIndex);
+            iNodeIndex = (int)(long)(i);
+            iGrid = getGrid(iGridIndex);
             MapGridRoutingBuffer iGridRB = routingGridBuffers.get(iGridIndex);
 
+            // Route point coordinates (for view)
+            Coordinate coord = new Coordinate(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);            
+            calculatedRoute.add(coord);
 
             long pre = iGridRB.nodesPreBuffer[iNodeIndex];
             int edge = iGridRB.nodesRouteEdges[iNodeIndex];            
@@ -610,12 +616,11 @@ public class AStarRouteSolver implements IRouteSolver {
             timeOfRoute += (dist / 1000.0f) / maxSpeed;
             
             
-            // Route point coordinates (for view)
-            Coordinate coord = new Coordinate(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);            
-            calculatedRoute.add(coord);
-            
             i = pre;
         }
+        
+        Coordinate coord = new Coordinate(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);            
+        calculatedRoute.add(coord);
         
         
         System.out.println("Route Distance: " + ((int)distOfRoute / 1000.0f) + "km");        
