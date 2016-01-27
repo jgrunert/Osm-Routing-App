@@ -6,7 +6,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
 /**
@@ -89,14 +91,18 @@ public class OsmAppPreprocessorPass4B {
 		// Find nodes to remove
 		OsmAppPreprocessor.LOG.info("Start find nodes to remove");
 		boolean[] nodesToDelete = new boolean[nodeCount];
-		
+		boolean[] edgesToDelete = new boolean[edgeCount];
+
+		int node0Count = 0;
 		int node1Count = 0;
 		int node2Count = 0;
 		int nodeEdgeDiffCount = 0;
 		int nodesDeleted = 0;
 		int nodesKeptCount = 0;
 		int edgesKeptCount = 0;
-		int errorNodeCount = 0;
+		int zeroNodeCount = 0;
+		int errorEdgeCount = 0;
+		int loopEdgeCount = 0;
 
 
 		int ndTmp;
@@ -117,7 +123,11 @@ public class OsmAppPreprocessorPass4B {
 					 edgeInfobitsTmp = edgesInfobits[iEdge];
 					 edgeMaxSpeedTmp = edgesMaxSpeeds[iEdge];
 				 } else {
-					 if(edgeInfobitsTmp != edgesInfobits[iEdge] || edgeMaxSpeedTmp != edgesMaxSpeeds[iEdge]) {
+				     // Dont merge if maxspeed different or infobits
+					 if((edgeInfobitsTmp) != (edgesInfobits[iEdge]) || edgeMaxSpeedTmp != edgesMaxSpeeds[iEdge]) {
+				     // Dont merge if maxspeed different or infobits (except oneway flag, otherwise no merge of oneway-routes such as motorways)
+					 //if((edgeInfobitsTmp >> 1) != (edgesInfobits[iEdge] >> 1) || edgeMaxSpeedTmp != edgesMaxSpeeds[iEdge]) {
+						 // TODO Code does not merge motorways
 						 edgesDifferTmp = true;
 								 break;
 					 }
@@ -132,13 +142,16 @@ public class OsmAppPreprocessorPass4B {
 
 			if (edgesDifferTmp) {
 				nodeEdgeDiffCount++;
+			} else if (ndTmp == 0) {
+				node0Count++;
 			} else if (ndTmp == 1) {
 				node1Count++;
 			} else if (ndTmp == 2) {
 				node2Count++;
 			}
 			
-			if(edgesDifferTmp || ndTmp != 2) {
+			//if(edgesDifferTmp || ndTmp != 2) {
+			if(edgesDifferTmp || ndTmp > 2) {
 				nodesKeptCount++;
 			} else {
 				nodesDeleted++;
@@ -156,6 +169,8 @@ public class OsmAppPreprocessorPass4B {
 		
 		List<Integer> nodesKeptIndices = new ArrayList<>(nodesKeptCount); // Initialize with nodesKeptCount
 		//List<Integer> edgesKeptIndices = new ArrayList<>(nodesKeptCount); // Also use nodesKeptCount (at least this count)
+		Map<Integer, List<NodeFollowPath.Coord>> edgeRemovedCoords = new HashMap<>();
+		int edgeRemovedCoordsCount = 0;
 
 	    percTmp = nodeCount / 100;
 		for (int iNd = 0; iNd < nodeCount; iNd++) {
@@ -165,8 +180,7 @@ public class OsmAppPreprocessorPass4B {
 				continue;
 			}
 			
-			boolean nodeHasError = false; // Skip node if has error
-			int newEdgesKeptCount = edgesKeptCount;
+			int nodeEdgeCount = 0;
 			
 			// Follow and update edges if necesary
 			 for (int iEdge = nodesEdgeOffset[iNd]; (iNd + 1 < nodesEdgeOffset.length && iEdge < nodesEdgeOffset[iNd + 1])
@@ -174,15 +188,18 @@ public class OsmAppPreprocessorPass4B {
 					 iEdge++) {
 				// Follow edge path
 				NodeFollowPath followPath = followNodeEdge(iNd, iEdge,
-						nodesEdgeOffset, edgeCount, edgesTarget, edgesLengths,
-						nodesToDelete);
+						nodesEdgeOffset, nodesLat, nodesLon,
+						edgeCount, edgesTarget, edgesLengths, nodesToDelete);
 				
-				if(followPath == null) {
-					// Ignore node if has error in edge
-					errorNodeCount++;
-					nodesKeptCount--;
-					nodeHasError = true;
-					break;
+				if(followPath == null || followPath.Target == iNd) {
+					if(followPath == null) {
+						errorEdgeCount++;						
+					} else {
+						loopEdgeCount++;
+					}
+					// Delete edge if has error
+					edgesToDelete[iEdge] = true;
+					continue;
 				}
 
 				// Update edge length
@@ -190,13 +207,21 @@ public class OsmAppPreprocessorPass4B {
 				// Update edge target
 				edgesTarget[iEdge] = followPath.Target;
 				assert !nodesToDelete[followPath.Target];
-				newEdgesKeptCount++;
+				edgeRemovedCoords.put(iEdge, followPath.PathCoords);
+				edgeRemovedCoordsCount += followPath.PathCoords.size();
+				edgesKeptCount++;
+				nodeEdgeCount++;
 			}
 			 
-			if (!nodeHasError) {
-				edgesKeptCount = newEdgesKeptCount;
-				nodesKeptIndices.add(iNd);
-			}
+			if (nodeEdgeCount == 0) {
+				zeroNodeCount++;
+			} 
+			
+//			if(nodeEdgeCount == 2) {
+//				System.out.println(edgesMaxSpeeds[nodesEdgeOffset[iNd]]);
+//			}
+			
+			nodesKeptIndices.add(iNd);
 			 
 			if (iNd % percTmp == 0) {
 				System.out.println(iNd / percTmp + "% removing nodes");
@@ -204,7 +229,10 @@ public class OsmAppPreprocessorPass4B {
 		}
 
 		OsmAppPreprocessor.LOG.info("Converting temporary kept-lists to arrays");
+		
 		assert nodesKeptCount == nodesKeptIndices.size();
+		assert edgeRemovedCoords.size() == edgesKeptCount;
+		
 		Integer[] nodesKeptIndicesArray = nodesKeptIndices.toArray(new Integer[nodesKeptCount]);
 		nodesKeptIndices = null;
 		//Integer[] edgesKeptIndicesArray = edgesKeptIndices.toArray(new Integer[0]);
@@ -217,13 +245,19 @@ public class OsmAppPreprocessorPass4B {
 	    float[] nodesLatKept = new float[nodesKeptCount];
 	    float[] nodesLonKept = new float[nodesKeptCount];
 	    int[] nodesEdgeOffsetKept = new int[nodesKeptCount];	
-	    int edgeOffsetTmp = 0;
 	    
 	    int[] edgesTargetKept = new int[edgesKeptCount];
 	    byte[] edgesInfobitsKept = new byte[edgesKeptCount];
 	    float[] edgesLengthsKept = new float[edgesKeptCount];
 	    byte[] edgesMaxSpeedsKept = new byte[edgesKeptCount];
+	    
+	    int[] removedEdgeCoordsOffsets = new int[edgesKeptCount];
+	    float[] removedEdgeCoordsLat = new float[edgeRemovedCoordsCount];
+	    float[] removedEdgeCoordsLon = new float[edgeRemovedCoordsCount];
 
+	    int edgeOffsetTmp = 0;
+	    int removedEdgeOffsetTmp = 0;
+	    
 	    percTmp = nodesKeptCount / 10;
 		for (int iNd = 0; iNd < nodesKeptCount; iNd++) {
 			// Extract node
@@ -236,11 +270,26 @@ public class OsmAppPreprocessorPass4B {
 			 for (int iEdge = nodesEdgeOffset[oldIndex]; (oldIndex + 1 < nodesEdgeOffset.length && iEdge < nodesEdgeOffset[oldIndex + 1])
 	                    || (oldIndex + 1 == nodesEdgeOffset.length && iEdge < edgeCount); // Last node in offset array
 					 iEdge++) {
+				 if(edgesToDelete[iEdge]) {
+					 continue;
+				 }
+				 
 				 edgesTargetKept[edgeOffsetTmp] = edgesTarget[iEdge];
 				 assert !nodesToDelete[edgesTarget[iEdge]];
 				 edgesInfobitsKept[edgeOffsetTmp] = edgesInfobits[iEdge];
 				 edgesLengthsKept[edgeOffsetTmp] = edgesLengths[iEdge];
 				 edgesMaxSpeedsKept[edgeOffsetTmp] = edgesMaxSpeeds[iEdge];
+				 
+				 removedEdgeCoordsOffsets[edgeOffsetTmp] = removedEdgeOffsetTmp;
+				 List<NodeFollowPath.Coord> removedCoords = edgeRemovedCoords.get(iEdge);
+				 assert removedCoords != null;
+				 
+				 for(int i = 0; i < removedCoords.size(); i++) {
+					 removedEdgeCoordsLat[removedEdgeOffsetTmp] = removedCoords.get(i).Lat;
+					 removedEdgeCoordsLon[removedEdgeOffsetTmp] = removedCoords.get(i).Lon;
+					 removedEdgeOffsetTmp++;
+				 }
+				 
 				 // Edge offset counter
 				 edgeOffsetTmp++;
 			}
@@ -249,6 +298,9 @@ public class OsmAppPreprocessorPass4B {
 					System.out.println(iNd / percTmp * 10 + "% extracting edges");				 
 			 }
 		}
+		
+		// Free removedEdgeCoordsOffsets
+		removedEdgeCoordsOffsets = null;
 			
 		
 		// Update edge targets
@@ -269,9 +321,6 @@ public class OsmAppPreprocessorPass4B {
 			 }
 		}
 		
-		// TODO Node ID Mapping
-		// TODO Export new nodes and edges
-		// TODO Also export all nodes (for route reconstruction) for later use
 		
 		{
 		// Save nodes
@@ -297,6 +346,9 @@ public class OsmAppPreprocessorPass4B {
 		os.writeObject(edgesInfobitsKept);
 		os.writeObject(edgesLengthsKept);
 		os.writeObject(edgesMaxSpeedsKept);
+		os.writeObject(removedEdgeCoordsOffsets);
+		os.writeObject(removedEdgeCoordsLat);
+		os.writeObject(removedEdgeCoordsLon);
 		os.close();
 		OsmAppPreprocessor.LOG.info("Finished serializing edges");
 		}
@@ -305,6 +357,7 @@ public class OsmAppPreprocessorPass4B {
 		OsmAppPreprocessor.LOG.warning("Dead ends: " + deadEnds);	
 
 		System.out.println("nodeCount: " + nodeCount);
+		System.out.println("node0Count: " + node0Count);
 		System.out.println("node1Count: " + node1Count);
 		System.out.println("node2Count: " + node2Count);
 		System.out.println("nodeEdgeDiffCount: " + nodeEdgeDiffCount);
@@ -312,7 +365,9 @@ public class OsmAppPreprocessorPass4B {
 		System.out.println("nodesDeleted: " + nodesDeleted);
 		System.out.println("edgeCount: " + edgeCount);
 		System.out.println("edgesKept: " + edgesKeptCount);
-		System.out.println("errorNodeCount: " + errorNodeCount);
+		System.out.println("zeroNodeCount: " + zeroNodeCount);
+		System.out.println("errorEdgeCount: " + errorEdgeCount);
+		System.out.println("loopEdgeCount: " + loopEdgeCount);
 		
 		OsmAppPreprocessor.LOG.info("Finished Pass4B");
 	}
@@ -323,11 +378,24 @@ public class OsmAppPreprocessorPass4B {
 	private static class NodeFollowPath {
 		public final float Dist;
 		public final int Target;
+		public final List<Coord> PathCoords;
 		
-		public NodeFollowPath(float dist, int target) {
+		public static class Coord {
+			public final float Lat;
+			public final float Lon;
+			
+			public Coord(float lat, float lon) {
+				super();
+				Lat = lat;
+				Lon = lon;
+			}			
+		}
+		
+		public NodeFollowPath(float dist, int target, List<Coord> pathCoords) {
 			super();
 			Dist = dist;
 			Target = target;
+			PathCoords = pathCoords;
 		}		
 	}
 	
@@ -340,13 +408,14 @@ public class OsmAppPreprocessorPass4B {
 	 * @return
 	 */
 	private static NodeFollowPath followNodeEdge(int nodeLast, int edge, 
-			int[] nodesEdgeOffset, int edgeCount, int[] edgesTarget, float[] edgesLengths, boolean[] nodesToDelete) {
+			int[] nodesEdgeOffset, float[] nodesLat, float[] nodesLon, 
+			int edgeCount, int[] edgesTarget, float[] edgesLengths, boolean[] nodesToDelete) {
 		
 		int nodeNext = edgesTarget[edge];
 		
 		if(!nodesToDelete[nodeNext]) {
 			// Node not deleted, leave edge as it is
-			return new NodeFollowPath(0.0f, nodeNext);
+			return new NodeFollowPath(0.0f, nodeNext, new ArrayList<>());
 		} else {
 			// Deleted node - follow edges
 			
@@ -369,11 +438,13 @@ public class OsmAppPreprocessorPass4B {
 			
 			if(nextEdge == -1) {
 				deadEnds++;
+				nextEdge = -1;				
+				
 				if (!nodesToDelete[nodeNext]) { 
 					// Return next node which is dead end and not deleted
-					return new NodeFollowPath(0.0f, nodeNext);
+					return new NodeFollowPath(0.0f, nodeNext, new ArrayList<>());
 				} if (!nodesToDelete[nodeLast]) { 
-					return new NodeFollowPath(0.0f, nodeLast);
+					return new NodeFollowPath(0.0f, nodeLast, new ArrayList<>());
 				} else {
 					// Unable to follow edge - error node
 					return null;
@@ -383,12 +454,17 @@ public class OsmAppPreprocessorPass4B {
 			// Return sum of edges followed recursively
 			NodeFollowPath follow = 
 					followNodeEdge(nodeNext, nextEdge, 
-							nodesEdgeOffset, edgeCount, edgesTarget, edgesLengths, nodesToDelete);
+							nodesEdgeOffset, nodesLat, nodesLon,
+							edgeCount, edgesTarget, edgesLengths, nodesToDelete);
 			if(follow == null) {
 				return null;
 			}
 			assert !nodesToDelete[follow.Target];
-			return new NodeFollowPath(follow.Dist + edgesLengths[nextEdge], follow.Target);
+			
+			List<NodeFollowPath.Coord> pathCoords = new ArrayList<>();
+			pathCoords.add(new NodeFollowPath.Coord(nodesLat[nodeNext], nodesLon[nodeNext]));
+			pathCoords.addAll(follow.PathCoords);
+			return new NodeFollowPath(follow.Dist + edgesLengths[nextEdge], follow.Target, pathCoords);
 		}
 	}
 }

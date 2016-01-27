@@ -32,6 +32,9 @@ public class OsmAppPreprocessorPass5 {
 	    float[] nodesLat;
 	    float[] nodesLon;
 	    int[] nodesEdgeOffset;
+	    int[] removedEdgeCoordsOffsets;
+	    float[] removedEdgeCoordsLat;
+	    float[] removedEdgeCoordsLon;
 	    
 	    int[] newNodeIndices;
 	    int[] newNodeIndicesInverse;
@@ -68,6 +71,9 @@ public class OsmAppPreprocessorPass5 {
 			edgesInfobits = (byte[]) edgeReader.readObject();
 			edgesLengths = (float[]) edgeReader.readObject();
 			edgesMaxSpeeds = (byte[]) edgeReader.readObject();
+		    removedEdgeCoordsOffsets = (int[]) edgeReader.readObject();
+		    removedEdgeCoordsLat = (float[]) edgeReader.readObject();
+		    removedEdgeCoordsLon = (float[]) edgeReader.readObject();
 
 			edgeReader.close();
 			OsmAppPreprocessor.LOG.info("Finished reading edges");
