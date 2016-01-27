@@ -1,8 +1,10 @@
 package de.jgrunert.osm_routing;
 
+import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -584,7 +586,13 @@ public class AStarRouteSolver implements IRouteSolver {
         
 
         int iNodeIndex = 0;
-        MapGrid iGrid = null;
+        MapGrid iGrid = null;        
+
+        // Buffers for removed edge points in a grid to reconstruct points
+        int gridRemovedEdgeGridIndex = -1;
+        int[] gridRemovedEdgeCoordsOffsets = null;
+        float[] gridRemovedEdgeCoordsLat = null;
+        float[] gridRemovedEdgeCoordsLon = null;
         
         long i = targetNodeGridIndex;
         while (i != startNodeGridIndex) {
@@ -616,6 +624,34 @@ public class AStarRouteSolver implements IRouteSolver {
             timeOfRoute += (dist / 1000.0f) / maxSpeed;
             
             
+            // Reconstruct deleted points on edge
+            if(gridRemovedEdgeGridIndex != iGridIndex) {
+                // Load deleted edge points
+                try (ObjectInputStream gridReader = new ObjectInputStream(new BufferedInputStream(new FileInputStream(MAP_GRIDS_DIR + "\\" + iGridIndex + ".grid2")))) 
+                {
+                    gridRemovedEdgeCoordsOffsets = (int[]) gridReader.readObject();
+                    gridRemovedEdgeCoordsLat = (float[]) gridReader.readObject();
+                    gridRemovedEdgeCoordsLon = (float[]) gridReader.readObject();                    
+                    gridReader.close();
+                    
+                    gridRemovedEdgeGridIndex = iGridIndex;
+                } catch(Exception exc) {
+                    exc.printStackTrace();
+                }
+            }            
+            // Reconstruct deleted points
+            List<Coordinate> coordsRem = new ArrayList<Coordinate>();
+            for(int iEdgeRem = gridRemovedEdgeCoordsOffsets[edge]; 
+                    (edge + 1 < gridRemovedEdgeCoordsOffsets.length && iEdgeRem < gridRemovedEdgeCoordsOffsets[edge + 1]) || 
+                      (edge + 1 == gridRemovedEdgeCoordsOffsets.length && iEdgeRem < gridRemovedEdgeCoordsLat.length); 
+                    iEdgeRem++) {
+                Coordinate coordRem = new Coordinate(gridRemovedEdgeCoordsLat[iEdgeRem], gridRemovedEdgeCoordsLon[iEdgeRem]);            
+                coordsRem.add(coordRem);
+            }                
+            Collections.reverse(coordsRem);
+            calculatedRoute.addAll(coordsRem);
+            
+            // Go one step back
             i = pre;
         }
         
