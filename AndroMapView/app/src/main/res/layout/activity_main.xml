@@ -12,7 +12,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="AndroMapView"
+        android:text="Coordinates"
         android:id="@+id/textView" />
 
     <EditText
@@ -21,11 +21,11 @@
         android:inputType="numberDecimal"
         android:ems="10"
         android:id="@+id/editTextLat1"
+        android:text="47.8"
         android:layout_below="@+id/textView"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="36dp"
-        android:text="47.79998" />
+        android:layout_toStartOf="@+id/editTextLon1" />
 
     <EditText
         android:layout_width="wrap_content"
@@ -33,10 +33,11 @@
         android:inputType="numberDecimal"
         android:ems="10"
         android:id="@+id/editTextLon1"
-        android:layout_below="@+id/editTextLat1"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:text="8.998992" />
+        android:text="9.0"
+        android:singleLine="false"
+        android:layout_alignTop="@+id/editTextLat1"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true" />
 
     <EditText
         android:layout_width="wrap_content"
@@ -44,10 +45,12 @@
         android:inputType="numberDecimal"
         android:ems="10"
         android:id="@+id/editTextLat2"
-        android:layout_centerVertical="true"
+        android:text="49.15"
+        android:layout_below="@+id/editTextLon1"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:text="49.150383" />
+        android:layout_toLeftOf="@+id/editTextLon2"
+        android:layout_toStartOf="@+id/editTextLon2" />
 
     <EditText
         android:layout_width="wrap_content"
@@ -55,19 +58,30 @@
         android:inputType="numberDecimal"
         android:ems="10"
         android:id="@+id/editTextLon2"
-        android:layout_below="@+id/editTextLat2"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:text="9.219987" />
+        android:text="9.22"
+        android:layout_alignTop="@+id/editTextLat2"
+        android:layout_alignRight="@+id/editTextLon1"
+        android:layout_alignEnd="@+id/editTextLon1" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="New Button"
         android:id="@+id/button"
+        android:onClick="mapCalcButtonClick"
         android:layout_below="@+id/editTextLon2"
-        android:layout_toRightOf="@+id/textView"
-        android:layout_toEndOf="@+id/textView"
-        android:layout_marginTop="63dp"
-        android:onClick="mapCalcButtonClick" />
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <org.mapsforge.map.android.view.MapView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/view"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_below="@+id/button" />
+
 </RelativeLayout>

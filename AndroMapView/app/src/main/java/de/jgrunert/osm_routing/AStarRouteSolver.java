@@ -29,7 +29,7 @@ public class AStarRouteSolver implements IRouteSolver {
     
     // General constants
     private static final File OSM_BASE_DIR = new File(Environment.getExternalStorageDirectory(), "osm");
-    private static final File MAP_BASE_DIR = new File(OSM_BASE_DIR, "germany_grids_020");
+    private static final File MAP_BASE_DIR = new File(OSM_BASE_DIR, "germany_grids");
     //private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
     //private static final String MAP_DIR = "D:\\Jonas\\OSM\\hamburg";
     
