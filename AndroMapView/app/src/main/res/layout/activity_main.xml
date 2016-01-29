@@ -9,121 +9,200 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="de.jgrunert.andromapview.MainActivity">
 
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:id="@+id/linearLayout2">
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:weightSum="1"
+        android:id="@+id/linearLayout4"
+        android:layout_below="@+id/linearLayout2"
+        android:layout_alignLeft="@+id/linearLayout5"
+        android:layout_alignStart="@+id/linearLayout5"
+        android:layout_alignRight="@+id/linearLayout2"
+        android:layout_alignEnd="@+id/linearLayout2">
+
+        <EditText
+            android:layout_width="90dp"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:ems="10"
+            android:id="@+id/editTextLat1"
+            android:text="47.8"
+            android:layout_below="@+id/textView"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_weight="0.30" />
+
+        <EditText
+            android:layout_width="90dp"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:ems="10"
+            android:id="@+id/editTextLon1"
+            android:text="9.0"
+            android:singleLine="false"
+            android:layout_below="@+id/textView"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_weight="0.30"
+            android:layout_margin="0dp" />
+
+        <Button
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="GPS"
+            android:id="@+id/button4"
+            android:layout_below="@+id/button6"
+            android:layout_alignLeft="@+id/button7"
+            android:layout_alignStart="@+id/button7"
+            android:layout_marginLeft="5dp" />
+
+        <Button
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sel"
+            android:id="@+id/button6"
+            android:layout_alignTop="@+id/textView"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/linearLayout5"
+        android:layout_below="@+id/linearLayout4"
+        android:layout_alignRight="@+id/linearLayout3"
+        android:layout_alignEnd="@+id/linearLayout3">
+
+        <EditText
+            android:layout_width="90dp"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:ems="10"
+            android:id="@+id/editTextLat2"
+            android:text="49.15"
+            android:layout_below="@+id/editTextLon1"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_toLeftOf="@+id/editTextLon2"
+            android:layout_toStartOf="@+id/editTextLon2"
+            android:layout_weight="0.30" />
+
+        <EditText
+            android:layout_width="90dp"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:ems="10"
+            android:id="@+id/editTextLon2"
+            android:text="9.22"
+            android:layout_below="@+id/editTextLat2"
+            android:layout_centerHorizontal="true"
+            android:layout_weight="0.30" />
+
+        <Button
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="GPS"
+            android:id="@+id/button7"
+            android:layout_alignTop="@+id/button6"
+            android:layout_toLeftOf="@+id/button6"
+            android:layout_toStartOf="@+id/button6"
+            android:layout_marginLeft="5dp" />
+
+        <Button
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sel"
+            android:id="@+id/button5"
+            android:layout_alignTop="@+id/button4"
+            android:layout_toRightOf="@+id/button4"
+            android:layout_toEndOf="@+id/button4" />
+    </LinearLayout>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Coordinates"
-        android:id="@+id/textView" />
-
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:inputType="numberDecimal"
-        android:ems="10"
-        android:id="@+id/editTextLat1"
-        android:text="47.8"
-        android:layout_below="@+id/textView"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Start"
+        android:id="@+id/textView2"
+        android:layout_alignTop="@+id/linearLayout4"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
 
-    <EditText
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:inputType="numberDecimal"
-        android:ems="10"
-        android:id="@+id/editTextLon1"
-        android:text="9.0"
-        android:singleLine="false"
-        android:layout_below="@+id/textView"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Target"
+        android:id="@+id/textView3"
+        android:layout_below="@+id/linearLayout4"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/linearLayout5"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_marginLeft="32dp"
-        android:layout_marginStart="32dp" />
+        android:id="@+id/linearLayout3">
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:inputType="numberDecimal"
-        android:ems="10"
-        android:id="@+id/editTextLat2"
-        android:text="49.15"
-        android:layout_below="@+id/editTextLon1"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_toLeftOf="@+id/editTextLon2"
-        android:layout_toStartOf="@+id/editTextLon2" />
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:weightSum="1">
 
-    <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:inputType="numberDecimal"
-        android:ems="10"
-        android:id="@+id/editTextLon2"
-        android:text="9.22"
-        android:layout_alignTop="@+id/editTextLat2"
-        android:layout_alignRight="@+id/editTextLon1"
-        android:layout_alignEnd="@+id/editTextLon1" />
+            <Button
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Car Fast"
+                android:id="@+id/button"
+                android:layout_centerVertical="true"
+                android:layout_toLeftOf="@+id/linearLayout2"
+                android:layout_toStartOf="@+id/linearLayout2"
+                android:layout_weight="0.14" />
 
-    <org.mapsforge.map.android.view.MapView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/view"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/button4" />
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Car Short"
+                android:id="@+id/button2" />
 
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="GPS"
-        android:id="@+id/button4"
-        android:layout_below="@+id/button6"
-        android:layout_alignLeft="@+id/button7"
-        android:layout_alignStart="@+id/button7" />
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pedestr."
+                android:id="@+id/button3" />
 
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Sel"
-        android:id="@+id/button5"
-        android:layout_alignTop="@+id/button4"
-        android:layout_toRightOf="@+id/button4"
-        android:layout_toEndOf="@+id/button4" />
+        </LinearLayout>
 
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Sel"
-        android:id="@+id/button6"
-        android:layout_alignTop="@+id/textView"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="GPS"
-        android:id="@+id/button7"
-        android:layout_alignTop="@+id/button6"
-        android:layout_toLeftOf="@+id/button6"
-        android:layout_toStartOf="@+id/button6" />
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Car Fast"
-        android:id="@+id/button"
-        android:layout_marginTop="24dp"
-        android:layout_below="@+id/button4"
-        android:layout_alignRight="@+id/button5"
-        android:layout_alignEnd="@+id/button5"
-        android:layout_toEndOf="@+id/button4"
-        android:layout_toRightOf="@+id/button4" />
+        <org.mapsforge.map.android.view.MapView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/view"
+            android:layout_alignBottom="@+id/button"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true" />
+    </LinearLayout>
 
 </RelativeLayout>
