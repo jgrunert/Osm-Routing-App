@@ -2,7 +2,7 @@ package de.jgrunert.osm_routing;
 
 import java.util.List;
 
-import org.openstreetmap.gui.jmapviewer.Coordinate;
+import org.mapsforge.core.model.LatLong;
 
 
 @SuppressWarnings("javadoc")
@@ -17,13 +17,13 @@ public interface IRouteSolver {
     
     void setStartNode(long nodeGridIndex);
     void setTargetNode(long nodeGridIndex);
-    
-    Coordinate getStartCoordinate();
-    Coordinate getTargetCoordinate();    
+
+    LatLong getStartCoordinate();
+    LatLong getTargetCoordinate();
 
     RoutingState getRoutingState();
-    List<Coordinate> getRoutingPreviewDots();
-    List<Coordinate> getCalculatedRoute();
+    List<LatLong> getRoutingPreviewDots();
+    List<LatLong> getCalculatedRoute();
     
     boolean getNeedsDispalyRefresh();
     void resetNeedsDispalyRefresh();
@@ -32,7 +32,7 @@ public interface IRouteSolver {
     
     void startCalculateRoute(TransportMode transportMode, RoutingMode routeMode);
 
-    Coordinate getBestCandidateCoords();
+    LatLong getBestCandidateCoords();
     
     boolean isDoFastFollow();
     void setDoFastFollow(boolean doFastFollow);

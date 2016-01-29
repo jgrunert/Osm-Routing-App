@@ -14,30 +14,41 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import org.mapsforge.core.graphics.Color;
+import org.mapsforge.core.graphics.Paint;
+import org.mapsforge.core.graphics.Style;
+import org.mapsforge.core.model.BoundingBox;
 import org.mapsforge.core.model.LatLong;
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
 import org.mapsforge.map.android.util.AndroidUtil;
 import org.mapsforge.map.android.view.MapView;
 import org.mapsforge.map.datastore.MapDataStore;
 import org.mapsforge.map.layer.cache.TileCache;
+import org.mapsforge.map.layer.overlay.Circle;
+import org.mapsforge.map.layer.overlay.Polyline;
 import org.mapsforge.map.layer.renderer.TileRendererLayer;
 import org.mapsforge.map.reader.MapFile;
 import org.mapsforge.map.rendertheme.InternalRenderTheme;
 //import org.mapsforge.map.reader.header.;
 
 import java.io.File;
+import java.util.List;
 
 import de.jgrunert.osm_routing.AStarRouteSolver;
 import de.jgrunert.osm_routing.IRouteSolver;
 
 public class MainActivity extends ActionBarActivity {
 
-    AStarRouteSolver routeSolver = new AStarRouteSolver();
+    IRouteSolver routeSolver = new AStarRouteSolver();
     protected PowerManager.WakeLock mWakeLock;
 
     private MapView mapView;
     private TileCache tileCache;
     private TileRendererLayer tileRendererLayer;
+
+    private static final File MAP_VIEW_FILE = new File(Environment.getExternalStorageDirectory(), "osm/mapsforge/germany.map");
+
+
 
     /** Called when the activity is first created. */
     @Override
@@ -48,45 +59,98 @@ public class MainActivity extends ActionBarActivity {
 
         setContentView(R.layout.activity_main);
 
+
         /* This code together with the one in onDestroy()
          * will make the screen be always on until this Activity gets destroyed. */
         final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "My Tag");
+        this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "lock_tag");
         this.mWakeLock.acquire();
 
+
+        // Initialize MapView
         this.mapView = ((MapView)findViewById(R.id.view));
-        //setContentView(this.mapView);
-        //ViewGroup.LayoutParams lp =new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        //lp.gravity= Gravity.BOTTOM;
-        //addContentView(this.mapView, lp);
-        //findViewById(R.id.)
-
-        //this.Fram
-
         this.mapView.setClickable(true);
         this.mapView.getMapScaleBar().setVisible(true);
         this.mapView.setBuiltInZoomControls(true);
         this.mapView.getMapZoomControls().setZoomLevelMin((byte) 10);
         this.mapView.getMapZoomControls().setZoomLevelMax((byte) 20);
 
-        final File OSM_BASE_DIR = new File(Environment.getExternalStorageDirectory(), "osm");
-        final File MAP_BASE_DIR = new File(OSM_BASE_DIR, "mapsforge");
-
-        this.tileCache = AndroidUtil.createTileCache(this, "mapcache",
+        this.tileCache = AndroidUtil.createTileCache(this, "map_cache",
                 mapView.getModel().displayModel.getTileSize(),1f,
                 this.mapView.getModel().frameBufferModel.getOverdrawFactor());
 
-        MapDataStore mapDataStore = new MapFile(new File(MAP_BASE_DIR, "germany.map"));
+        MapDataStore mapDataStore = new MapFile(MAP_VIEW_FILE);
         this.tileRendererLayer = new TileRendererLayer(tileCache, mapDataStore,
                 this.mapView.getModel().mapViewPosition, false, true, AndroidGraphicFactory.INSTANCE);
         tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.OSMARENDER);
 
         this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
 
-        this.mapView.getModel().mapViewPosition.setCenter(new LatLong(52.517037, 13.38886));
-        this.mapView.getModel().mapViewPosition.setZoomLevel((byte) 12);
 
         System.out.println("Initialized MainActivity");
+
+
+        // Set map focus
+        mapFocus(routeSolver.getStartCoordinate());
+        mapSetZoom((byte) 10);
+
+        updateRouteOverlay();
+    }
+
+
+
+    public void updateRouteOverlay() {
+
+        // instantiating the paint objects
+        Paint paintRouteLine = AndroidGraphicFactory.INSTANCE.createPaint();
+        paintRouteLine.setColor(Color.BLUE);
+        paintRouteLine.setStrokeWidth(8);
+        paintRouteLine.setStyle(Style.STROKE);
+
+        Paint paintPointBorder = AndroidGraphicFactory.INSTANCE.createPaint();
+        paintPointBorder.setColor(Color.BLACK);
+        paintPointBorder.setStrokeWidth(12);
+        paintPointBorder.setStyle(Style.STROKE);
+
+        Paint paintStartPoint = AndroidGraphicFactory.INSTANCE.createPaint();
+        paintStartPoint.setColor(Color.BLUE);
+        paintStartPoint.setStyle(Style.FILL);
+
+        Paint paintTargPoint = AndroidGraphicFactory.INSTANCE.createPaint();
+        paintTargPoint.setColor(Color.RED);
+        paintTargPoint.setStyle(Style.FILL);
+
+
+
+        LatLong startCoord = routeSolver.getStartCoordinate();
+        LatLong targCoord = routeSolver.getTargetCoordinate();
+
+
+        // TODO Real route
+        Polyline routeLine = new Polyline(paintRouteLine, AndroidGraphicFactory.INSTANCE);
+        List<LatLong> coordinateList = routeLine.getLatLongs();
+        coordinateList.add(startCoord);
+        coordinateList.add(targCoord);
+        mapView.getLayerManager().getLayers().add(routeLine);
+
+
+        // Overlay for start and end points
+        Circle cStart = new Circle(routeSolver.getStartCoordinate(), 120.0f, paintStartPoint, paintPointBorder);
+        Circle cTarg = new Circle(routeSolver.getTargetCoordinate(), 120.0f, paintTargPoint, paintPointBorder);
+
+        mapView.getLayerManager().getLayers().add(cStart);
+        mapView.getLayerManager().getLayers().add(cTarg);
+    }
+
+
+
+    public void mapFocus(LatLong focusPoint) {
+        //this.mapView.getModel().mapViewPosition.setCenter(new LatLong(52.517037, 13.38886));
+        this.mapView.getModel().mapViewPosition.setCenter(focusPoint);
+    }
+
+    public void mapSetZoom(byte zoom) {
+        this.mapView.getModel().mapViewPosition.setZoomLevel(zoom);
     }
 
 

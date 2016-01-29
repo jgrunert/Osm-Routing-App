@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import org.openstreetmap.gui.jmapviewer.Coordinate;
+import org.mapsforge.core.model.LatLong;
 
 
 /**
@@ -51,26 +51,26 @@ public class AStarRouteSolver implements IRouteSolver {
     public void setTargetNode(long nodeGridIndex) { targetNodeGridIndex = nodeGridIndex; needsDispalyRefresh = true; }
     
     @Override
-    public Coordinate getStartCoordinate() {
+    public LatLong getStartCoordinate() {
         if(startNodeGridIndex == null) { return null; }
         return getNodeCoordinates(startNodeGridIndex); 
     }
     @Override
-    public Coordinate getTargetCoordinate() {
+    public LatLong getTargetCoordinate() {
         if(targetNodeGridIndex == null) { return null; }
         return getNodeCoordinates(targetNodeGridIndex); 
     }
     
     // Debugging and routing preview
-    private List<Coordinate> routingPreviewDots = new LinkedList<Coordinate>();
+    private List<LatLong> routingPreviewDots = new LinkedList<LatLong>();
     private static final double routingPreviewDotPropability = 0.999;
     @Override
-    public synchronized List<Coordinate> getRoutingPreviewDots() { return new ArrayList<Coordinate>(routingPreviewDots); }
-    private synchronized void addNewPreviewDot(Coordinate dot) { routingPreviewDots.add(dot); }
+    public synchronized List<LatLong> getRoutingPreviewDots() { return new ArrayList<LatLong>(routingPreviewDots); }
+    private synchronized void addNewPreviewDot(LatLong dot) { routingPreviewDots.add(dot); }
     
     private Long bestCandidateNode;    
     @Override
-    public Coordinate getBestCandidateCoords() {
+    public LatLong getBestCandidateCoords() {
         if(bestCandidateNode == null) { return null; }
         return getNodeCoordinates(bestCandidateNode); 
     }
@@ -82,9 +82,9 @@ public class AStarRouteSolver implements IRouteSolver {
     public void resetNeedsDispalyRefresh() { needsDispalyRefresh = false; }
     
     // Final route
-    private List<Coordinate> calculatedRoute = new LinkedList<Coordinate>();
+    private List<LatLong> calculatedRoute = new LinkedList<LatLong>();
     @Override
-    public List<Coordinate> getCalculatedRoute() { return calculatedRoute; }
+    public List<LatLong> getCalculatedRoute() { return calculatedRoute; }
 
     public float distOfRoute = 0.0f; // Route distance in metres
     public float timeOfRoute = 0.0f; // Route time in hours
@@ -271,7 +271,7 @@ public class AStarRouteSolver implements IRouteSolver {
      * Tries to determine coordinates of a node, tries to load grid if necessary
      * @return Coordinates of node
      */
-    private Coordinate getNodeCoordinates(long nodeGridIndex) {
+    private LatLong getNodeCoordinates(long nodeGridIndex) {
         return getNodeCoordinates((int)(nodeGridIndex >> 32), (int)nodeGridIndex);
     }
     
@@ -279,7 +279,7 @@ public class AStarRouteSolver implements IRouteSolver {
      * Tries to determine coordinates of a node, tries to load grid if necessary
      * @return Coordinates of node
      */
-    private Coordinate getNodeCoordinates(int gridIndex, int nodeIndex) {
+    private LatLong getNodeCoordinates(int gridIndex, int nodeIndex) {
         MapGrid grid = getGrid(gridIndex);
         return getNodeCoordinates(grid, nodeIndex);
     }
@@ -288,8 +288,8 @@ public class AStarRouteSolver implements IRouteSolver {
      * Tries to determine coordinates of a node, tries to load grid if necessary
      * @return Coordinates of node
      */
-    private Coordinate getNodeCoordinates(MapGrid grid, int nodeIndex) {
-        return new Coordinate(grid.nodesLat[nodeIndex], grid.nodesLon[nodeIndex]);
+    private LatLong getNodeCoordinates(MapGrid grid, int nodeIndex) {
+        return new LatLong(grid.nodesLat[nodeIndex], grid.nodesLon[nodeIndex]);
     }
     
     
@@ -451,12 +451,12 @@ public class AStarRouteSolver implements IRouteSolver {
         
         // Find better start and end points if not suitable
         if(!checkNodeWithFilter(getGrid((int)(startNodeGridIndex >> 32)), (int)(long)startNodeGridIndex, edgeFilterBitMask, edgeFilterBitValue)) {
-            Coordinate startCoord = getNodeCoordinates(startNodeGridIndex);
-            startNodeGridIndex = findNextNode((float)startCoord.getLat(), (float)startCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
+            LatLong startCoord = getNodeCoordinates(startNodeGridIndex);
+            startNodeGridIndex = findNextNode((float)startCoord.latitude, (float)startCoord.longitude, edgeFilterBitMask, edgeFilterBitValue);
         }
-        if(!checkNodeWithFilter(getGrid((int)(targetNodeGridIndex >> 32)), (int)(long)targetNodeGridIndex, edgeFilterBitMask, edgeFilterBitValue)) {
-            Coordinate targetCoord = getNodeCoordinates(targetNodeGridIndex);
-            targetNodeGridIndex = findNextNode((float)targetCoord.getLat(), (float)targetCoord.getLon(), edgeFilterBitMask, edgeFilterBitValue);
+        if(!checkNodeWithFilter(getGrid((int) (targetNodeGridIndex >> 32)), (int) (long) targetNodeGridIndex, edgeFilterBitMask, edgeFilterBitValue)) {
+            LatLong targetCoord = getNodeCoordinates(targetNodeGridIndex);
+            targetNodeGridIndex = findNextNode((float)targetCoord.latitude, (float)targetCoord.longitude, edgeFilterBitMask, edgeFilterBitValue);
         }   
         
 
@@ -619,7 +619,7 @@ public class AStarRouteSolver implements IRouteSolver {
 
 
             // Route point coordinates (for view)
-            Coordinate coord = new Coordinate(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);
+            LatLong coord = new LatLong(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);
             calculatedRoute.add(coord);
 
             i = pre;
