@@ -28,6 +28,7 @@ public interface IRouteSolver {
     boolean getNeedsDispalyRefresh();
     void resetNeedsDispalyRefresh();
 
+    Long findNextNode(float lat, float lon);
     Long findNextNode(float lat, float lon, byte filterBitMask, byte filterBitValue);
     
     void startCalculateRoute(TransportMode transportMode, RoutingMode routeMode);

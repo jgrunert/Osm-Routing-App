@@ -291,8 +291,17 @@ public class AStarRouteSolver implements IRouteSolver {
     private LatLong getNodeCoordinates(MapGrid grid, int nodeIndex) {
         return new LatLong(grid.nodesLat[nodeIndex], grid.nodesLon[nodeIndex]);
     }
-    
-    
+
+
+    /**
+     * Tries to find out index of next point to given coordinate
+     * @return Index of next point
+     */
+    @Override
+    public Long findNextNode(float lat, float lon) {
+        return findNextNode(lat, lon, (byte)0, (byte)0);
+    }
+
     /**
      * Tries to find out index of next point to given coordinate
      * @return Index of next point

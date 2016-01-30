@@ -2,26 +2,21 @@ package de.jgrunert.andromapview;
 
 import android.content.Context;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import org.mapsforge.core.graphics.Color;
 import org.mapsforge.core.graphics.Paint;
 import org.mapsforge.core.graphics.Style;
-import org.mapsforge.core.model.BoundingBox;
 import org.mapsforge.core.model.LatLong;
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
 import org.mapsforge.map.android.util.AndroidUtil;
@@ -30,7 +25,6 @@ import org.mapsforge.map.datastore.MapDataStore;
 import org.mapsforge.map.layer.cache.TileCache;
 import org.mapsforge.map.layer.overlay.Circle;
 import org.mapsforge.map.layer.overlay.FixedPixelCircle;
-import org.mapsforge.map.layer.overlay.Marker;
 import org.mapsforge.map.layer.overlay.Polyline;
 import org.mapsforge.map.layer.renderer.TileRendererLayer;
 import org.mapsforge.map.reader.MapFile;
@@ -140,7 +134,7 @@ public class MainActivity extends ActionBarActivity {
      * Tries to return the location with best accuracy from GPS or NETWORK
      * @return Best position or NULL if no location available
      */
-    private Location getBestLocation() {
+    private Location getBestCurrentLocation() {
 
         Location locGps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ?
                 locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER) :
@@ -178,10 +172,10 @@ public class MainActivity extends ActionBarActivity {
 
 
         // Draw points over route line
-        updatePositionOverlay();
+        updatePointOverlay();
     }
 
-    public void updatePositionOverlay() {
+    public void updatePointOverlay() {
 
         // Initialize paints
         Paint paintPointBorder = AndroidGraphicFactory.INSTANCE.createPaint();
@@ -214,7 +208,7 @@ public class MainActivity extends ActionBarActivity {
 
 
         // Draw current location with accuracy if available
-        Location ownLoc = getBestLocation();
+        Location ownLoc = getBestCurrentLocation();
         if(ownLoc != null) {
             LatLong ownLocLatLon = new LatLong(ownLoc.getLatitude(), ownLoc.getLongitude());
 
@@ -246,7 +240,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void mapFocusCurrent() {
-        Location ownLoc = getBestLocation();
+        Location ownLoc = getBestCurrentLocation();
         if(ownLoc != null) {
             LatLong ownLocLatLon = new LatLong(ownLoc.getLatitude(), ownLoc.getLongitude());
             mapFocus(ownLocLatLon);
@@ -271,20 +265,17 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        // Exit app
+        if (id == R.id.action_exit) {
+            System.exit(0);
             return true;
         }
 
@@ -295,8 +286,32 @@ public class MainActivity extends ActionBarActivity {
 
 
     public void btClickCenterGps(View v) {
-        updatePositionOverlay();
+        updatePointOverlay();
         mapFocusCurrent();
+    }
+
+    public void btClickSetStartTargetGps(View v) {
+        Location loc = getBestCurrentLocation();
+        if(loc != null) {
+            if(v.getId() == R.id.btStartGps) {
+                routeSolver.setStartNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
+            } else if(v.getId() == R.id.btTargGps) {
+                routeSolver.setTargetNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
+            }
+            updatePointOverlay();
+            mapFocusCurrent();
+        } else {
+            Toast.makeText(getBaseContext(),
+                    "Unable to determine location", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void btClickSetStartTargetSel(View v) {
+        if(v.getId() == R.id.btStartSel) {
+            //routeSolver.setStartNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
+        } else if(v.getId() == R.id.btTargSel) {
+            //routeSolver.setTargetNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
+        }
     }
 
 

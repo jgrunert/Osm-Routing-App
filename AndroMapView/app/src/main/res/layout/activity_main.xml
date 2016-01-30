@@ -66,9 +66,10 @@
             android:text="GPS"
             android:id="@+id/btStartGps"
             android:layout_below="@+id/btStartSel"
-            android:layout_alignLeft="@+id/gtTargGps"
-            android:layout_alignStart="@+id/gtTargGps"
-            android:layout_marginLeft="5dp" />
+            android:layout_alignLeft="@+id/btTargGps"
+            android:layout_alignStart="@+id/btTargGps"
+            android:layout_marginLeft="5dp"
+            android:onClick="btClickSetStartTargetGps" />
 
         <Button
             style="?android:attr/buttonStyleSmall"
@@ -78,7 +79,8 @@
             android:id="@+id/btStartSel"
             android:layout_alignTop="@+id/textView"
             android:layout_alignParentRight="true"
-            android:layout_alignParentEnd="true" />
+            android:layout_alignParentEnd="true"
+            android:onClick="btClickSetStartTargetSel" />
     </LinearLayout>
 
     <LinearLayout
@@ -120,11 +122,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="GPS"
-            android:id="@+id/gtTargGps"
+            android:id="@+id/btTargGps"
             android:layout_alignTop="@+id/btStartSel"
             android:layout_toLeftOf="@+id/btStartSel"
             android:layout_toStartOf="@+id/btStartSel"
-            android:layout_marginLeft="5dp" />
+            android:layout_marginLeft="5dp"
+            android:onClick="btClickSetStartTargetGps" />
 
         <Button
             style="?android:attr/buttonStyleSmall"
@@ -134,7 +137,8 @@
             android:id="@+id/btTargSel"
             android:layout_alignTop="@+id/btStartGps"
             android:layout_toRightOf="@+id/btStartGps"
-            android:layout_toEndOf="@+id/btStartGps" />
+            android:layout_toEndOf="@+id/btStartGps"
+            android:onClick="btClickSetStartTargetSel" />
     </LinearLayout>
 
     <TextView

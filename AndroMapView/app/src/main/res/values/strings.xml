@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">AndroMapView</string>
-    <string name="action_settings">Settings</string>
+    <string name="action_exit">Exit</string>
 </resources>
