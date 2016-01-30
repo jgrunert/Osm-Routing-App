@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.support.v7.app.ActionBarActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -50,11 +52,16 @@ public class MainActivity extends ActionBarActivity {
 
     private LocationManager locationManager;
 
-    Polyline routeLine = null;
-    FixedPixelCircle cStart = null;
-    FixedPixelCircle cTarg = null;
-    FixedPixelCircle cCurr = null;
-    Circle cCurrAccur = null;
+    private Polyline routeLine = null;
+    private FixedPixelCircle cStart = null;
+    private FixedPixelCircle cTarg = null;
+    private FixedPixelCircle cCurr = null;
+    private Circle cCurrAccur = null;
+
+    private boolean startLocationSetting = false;
+    private boolean targLocationSetting = false;
+    // Flag to prevent endless event circles
+    private boolean isSettingLocation = false;
 
     private static final File MAP_VIEW_FILE = new File(Environment.getExternalStorageDirectory(), "osm/mapsforge/germany.map");
 
@@ -116,6 +123,72 @@ public class MainActivity extends ActionBarActivity {
             Toast.makeText(getBaseContext(),
                     "GPS not enabled - location listening disabled", Toast.LENGTH_LONG).show();
         }
+
+
+
+        TextWatcher startEditWatcher = new TextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if(isSettingLocation) {
+                    return;
+                }
+                isSettingLocation = true;
+
+                float lat = Float.parseFloat(((EditText) findViewById(R.id.editTextLat1)).getText().toString());
+                float lon = Float.parseFloat(((EditText) findViewById(R.id.editTextLon1)).getText().toString());
+                Long node = routeSolver.findNextNode(lat, lon);
+                if(node != null) {
+                    routeSolver.setStartNode(node);
+                    updatePointOverlay();
+                    mapFocus(new LatLong(lat, lon));
+                    mapSetZoom((byte) 16);
+                }
+                isSettingLocation = false;
+            }
+        };
+        ((EditText)findViewById(R.id.editTextLat1)).addTextChangedListener(startEditWatcher);
+        ((EditText)findViewById(R.id.editTextLon1)).addTextChangedListener(startEditWatcher);
+
+        TextWatcher targEditWatcher = new TextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if(isSettingLocation) {
+                    return;
+                }
+                isSettingLocation = true;
+
+                float lat = Float.parseFloat(((EditText) findViewById(R.id.editTextLat2)).getText().toString());
+                float lon = Float.parseFloat(((EditText) findViewById(R.id.editTextLon2)).getText().toString());
+                Long node = routeSolver.findNextNode(lat, lon);
+                if(node != null) {
+                    routeSolver.setTargetNode(node);
+                    updatePointOverlay();
+                    mapFocus(new LatLong(lat, lon));
+                    mapSetZoom((byte) 16);
+                }
+                isSettingLocation = false;
+            }
+        };
+        ((EditText)findViewById(R.id.editTextLat2)).addTextChangedListener(targEditWatcher);
+        ((EditText)findViewById(R.id.editTextLon2)).addTextChangedListener(targEditWatcher);
+
+
 
         Log.i(TAG, "Initialized MainActivity");
 
@@ -193,11 +266,11 @@ public class MainActivity extends ActionBarActivity {
 
 
         // Remove old overlay
-        if(cCurrAccur != null) {
-            mapView.getLayerManager().getLayers().remove(cCurrAccur);
+        if(cStart != null) {
+            mapView.getLayerManager().getLayers().remove(cStart);
         }
-        if(cCurrAccur != null) {
-            mapView.getLayerManager().getLayers().remove(cCurrAccur);
+        if(cTarg != null) {
+            mapView.getLayerManager().getLayers().remove(cTarg);
         }
 
         // Add new overlay
@@ -230,6 +303,20 @@ public class MainActivity extends ActionBarActivity {
             mapView.getLayerManager().getLayers().add(cCurr);
             mapView.getLayerManager().getLayers().add(cCurrAccur);
         }
+    }
+
+
+    private void onStartChanging(float lat, float lon) {
+        isSettingLocation = true;
+        ((EditText) findViewById(R.id.editTextLat1)).setText(Float.toString(lat));
+        ((EditText) findViewById(R.id.editTextLon1)).setText(Float.toString(lon));
+        isSettingLocation = false;
+    }
+    private void onTargetChanging(float lat, float lon) {
+        isSettingLocation = true;
+        ((EditText) findViewById(R.id.editTextLat2)).setText(Float.toString(lat));
+        ((EditText) findViewById(R.id.editTextLon2)).setText(Float.toString(lon));
+        isSettingLocation = false;
     }
 
 
@@ -295,8 +382,10 @@ public class MainActivity extends ActionBarActivity {
         if(loc != null) {
             if(v.getId() == R.id.btStartGps) {
                 routeSolver.setStartNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
+                onStartChanging((float) loc.getLatitude(), (float) loc.getLongitude());
             } else if(v.getId() == R.id.btTargGps) {
                 routeSolver.setTargetNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
+                onTargChanging((float) loc.getLatitude(), (float) loc.getLongitude());
             }
             updatePointOverlay();
             mapFocusCurrent();
