@@ -1,21 +1,13 @@
 package de.jgrunert.andromapview;
 
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
-import android.widget.Toast;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
 
 /**
- * Created by Jonas on 30.01.2016.
+ * Listener listening on location updates
+ * Created by Jonas Grunert on 30.01.2016.
  */
 public class FineLocationListener implements LocationListener {
 

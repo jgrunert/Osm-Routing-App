@@ -18,6 +18,8 @@ import java.util.Set;
 
 import org.mapsforge.core.model.LatLong;
 
+import de.jgrunert.andromapview.MainActivity;
+
 
 /**
  * Solves routing problems using A* algorighm
@@ -30,8 +32,6 @@ public class AStarRouteSolver implements IRouteSolver {
     // General constants
     private static final File OSM_BASE_DIR = new File(Environment.getExternalStorageDirectory(), "osm");
     private static final File MAP_BASE_DIR = new File(OSM_BASE_DIR, "germany_grids");
-    //private static final String MAP_DIR = "D:\\Jonas\\OSM\\bawue";
-    //private static final String MAP_DIR = "D:\\Jonas\\OSM\\hamburg";
     
     
     // Routing constants
@@ -69,20 +69,7 @@ public class AStarRouteSolver implements IRouteSolver {
         if(targetNodeGridIndex == null) { return null; }
         return getNodeCoordinates(targetNodeGridIndex); 
     }
-    
-    // Debugging and routing preview
-    private List<LatLong> routingPreviewDots = new LinkedList<LatLong>();
-    private static final double routingPreviewDotPropability = 0.999;
-    @Override
-    public synchronized List<LatLong> getRoutingPreviewDots() { return new ArrayList<LatLong>(routingPreviewDots); }
-    private synchronized void addNewPreviewDot(LatLong dot) { routingPreviewDots.add(dot); }
-    
-    private Long bestCandidateNode;    
-    @Override
-    public LatLong getBestCandidateCoords() {
-        if(bestCandidateNode == null) { return null; }
-        return getNodeCoordinates(bestCandidateNode); 
-    }
+
     
     private volatile boolean needsDispalyRefresh = false;
     @Override
@@ -146,12 +133,17 @@ public class AStarRouteSolver implements IRouteSolver {
     // Heap for rout finding
     NodeDistHeap routeDistHeap;
 
+    private final MainActivity parent;
+
 
     /**
      * Constructor, loads grid data
      */
-    public AStarRouteSolver() {
+    public AStarRouteSolver(MainActivity parent) {
 
+        this.parent = parent;
+
+        // TODO Not smartphone dependant
         System.out.println("Max memory: " + (Runtime.getRuntime().maxMemory() / 1048576) + "Mb");
 
         try {            
@@ -482,9 +474,6 @@ public class AStarRouteSolver implements IRouteSolver {
             System.err.println("Cannot calculate route: Must select valid start and target");
             return;
         }
-                
-        rd = new Random(123);
-        routingPreviewDots.clear();
 
         startGridIndex = (int)(startNodeGridIndex >> 32);
         startNodeIndex = (int)(long)(startNodeGridIndex);
@@ -550,7 +539,6 @@ public class AStarRouteSolver implements IRouteSolver {
         while (!routeDistHeap.isEmpty()) {
             // Remove and get index
             visNodeGridIndex = routeDistHeap.removeFirst();
-            bestCandidateNode = visNodeGridIndex;
         
             // Visit node/neighbors
             if(visitNode()) {
@@ -575,14 +563,6 @@ public class AStarRouteSolver implements IRouteSolver {
         if (found) {
             // Reconstruct route
             reconstructRoute();
-            // For testing: Connect debug markers
-//            for(int iM = 0; iM < routeDots.size() - 1; iM++) {
-//
-//                MapPolygonImpl routPoly = new MapPolygonImpl(new Color(255 - (255 * iM / routeDots.size()), 0, 255 * iM / routeDots.size()),
-//                        routeDots.get(iM).getCoordinate(), routeDots.get(iM).getCoordinate(), routeDots.get(iM+1).getCoordinate());
-//                routeLines.add(routPoly);
-//                map.addMapPolygon(routPoly);
-//            }
         } else {
             System.err.println("No way found");
         }
@@ -594,6 +574,8 @@ public class AStarRouteSolver implements IRouteSolver {
         this.state = RoutingState.Standby;
         needsDispalyRefresh = true;
         System.out.println("Finished routing after " + (System.currentTimeMillis() - startTime) + "ms");
+
+        parent.onRoutingFinished();
     }
 
     private void reconstructRoute() {
@@ -676,10 +658,6 @@ public class AStarRouteSolver implements IRouteSolver {
         openList.remove(visNodeGridIndex);
         visitedCount++;
 
-        if (rd.nextFloat() > routingPreviewDotPropability) {
-            addNewPreviewDot(getNodeCoordinates(visGrid, visNodeIndex));
-        }
-        
         // Check if found
         if (visNodeGridIndex == target) {
             // Found! Return

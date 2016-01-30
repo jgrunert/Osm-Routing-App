@@ -25,7 +25,6 @@ public interface IRouteSolver {
     LatLong getTargetCoordinate();
 
     RoutingState getRoutingState();
-    List<LatLong> getRoutingPreviewDots();
     List<LatLong> getCalculatedRoute();
     
     boolean getNeedsDispalyRefresh();
@@ -36,8 +35,6 @@ public interface IRouteSolver {
     
     void startCalculateRoute(TransportMode transportMode, RoutingMode routeMode);
 
-    LatLong getBestCandidateCoords();
-    
     boolean isDoFastFollow();
     void setDoFastFollow(boolean doFastFollow);
     

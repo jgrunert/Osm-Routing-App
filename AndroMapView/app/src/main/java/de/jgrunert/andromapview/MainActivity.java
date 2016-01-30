@@ -37,6 +37,7 @@ import org.mapsforge.map.util.MapViewProjection;
 //import org.mapsforge.map.reader.header.;
 
 import java.io.File;
+import java.util.List;
 
 import de.jgrunert.osm_routing.AStarRouteSolver;
 import de.jgrunert.osm_routing.IRouteSolver;
@@ -45,7 +46,7 @@ public class MainActivity extends ActionBarActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
-    IRouteSolver routeSolver = new AStarRouteSolver();
+    IRouteSolver routeSolver;
     protected PowerManager.WakeLock mWakeLock;
 
     private MapView mapView;
@@ -75,6 +76,8 @@ public class MainActivity extends ActionBarActivity {
     @Override
     public void onCreate(final Bundle icicle) {
         super.onCreate(icicle);
+
+        routeSolver = new AStarRouteSolver(this);
 
         AndroidGraphicFactory.createInstance(this.getApplication());
 
@@ -116,16 +119,13 @@ public class MainActivity extends ActionBarActivity {
                     onStartChanged((float)touchedPos.latitude, (float)touchedPos.longitude);
                     startLocationSetting = false;
                     findViewById(R.id.btStartSel).setEnabled(true);
-                    return true;
                 } else if(targLocationSetting) {
                     LatLong touchedPos = new MapViewProjection(mapView).fromPixels(event.getX(), event.getY());
-                    onTargetChanged((float)touchedPos.latitude, (float)touchedPos.longitude);
+                    onTargetChanged((float) touchedPos.latitude, (float) touchedPos.longitude);
                     targLocationSetting = false;
                     findViewById(R.id.btTargSel).setEnabled(true);
-                    return true;
-                } else {
-                    return false;
                 }
+                return false;
             }
         });
 
@@ -251,17 +251,16 @@ public class MainActivity extends ActionBarActivity {
         paintRouteLine.setStrokeWidth(8);
         paintRouteLine.setStyle(Style.STROKE);
 
-/*
-        LatLong startCoord = routeSolver.getStartCoordinate();
-        LatLong targCoord = routeSolver.getTargetCoordinate();
 
-        // TODO Real route
+        if(routeLine != null) {
+            mapView.getLayerManager().getLayers().remove(routeLine);
+        }
+
         routeLine = new Polyline(paintRouteLine, AndroidGraphicFactory.INSTANCE);
         List<LatLong> coordinateList = routeLine.getLatLongs();
-        coordinateList.add(startCoord);
-        coordinateList.add(targCoord);
+        coordinateList.addAll(routeSolver.getCalculatedRoute());
         mapView.getLayerManager().getLayers().add(routeLine);
-*/
+
 
         // Draw points over route line
         updatePointOverlay();
@@ -381,7 +380,9 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
-
+    public void onRoutingFinished() {
+        updateRouteOverlay();
+    }
 
 
     @Override
