@@ -18,6 +18,9 @@ public interface IRouteSolver {
     void setStartNode(long nodeGridIndex);
     void setTargetNode(long nodeGridIndex);
 
+    Long getStartNode();
+    Long getTargetNode();
+
     LatLong getStartCoordinate();
     LatLong getTargetCoordinate();
 

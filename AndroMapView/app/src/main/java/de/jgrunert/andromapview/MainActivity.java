@@ -34,7 +34,6 @@ import org.mapsforge.map.rendertheme.InternalRenderTheme;
 //import org.mapsforge.map.reader.header.;
 
 import java.io.File;
-import java.util.List;
 
 import de.jgrunert.osm_routing.AStarRouteSolver;
 import de.jgrunert.osm_routing.IRouteSolver;
@@ -140,18 +139,10 @@ public class MainActivity extends ActionBarActivity {
                 if(isSettingLocation) {
                     return;
                 }
-                isSettingLocation = true;
 
                 float lat = Float.parseFloat(((EditText) findViewById(R.id.editTextLat1)).getText().toString());
                 float lon = Float.parseFloat(((EditText) findViewById(R.id.editTextLon1)).getText().toString());
-                Long node = routeSolver.findNextNode(lat, lon);
-                if(node != null) {
-                    routeSolver.setStartNode(node);
-                    updatePointOverlay();
-                    mapFocus(new LatLong(lat, lon));
-                    mapSetZoom((byte) 16);
-                }
-                isSettingLocation = false;
+                onStartChanged(lat, lon);
             }
         };
         ((EditText)findViewById(R.id.editTextLat1)).addTextChangedListener(startEditWatcher);
@@ -171,18 +162,10 @@ public class MainActivity extends ActionBarActivity {
                 if(isSettingLocation) {
                     return;
                 }
-                isSettingLocation = true;
 
                 float lat = Float.parseFloat(((EditText) findViewById(R.id.editTextLat2)).getText().toString());
                 float lon = Float.parseFloat(((EditText) findViewById(R.id.editTextLon2)).getText().toString());
-                Long node = routeSolver.findNextNode(lat, lon);
-                if(node != null) {
-                    routeSolver.setTargetNode(node);
-                    updatePointOverlay();
-                    mapFocus(new LatLong(lat, lon));
-                    mapSetZoom((byte) 16);
-                }
-                isSettingLocation = false;
+                onTargetChanged(lat, lon);
             }
         };
         ((EditText)findViewById(R.id.editTextLat2)).addTextChangedListener(targEditWatcher);
@@ -193,11 +176,19 @@ public class MainActivity extends ActionBarActivity {
         Log.i(TAG, "Initialized MainActivity");
 
 
-        // Default focus
-        mapFocus(routeSolver.getStartCoordinate());
-        mapSetZoom((byte) 10);
-        // Try to focus current position
-        mapFocusCurrent();
+        // Initial focus and start/stop
+        Location initialLoc = getBestCurrentLocation();
+        LatLong initialLatLong;
+        if(initialLoc != null) {
+            initialLatLong = new LatLong(initialLoc.getLatitude(), initialLoc.getLongitude());
+        } else {
+            initialLatLong = new LatLong(48.78, 9.18);
+        }
+        onStartChanged((float) initialLatLong.latitude, (float) initialLatLong.longitude);
+        onTargetChanged((float) initialLatLong.latitude, (float) initialLatLong.longitude);
+        // Focus on initial position
+        mapSetZoom((byte) 16);
+        mapFocus(initialLatLong);
 
         updateRouteOverlay();
     }
@@ -232,7 +223,7 @@ public class MainActivity extends ActionBarActivity {
         paintRouteLine.setStrokeWidth(8);
         paintRouteLine.setStyle(Style.STROKE);
 
-
+/*
         LatLong startCoord = routeSolver.getStartCoordinate();
         LatLong targCoord = routeSolver.getTargetCoordinate();
 
@@ -242,7 +233,7 @@ public class MainActivity extends ActionBarActivity {
         coordinateList.add(startCoord);
         coordinateList.add(targCoord);
         mapView.getLayerManager().getLayers().add(routeLine);
-
+*/
 
         // Draw points over route line
         updatePointOverlay();
@@ -274,10 +265,14 @@ public class MainActivity extends ActionBarActivity {
         }
 
         // Add new overlay
-        cStart = new FixedPixelCircle(routeSolver.getStartCoordinate(), 5.0f, paintStartPoint, paintPointBorder);
-        cTarg = new FixedPixelCircle(routeSolver.getTargetCoordinate(), 5.0f, paintTargPoint, paintPointBorder);
-        mapView.getLayerManager().getLayers().add(cStart);
-        mapView.getLayerManager().getLayers().add(cTarg);
+        if(routeSolver.getStartNode() != null) {
+            cStart = new FixedPixelCircle(routeSolver.getStartCoordinate(), 5.0f, paintStartPoint, paintPointBorder);
+            mapView.getLayerManager().getLayers().add(cStart);
+        }
+        if(routeSolver.getTargetNode() != null) {
+            cTarg = new FixedPixelCircle(routeSolver.getTargetCoordinate(), 5.0f, paintTargPoint, paintPointBorder);
+            mapView.getLayerManager().getLayers().add(cTarg);
+        }
 
 
         // Draw current location with accuracy if available
@@ -306,16 +301,28 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
-    private void onStartChanging(float lat, float lon) {
+    private void onStartChanged(float lat, float lon) {
         isSettingLocation = true;
-        ((EditText) findViewById(R.id.editTextLat1)).setText(Float.toString(lat));
-        ((EditText) findViewById(R.id.editTextLon1)).setText(Float.toString(lon));
+        Long node = routeSolver.findNextNode(lat, lon);
+        if(node != null) {
+            ((EditText) findViewById(R.id.editTextLat1)).setText(Float.toString(lat));
+            ((EditText) findViewById(R.id.editTextLon1)).setText(Float.toString(lon));
+            routeSolver.setStartNode(node);
+            updatePointOverlay();
+            mapFocus(new LatLong(lat, lon));
+        }
         isSettingLocation = false;
     }
-    private void onTargetChanging(float lat, float lon) {
+    private void onTargetChanged(float lat, float lon) {
         isSettingLocation = true;
-        ((EditText) findViewById(R.id.editTextLat2)).setText(Float.toString(lat));
-        ((EditText) findViewById(R.id.editTextLon2)).setText(Float.toString(lon));
+        Long node = routeSolver.findNextNode(lat, lon);
+        if(node != null) {
+            ((EditText) findViewById(R.id.editTextLat2)).setText(Float.toString(lat));
+            ((EditText) findViewById(R.id.editTextLon2)).setText(Float.toString(lon));
+            routeSolver.setTargetNode(node);
+            updatePointOverlay();
+            mapFocus(new LatLong(lat, lon));
+        }
         isSettingLocation = false;
     }
 
@@ -381,11 +388,9 @@ public class MainActivity extends ActionBarActivity {
         Location loc = getBestCurrentLocation();
         if(loc != null) {
             if(v.getId() == R.id.btStartGps) {
-                routeSolver.setStartNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
-                onStartChanging((float) loc.getLatitude(), (float) loc.getLongitude());
+                onStartChanged((float) loc.getLatitude(), (float) loc.getLongitude());
             } else if(v.getId() == R.id.btTargGps) {
-                routeSolver.setTargetNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
-                onTargChanging((float) loc.getLatitude(), (float) loc.getLongitude());
+                onTargetChanged((float) loc.getLatitude(), (float) loc.getLongitude());
             }
             updatePointOverlay();
             mapFocusCurrent();
@@ -406,40 +411,30 @@ public class MainActivity extends ActionBarActivity {
 
 
 
-    public void btClickRouteCarFast(View v) {
+    public void btClickRouting(View v) {
 
-    }
-
-    public void btClickRouteCarShort(View v) {
-
-    }
-
-    public void btClickRoutePed(View v) {
-
-    }
-
-
-    public void mapCalcButtonClick(View v) {
-        double lat1 = Double.parseDouble(((EditText) findViewById(R.id.editTextLat1)).getText().toString());
-        double lon1 = Double.parseDouble(((EditText) findViewById(R.id.editTextLon1)).getText().toString());
-        double lat2 = Double.parseDouble(((EditText) findViewById(R.id.editTextLat2)).getText().toString());
-        double lon2 = Double.parseDouble(((EditText) findViewById(R.id.editTextLon2)).getText().toString());
-
-        Long startNode = routeSolver.findNextNode((float)lat1, (float)lon1, (byte) 0, (byte) 0);
-        Long targetNode = routeSolver.findNextNode((float)lat2, (float)lon2, (byte)0, (byte)0);
-
-        if(startNode == null) {
-            System.err.println("No start node found");
+        if(routeSolver.getStartNode() == null) {
+            Toast.makeText(getBaseContext(),
+                    "Unable route: No start selected", Toast.LENGTH_SHORT).show();
             return;
         }
-        if(targetNode == null) {
-            System.err.println("No target node found");
+        if(routeSolver.getTargetNode() == null) {
+            Toast.makeText(getBaseContext(),
+                    "Unable route: No target selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if(routeSolver.getStartNode().equals(routeSolver.getTargetNode())) {
+            Toast.makeText(getBaseContext(),
+                    "Unable route: Start and target identical", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        routeSolver.setStartNode(startNode);
-        routeSolver.setTargetNode(targetNode);
-
-        routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Fastest);
+        if(v.getId() == R.id.btRouteCarFast) {
+            routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Fastest);
+        } else if(v.getId() == R.id.btRouteCarShort) {
+            routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Shortest);
+        } else if(v.getId() == R.id.btRoutePed) {
+            routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Pedestrian, IRouteSolver.RoutingMode.Shortest);
+        }
     }
 }

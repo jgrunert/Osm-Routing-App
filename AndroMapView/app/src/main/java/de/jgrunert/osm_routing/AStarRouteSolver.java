@@ -49,6 +49,15 @@ public class AStarRouteSolver implements IRouteSolver {
     private Long targetNodeGridIndex = null;
     @Override
     public void setTargetNode(long nodeGridIndex) { targetNodeGridIndex = nodeGridIndex; needsDispalyRefresh = true; }
+
+    @Override
+    public Long getStartNode(){
+        return startNodeGridIndex;
+    }
+    @Override
+    public Long getTargetNode() {
+        return targetNodeGridIndex;
+    }
     
     @Override
     public LatLong getStartCoordinate() {
@@ -154,8 +163,8 @@ public class AStarRouteSolver implements IRouteSolver {
             e.printStackTrace();
         }
         
-        startNodeGridIndex = findNextNode(47.8f, 9.0f, (byte)0, (byte)0);
-        targetNodeGridIndex = findNextNode(49.15f, 9.22f, (byte)0, (byte)0);
+        //startNodeGridIndex = findNextNode(47.8f, 9.0f, (byte)0, (byte)0);
+        //targetNodeGridIndex = findNextNode(49.15f, 9.22f, (byte)0, (byte)0);
         
         state = RoutingState.Standby;
         needsDispalyRefresh = true;
