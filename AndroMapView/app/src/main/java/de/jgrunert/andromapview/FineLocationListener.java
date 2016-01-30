@@ -21,25 +21,19 @@ public class FineLocationListener implements LocationListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
-    private final LocationManager locationManager;
+    private final MainActivity mainActivity;
 
 
-    public FineLocationListener(LocationManager locationManager) {
-
-        this.locationManager = locationManager;
+    public FineLocationListener(MainActivity mainActivity) {
+        this.mainActivity = mainActivity;
     }
 
     @Override
     public void onLocationChanged(Location loc) {
-        //editLocation.setText("");
-        //pb.setVisibility(View.INVISIBLE);
-        //Toast.makeText(
-        //        getBaseContext(),
-       // //        "Location changed: Lat: " + loc.getLatitude() + " Lng: "
-       //                 + loc.getLongitude(), Toast.LENGTH_SHORT).show();
-        Log.v(TAG, "Location change: Latitude: " + loc.getLatitude() + " Longitude: " + loc.getLongitude());
-        System.out.println("getLastKnownLocation4 " + locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
-        //loc.getAccuracy()
+        Log.v(TAG, "Location change: Latitude: " + loc.getLatitude() +
+                " Longitude: " + loc.getLongitude() +
+                " Accuracy: " + loc.getAccuracy());
+        mainActivity.onFineLocationChanged();
     }
 
     @Override
