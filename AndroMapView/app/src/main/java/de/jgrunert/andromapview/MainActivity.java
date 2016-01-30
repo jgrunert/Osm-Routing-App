@@ -13,6 +13,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -32,6 +33,7 @@ import org.mapsforge.map.layer.overlay.Polyline;
 import org.mapsforge.map.layer.renderer.TileRendererLayer;
 import org.mapsforge.map.reader.MapFile;
 import org.mapsforge.map.rendertheme.InternalRenderTheme;
+import org.mapsforge.map.util.MapViewProjection;
 //import org.mapsforge.map.reader.header.;
 
 import java.io.File;
@@ -106,11 +108,30 @@ public class MainActivity extends ActionBarActivity {
 
         this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
 
+        mapView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if(startLocationSetting) {
+                    LatLong touchedPos = new MapViewProjection(mapView).fromPixels(event.getX(), event.getY());
+                    onStartChanged((float)touchedPos.latitude, (float)touchedPos.longitude);
+                    startLocationSetting = false;
+                    findViewById(R.id.btStartSel).setEnabled(true);
+                    return true;
+                } else if(targLocationSetting) {
+                    LatLong touchedPos = new MapViewProjection(mapView).fromPixels(event.getX(), event.getY());
+                    onTargetChanged((float)touchedPos.latitude, (float)touchedPos.longitude);
+                    targLocationSetting = false;
+                    findViewById(R.id.btTargSel).setEnabled(true);
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        });
 
 
         // Initialize location manager and listener
-        locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         // Getting GPS and NETWORK status
         boolean isGPSEnabled = locationManager
@@ -147,6 +168,7 @@ public class MainActivity extends ActionBarActivity {
                 float lat = Float.parseFloat(((EditText) findViewById(R.id.editTextLat1)).getText().toString());
                 float lon = Float.parseFloat(((EditText) findViewById(R.id.editTextLon1)).getText().toString());
                 onStartChanged(lat, lon);
+                mapFocus(new LatLong(lat, lon));
             }
         };
         ((EditText)findViewById(R.id.editTextLat1)).addTextChangedListener(startEditWatcher);
@@ -170,6 +192,7 @@ public class MainActivity extends ActionBarActivity {
                 float lat = Float.parseFloat(((EditText) findViewById(R.id.editTextLat2)).getText().toString());
                 float lon = Float.parseFloat(((EditText) findViewById(R.id.editTextLon2)).getText().toString());
                 onTargetChanged(lat, lon);
+                mapFocus(new LatLong(lat, lon));
             }
         };
         ((EditText)findViewById(R.id.editTextLat2)).addTextChangedListener(targEditWatcher);
@@ -314,7 +337,6 @@ public class MainActivity extends ActionBarActivity {
             ((EditText) findViewById(R.id.editTextLon1)).setText(Float.toString(lon));
             routeSolver.setStartNode(node);
             updatePointOverlay();
-            mapFocus(new LatLong(lat, lon));
         }
         isSettingLocation = false;
     }
@@ -326,7 +348,6 @@ public class MainActivity extends ActionBarActivity {
             ((EditText) findViewById(R.id.editTextLon2)).setText(Float.toString(lon));
             routeSolver.setTargetNode(node);
             updatePointOverlay();
-            mapFocus(new LatLong(lat, lon));
         }
         isSettingLocation = false;
     }
@@ -412,8 +433,10 @@ public class MainActivity extends ActionBarActivity {
         if(loc != null) {
             if(v.getId() == R.id.btStartGps) {
                 onStartChanged((float) loc.getLatitude(), (float) loc.getLongitude());
+                mapFocus(new LatLong(loc.getLatitude(), loc.getLongitude()));
             } else if(v.getId() == R.id.btTargGps) {
                 onTargetChanged((float) loc.getLatitude(), (float) loc.getLongitude());
+                mapFocus(new LatLong(loc.getLatitude(), loc.getLongitude()));
             }
             updatePointOverlay();
             mapFocusCurrent();
@@ -426,9 +449,15 @@ public class MainActivity extends ActionBarActivity {
 
     public void btClickSetStartTargetSel(View v) {
         if(v.getId() == R.id.btStartSel) {
-            //routeSolver.setStartNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
+            startLocationSetting = true;
+            targLocationSetting = false;
+            findViewById(R.id.btStartSel).setEnabled(false);
+            findViewById(R.id.btTargSel).setEnabled(true);
         } else if(v.getId() == R.id.btTargSel) {
-            //routeSolver.setTargetNode(routeSolver.findNextNode((float) loc.getLatitude(), (float) loc.getLongitude()));
+            targLocationSetting = true;
+            startLocationSetting = false;
+            findViewById(R.id.btTargSel).setEnabled(false);
+            findViewById(R.id.btStartSel).setEnabled(true);
         }
     }
 
