@@ -1,10 +1,14 @@
 package de.jgrunert.andromapview;
 
 import android.content.Context;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -25,6 +29,8 @@ import org.mapsforge.map.android.view.MapView;
 import org.mapsforge.map.datastore.MapDataStore;
 import org.mapsforge.map.layer.cache.TileCache;
 import org.mapsforge.map.layer.overlay.Circle;
+import org.mapsforge.map.layer.overlay.FixedPixelCircle;
+import org.mapsforge.map.layer.overlay.Marker;
 import org.mapsforge.map.layer.overlay.Polyline;
 import org.mapsforge.map.layer.renderer.TileRendererLayer;
 import org.mapsforge.map.reader.MapFile;
@@ -39,12 +45,22 @@ import de.jgrunert.osm_routing.IRouteSolver;
 
 public class MainActivity extends ActionBarActivity {
 
+    private static final String TAG = MainActivity.class.getSimpleName();
+
     IRouteSolver routeSolver = new AStarRouteSolver();
     protected PowerManager.WakeLock mWakeLock;
 
     private MapView mapView;
     private TileCache tileCache;
     private TileRendererLayer tileRendererLayer;
+
+    private LocationManager locationManager;
+
+    Polyline routeLine = null;
+    FixedPixelCircle cStart = null;
+    FixedPixelCircle cTarg = null;
+    FixedPixelCircle cCurr = null;
+    Circle cCurrAccur = null;
 
     private static final File MAP_VIEW_FILE = new File(Environment.getExternalStorageDirectory(), "osm/mapsforge/germany.map");
 
@@ -68,7 +84,7 @@ public class MainActivity extends ActionBarActivity {
 
 
         // Initialize MapView
-        this.mapView = ((MapView)findViewById(R.id.view));
+        this.mapView = ((MapView)findViewById(R.id.mapView));
         this.mapView.setClickable(true);
         this.mapView.getMapScaleBar().setVisible(true);
         this.mapView.setBuiltInZoomControls(true);
@@ -87,33 +103,94 @@ public class MainActivity extends ActionBarActivity {
         this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
 
 
-        System.out.println("Initialized MainActivity");
+
+        // Initialize location manager and listener
+        locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
 
 
-        // Set map focus
+        // Getting GPS and NETWORK status
+        boolean isGPSEnabled = locationManager
+                .isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+        if(isGPSEnabled) {
+            FineLocationListener locationListener = new FineLocationListener(locationManager);
+            locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
+            Log.i(TAG, "Started FineLocationListener");
+        } else {
+            Log.w(TAG, "Unable to start FineLocationListener - GPS not enabled");
+            Toast.makeText(getBaseContext(),
+                    "GPS not enabled - location listening disabled", Toast.LENGTH_LONG).show();
+        }
+
+        Log.i(TAG, "Initialized MainActivity");
+
+
+        // Default focus
         mapFocus(routeSolver.getStartCoordinate());
         mapSetZoom((byte) 10);
+        // Try to focus current position
+        mapFocusCurrent();
 
         updateRouteOverlay();
     }
 
 
+    /**
+     * Tries to return the location with best accuracy from GPS or NETWORK
+     * @return Best position or NULL if no location available
+     */
+    private Location getBestLocation() {
+
+        Location locGps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ?
+                locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER) :
+                null;
+        Location locNet = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) ?
+                locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) :
+                null;
+
+        if(locGps != null && (locNet == null || locGps.getAccuracy() < locNet.getAccuracy())) {
+            return locGps;
+        } else {
+            return locNet;
+        }
+    }
+
 
     public void updateRouteOverlay() {
 
-        // instantiating the paint objects
+        // Initialize paints
         Paint paintRouteLine = AndroidGraphicFactory.INSTANCE.createPaint();
         paintRouteLine.setColor(Color.BLUE);
         paintRouteLine.setStrokeWidth(8);
         paintRouteLine.setStyle(Style.STROKE);
 
+
+        LatLong startCoord = routeSolver.getStartCoordinate();
+        LatLong targCoord = routeSolver.getTargetCoordinate();
+
+        // TODO Real route
+        routeLine = new Polyline(paintRouteLine, AndroidGraphicFactory.INSTANCE);
+        List<LatLong> coordinateList = routeLine.getLatLongs();
+        coordinateList.add(startCoord);
+        coordinateList.add(targCoord);
+        mapView.getLayerManager().getLayers().add(routeLine);
+
+
+        // Draw points over route line
+        updatePositionOverlay();
+    }
+
+    public void updatePositionOverlay() {
+
+        // Initialize paints
         Paint paintPointBorder = AndroidGraphicFactory.INSTANCE.createPaint();
         paintPointBorder.setColor(Color.BLACK);
-        paintPointBorder.setStrokeWidth(12);
+        paintPointBorder.setStrokeWidth(6);
         paintPointBorder.setStyle(Style.STROKE);
 
         Paint paintStartPoint = AndroidGraphicFactory.INSTANCE.createPaint();
-        paintStartPoint.setColor(Color.BLUE);
+        paintStartPoint.setColor(Color.GREEN);
         paintStartPoint.setStyle(Style.FILL);
 
         Paint paintTargPoint = AndroidGraphicFactory.INSTANCE.createPaint();
@@ -121,25 +198,44 @@ public class MainActivity extends ActionBarActivity {
         paintTargPoint.setStyle(Style.FILL);
 
 
+        // Remove old overlay
+        if(cCurrAccur != null) {
+            mapView.getLayerManager().getLayers().remove(cCurrAccur);
+        }
+        if(cCurrAccur != null) {
+            mapView.getLayerManager().getLayers().remove(cCurrAccur);
+        }
 
-        LatLong startCoord = routeSolver.getStartCoordinate();
-        LatLong targCoord = routeSolver.getTargetCoordinate();
-
-
-        // TODO Real route
-        Polyline routeLine = new Polyline(paintRouteLine, AndroidGraphicFactory.INSTANCE);
-        List<LatLong> coordinateList = routeLine.getLatLongs();
-        coordinateList.add(startCoord);
-        coordinateList.add(targCoord);
-        mapView.getLayerManager().getLayers().add(routeLine);
-
-
-        // Overlay for start and end points
-        Circle cStart = new Circle(routeSolver.getStartCoordinate(), 120.0f, paintStartPoint, paintPointBorder);
-        Circle cTarg = new Circle(routeSolver.getTargetCoordinate(), 120.0f, paintTargPoint, paintPointBorder);
-
+        // Add new overlay
+        cStart = new FixedPixelCircle(routeSolver.getStartCoordinate(), 5.0f, paintStartPoint, paintPointBorder);
+        cTarg = new FixedPixelCircle(routeSolver.getTargetCoordinate(), 5.0f, paintTargPoint, paintPointBorder);
         mapView.getLayerManager().getLayers().add(cStart);
         mapView.getLayerManager().getLayers().add(cTarg);
+
+
+        // Draw current location with accuracy if available
+        Location ownLoc = getBestLocation();
+        if(ownLoc != null) {
+            LatLong ownLocLatLon = new LatLong(ownLoc.getLatitude(), ownLoc.getLongitude());
+
+            Paint paintOwnPoint = AndroidGraphicFactory.INSTANCE.createPaint();
+            paintOwnPoint.setColor(Color.BLUE);
+            paintOwnPoint.setStyle(Style.FILL);
+
+            // Remove old overlay
+            if(cCurr != null) {
+                mapView.getLayerManager().getLayers().remove(cCurr);
+            }
+            if(cCurrAccur != null) {
+                mapView.getLayerManager().getLayers().remove(cCurrAccur);
+            }
+
+            // Add new overlay
+            cCurr = new FixedPixelCircle(ownLocLatLon, 5.0f, paintOwnPoint, paintPointBorder);
+            cCurrAccur = new Circle(ownLocLatLon, ownLoc.getAccuracy(), null, paintPointBorder);
+            mapView.getLayerManager().getLayers().add(cCurr);
+            mapView.getLayerManager().getLayers().add(cCurrAccur);
+        }
     }
 
 
@@ -147,6 +243,15 @@ public class MainActivity extends ActionBarActivity {
     public void mapFocus(LatLong focusPoint) {
         //this.mapView.getModel().mapViewPosition.setCenter(new LatLong(52.517037, 13.38886));
         this.mapView.getModel().mapViewPosition.setCenter(focusPoint);
+    }
+
+    public void mapFocusCurrent() {
+        Location ownLoc = getBestLocation();
+        if(ownLoc != null) {
+            LatLong ownLocLatLon = new LatLong(ownLoc.getLatitude(), ownLoc.getLongitude());
+            mapFocus(ownLocLatLon);
+            mapSetZoom((byte)16);
+        }
     }
 
     public void mapSetZoom(byte zoom) {
@@ -184,6 +289,29 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+
+
+
+    public void btClickCenterGps(View v) {
+        updatePositionOverlay();
+        mapFocusCurrent();
+    }
+
+
+
+
+    public void btClickRouteCarFast(View v) {
+
+    }
+
+    public void btClickRouteCarShort(View v) {
+
+    }
+
+    public void btClickRoutePed(View v) {
+
     }
 
 

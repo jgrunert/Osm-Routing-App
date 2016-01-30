@@ -64,10 +64,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="GPS"
-            android:id="@+id/button4"
-            android:layout_below="@+id/button6"
-            android:layout_alignLeft="@+id/button7"
-            android:layout_alignStart="@+id/button7"
+            android:id="@+id/btStartGps"
+            android:layout_below="@+id/btStartSel"
+            android:layout_alignLeft="@+id/gtTargGps"
+            android:layout_alignStart="@+id/gtTargGps"
             android:layout_marginLeft="5dp" />
 
         <Button
@@ -75,7 +75,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Sel"
-            android:id="@+id/button6"
+            android:id="@+id/btStartSel"
             android:layout_alignTop="@+id/textView"
             android:layout_alignParentRight="true"
             android:layout_alignParentEnd="true" />
@@ -120,10 +120,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="GPS"
-            android:id="@+id/button7"
-            android:layout_alignTop="@+id/button6"
-            android:layout_toLeftOf="@+id/button6"
-            android:layout_toStartOf="@+id/button6"
+            android:id="@+id/gtTargGps"
+            android:layout_alignTop="@+id/btStartSel"
+            android:layout_toLeftOf="@+id/btStartSel"
+            android:layout_toStartOf="@+id/btStartSel"
             android:layout_marginLeft="5dp" />
 
         <Button
@@ -131,17 +131,17 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Sel"
-            android:id="@+id/button5"
-            android:layout_alignTop="@+id/button4"
-            android:layout_toRightOf="@+id/button4"
-            android:layout_toEndOf="@+id/button4" />
+            android:id="@+id/btTargSel"
+            android:layout_alignTop="@+id/btStartGps"
+            android:layout_toRightOf="@+id/btStartGps"
+            android:layout_toEndOf="@+id/btStartGps" />
     </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Start"
+        android:text="From"
         android:id="@+id/textView2"
         android:layout_alignTop="@+id/linearLayout4"
         android:layout_alignParentLeft="true"
@@ -151,7 +151,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Target"
+        android:text="To"
         android:id="@+id/textView3"
         android:layout_below="@+id/linearLayout4"
         android:layout_alignParentLeft="true"
@@ -176,42 +176,47 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Car Fast"
-                android:id="@+id/button"
+                android:id="@+id/btRouteCarFast"
                 android:layout_centerVertical="true"
                 android:layout_toLeftOf="@+id/linearLayout2"
                 android:layout_toStartOf="@+id/linearLayout2"
                 style="?android:attr/buttonStyleSmall"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:longClickable="false"
+                android:onClick="btClickRouteCarFast" />
 
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Car Short"
-                android:id="@+id/button2"
+                android:id="@+id/btRouteCarShort"
                 style="?android:attr/buttonStyleSmall"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:onClick="btClickRouteCarShort" />
 
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Pedest."
-                android:id="@+id/button3"
+                android:id="@+id/btRoutePed"
                 style="?android:attr/buttonStyleSmall"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:onClick="btClickRoutePed" />
 
             <Button
                 style="?android:attr/buttonStyleSmall"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:text="GPS"
-                android:id="@+id/button8"
+                android:id="@+id/btCenterGps"
                 android:layout_marginLeft="4dp"
-                android:layout_marginTop="4dp" />
+                android:layout_marginTop="4dp"
+                android:onClick="btClickCenterGps" />
 
             <ProgressBar
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/progressBar"
+                android:id="@+id/progressBarRouting"
                 android:max="100"
                 android:progress="50"
                 android:secondaryProgress="20" />
@@ -223,14 +228,14 @@
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:text="Ready"
-            android:id="@+id/textView4"
+            android:id="@+id/textViewState"
             android:layout_marginLeft="6dp" />
 
         <org.mapsforge.map.android.view.MapView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:id="@+id/view"
-            android:layout_alignBottom="@+id/button"
+            android:id="@+id/mapView"
+            android:layout_alignBottom="@+id/btRouteCarFast"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
             android:layout_marginTop="4dp" />
