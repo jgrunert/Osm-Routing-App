@@ -211,11 +211,9 @@ public class Utils {
             lat2Rad += Pi2;
         }
 
-        System.out.println("x: " + dLat + " " + dLng + " " + lat1Rad + " " + lat2Rad);
         double a =
                 fastSin(dLat / 2) * fastSin(dLat / 2) + fastCos(lat1Rad)
                         * fastCos(lat2Rad) * fastSin(dLng / 2) * fastSin(dLng / 2);
-        System.out.println("a: " + a);
 
         float dist = distLUT[(int)(Math.sqrt(a)*distLutPrec)];
 

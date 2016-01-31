@@ -1,5 +1,7 @@
 package de.jgrunert.osm_routing;
 
+import android.os.Environment;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -12,8 +14,9 @@ import java.io.ObjectOutputStream;
 @SuppressWarnings("javadoc")
 public class Utils {
 
+    static final File CacheDir = new File(Environment.getExternalStorageDirectory(), "osm");
 
-    static final String SinCosCacheFile = "SinCosCache.bin";
+    static final File SinCosCacheFile = new File(CacheDir, "SinCosCache.bin");
 
     static final double Pi2 = Math.PI * 2.0;
     static final double sinCosPrecFactor = 200000;
@@ -23,7 +26,7 @@ public class Utils {
 
     static {
 
-        if(new File(SinCosCacheFile).exists()) {
+        if(SinCosCacheFile.exists()) {
 
             ObjectInputStream sinCosReader = null;
             try {
@@ -88,7 +91,7 @@ public class Utils {
         return sinLUT[(int)(rad * sinCosPrecFactor)];
     }
 
-    static final String DistCacheFile = "DistCache.bin";
+    static final File DistCacheFile = new File(CacheDir, "DistCache.bin");
 
     static final double distLutMax = Math.sqrt(0.005);
     static final double distLutPrec = 10000000;
@@ -96,7 +99,7 @@ public class Utils {
     static float[] distLUT = new float[(int)(distLutMax * distLutPrec)];
 
     static {
-        if (new File(DistCacheFile).exists()) {
+        if (DistCacheFile.exists()) {
 
             ObjectInputStream distCacheReader = null;
             try {
@@ -211,11 +214,9 @@ public class Utils {
             lat2Rad += Pi2;
         }
 
-        System.out.println("x: " + dLat + " " + dLng + " " + lat1Rad + " " + lat2Rad);
         double a =
                 fastSin(dLat / 2) * fastSin(dLat / 2) + fastCos(lat1Rad)
                         * fastCos(lat2Rad) * fastSin(dLng / 2) * fastSin(dLng / 2);
-        System.out.println("a: " + a);
 
         float dist = distLUT[(int)(Math.sqrt(a)*distLutPrec)];
 
