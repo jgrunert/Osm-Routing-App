@@ -101,7 +101,7 @@ public class AStarRouteSolver implements IRouteSolver {
     private Random rd;
     
     
-    private boolean doFastFollow = true;       
+    private boolean doFastFollow = false;       
     @Override
     public boolean isDoFastFollow() {
         return doFastFollow;
@@ -537,7 +537,7 @@ public class AStarRouteSolver implements IRouteSolver {
             bestCandidateNode = visNodeGridIndex;
         
             // Visit node/neighbors
-            if(visitNode(false)) {
+            if(visitNode()) {
                 found = true;
                 break;
             }
@@ -668,7 +668,7 @@ public class AStarRouteSolver implements IRouteSolver {
     
     
 
-    private boolean visitNode(boolean fastFollowing) {
+    private boolean visitNode() {
         visGridIndex = (int) (visNodeGridIndex >> 32);
         visNodeIndex = (int) (long) (visNodeGridIndex);
 
@@ -687,6 +687,15 @@ public class AStarRouteSolver implements IRouteSolver {
         // Update visitTimestamp to mark that grid is still in use
         visGrid.visitTimestamp = ++gridVisitTimestamp;
 
+        // Mark as closed/visited
+        visGridRB.nodesRouteClosedList[visNodeIndex] = true;
+        openList.remove(visNodeGridIndex);
+        visitedCount++;
+
+        
+        if (rd.nextFloat() > routingPreviewDotPropability) {
+            addNewPreviewDot(getNodeCoordinates(visGrid, visNodeIndex));
+        }
         
         // Check if target found
         if (visNodeGridIndex == target) {
@@ -763,25 +772,9 @@ public class AStarRouteSolver implements IRouteSolver {
                 nextVisitGridRB = nbGridRB;
                 nbEdge = iEdge;
             }
-            
-            
-            // Only mark visited if not fast following or fast following will continue after this node
-            // Don't mark nodes at end of fast follow as visited to avoid invalid routing
-            if(!fastFollowing || nbCount == 1) {
-                // Mark as closed/visited
-                visGridRB.nodesRouteClosedList[visNodeIndex] = true;
-                openList.remove(visNodeGridIndex);
-                visitedCount++;
-                
-                if (rd.nextFloat() > 0) { // TODO Only for testing
-                //if (rd.nextFloat() > routingPreviewDotPropability) {
-                    addNewPreviewDot(getNodeCoordinates(visGrid, visNodeIndex));
-                }
-            }
-            
 
             if (nbCount == 1) {
-                if (nextVisitNodeGridIndex != target ) {
+                if (nextVisitNodeGridIndex != target) {
                     nextVisitGridRB.nodesPreBuffer[nextVisitNodeIndex] = visNodeGridIndex;
                     nextVisitGridRB.nodesRouteEdges[nextVisitNodeIndex] = nbEdge;
                     nextVisitGridRB.nodesRouteCosts[nextVisitNodeIndex] =
@@ -794,7 +787,7 @@ public class AStarRouteSolver implements IRouteSolver {
 
                     //System.out.println("FastFollow to " + visNodeGridIndex);
                     fastFollows++;
-                    return visitNode(true);
+                    return visitNode();
                 } else {
                     //System.out.println("Target found during fast follow - dont follow to ensure routing properties");
                     return false;
