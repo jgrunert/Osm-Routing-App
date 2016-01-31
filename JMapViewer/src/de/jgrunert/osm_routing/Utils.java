@@ -94,7 +94,7 @@ public class Utils {
     
 
     static final double Pi2 = Math.PI * 2.0;
-    static final double sinCosPrecFactor = 100000;   
+    static final double sinCosPrecFactor = 1000000;   
     static final int sinCosLUTSize = (int)(Pi2 * sinCosPrecFactor) + 1; // +1 probably not necessary
     static final double[] sinLUT = new double[sinCosLUTSize];
     static final double[] cosLUT = new double[sinCosLUTSize];
@@ -220,9 +220,11 @@ public class Utils {
             lat2Rad += Pi2;
         }
         
+        System.out.println("x: " + dLat + " " + dLng + " " + lat1Rad + " " + lat2Rad);
         double a =
                 fastSin(dLat / 2) * fastSin(dLat / 2) + fastCos(lat1Rad)
                         * fastCos(lat2Rad) * fastSin(dLng / 2) * fastSin(dLng / 2);
+        System.out.println("a: " + a);
 //        double a =
 //                Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(Math.toRadians(lat1))
 //                        * Math.cos(Math.toRadians(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);

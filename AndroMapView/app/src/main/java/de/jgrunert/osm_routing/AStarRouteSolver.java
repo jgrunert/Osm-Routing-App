@@ -1,22 +1,23 @@
 package de.jgrunert.osm_routing;
 
-import android.os.Debug;
+import android.annotation.SuppressLint;
 import android.os.Environment;
+
+import org.mapsforge.core.model.LatLong;
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
-
-import org.mapsforge.core.model.LatLong;
 
 import de.jgrunert.andromapview.MainActivity;
 
@@ -31,16 +32,17 @@ public class AStarRouteSolver implements IRouteSolver {
     
     // General constants
     private static final File OSM_BASE_DIR = new File(Environment.getExternalStorageDirectory(), "osm");
-    private static final File MAP_BASE_DIR = new File(OSM_BASE_DIR, "germany_grids");
+    private static final File MAP_GRIDS_DIR = new File(OSM_BASE_DIR, "germany_grids");
     
     
     // Routing constants
     private static final short CAR_MAXSPEED = 130;
     private static final short PED_MAXSPEED = 5;
-    private static int ROUTE_HEAP_CAPACITY = 1000000;
-    // Number of grids to buffer
-    private static int GRID_BUFFER_SIZE = 100;
-    
+    private static final int ROUTE_HEAP_CAPACITY = 1000000;
+
+    // Max RAM heap space usage to limit grid loading
+    private static final double GRID_RAM_LIMIT = 0.7f;
+    private int maxGridCount = -1;
     
     // Start and end for route
     private Long startNodeGridIndex = null;
@@ -82,6 +84,7 @@ public class AStarRouteSolver implements IRouteSolver {
     @Override
     public List<LatLong> getCalculatedRoute() { return calculatedRoute; }
 
+
     public float distOfRoute = 0.0f; // Route distance in metres
     public float timeOfRoute = 0.0f; // Route time in hours
 
@@ -89,9 +92,7 @@ public class AStarRouteSolver implements IRouteSolver {
     private volatile RoutingState state = RoutingState.NotReady;
     @Override
     public RoutingState getRoutingState() { return state; }
-    
-    private Random rd;
-    
+
     
     private boolean doFastFollow = true;       
     @Override
@@ -127,7 +128,8 @@ public class AStarRouteSolver implements IRouteSolver {
     ArrayList<MapGrid> grids;
     // A simple queue with order of grids loaded to unload it in same order
     List<MapGrid> loadedGrids;
-    int gridLoadOperations;
+    int gridLoadsTotal;
+    int gridLoadsRoute;
     long gridVisitTimestamp;
     
     // Heap for rout finding
@@ -143,7 +145,6 @@ public class AStarRouteSolver implements IRouteSolver {
 
         this.parent = parent;
 
-        // TODO Not smartphone dependant
         System.out.println("Max memory: " + (Runtime.getRuntime().maxMemory() / 1048576) + "Mb");
 
         try {            
@@ -173,7 +174,7 @@ public class AStarRouteSolver implements IRouteSolver {
         ObjectInputStream gridReader = null;
         try {
             gridReader =
-                    new ObjectInputStream(new BufferedInputStream(new FileInputStream(new File(MAP_BASE_DIR, "grids.index"))));
+                    new ObjectInputStream(new BufferedInputStream(new FileInputStream(new File(MAP_GRIDS_DIR, "grids.index"))));
             gridRaster = gridReader.readFloat();
             gridMinLat = gridReader.readFloat();
             gridMinLon = gridReader.readFloat();
@@ -184,7 +185,7 @@ public class AStarRouteSolver implements IRouteSolver {
             loadedGrids = new ArrayList<MapGrid>();
             gridIndices = new int[gridLatCount][gridLonCount];
             gridVisitTimestamp = 0;
-            gridLoadOperations = 0;
+            gridLoadsTotal = 0;
             
             int iGrid = 0;
             for (int iLat = 0; iLat < gridLatCount; iLat++) {
@@ -209,35 +210,47 @@ public class AStarRouteSolver implements IRouteSolver {
      */
     private MapGrid loadGrid(int gridIndex) {
         try {
-            while(loadedGrids.size() >= GRID_BUFFER_SIZE) {
-                // Unload grid if to many grids in buffer
-                
-                // Find grid longest time not used
-                int sleepyGridIndex = 0;
-                long sleepyGridTimestamp = loadedGrids.get(0).visitTimestamp;
-                for(int i = 1; i < loadedGrids.size(); i++) {
-                    if(loadedGrids.get(i).visitTimestamp < sleepyGridTimestamp) {
-                        sleepyGridIndex = i;
-                        sleepyGridTimestamp = loadedGrids.get(i).visitTimestamp;
+            // Unload grid if to many grids in buffer
+            if(maxGridCount != -1) {
+                while (loadedGrids.size() >= maxGridCount) {
+
+                    // Find grid longest time not used
+                    int sleepyGridIndex = 0;
+                    long sleepyGridTimestamp = loadedGrids.get(0).visitTimestamp;
+                    for (int i = 1; i < loadedGrids.size(); i++) {
+                        if (loadedGrids.get(i).visitTimestamp < sleepyGridTimestamp) {
+                            sleepyGridIndex = i;
+                            sleepyGridTimestamp = loadedGrids.get(i).visitTimestamp;
+                        }
                     }
+                    MapGrid toUnload = loadedGrids.remove(sleepyGridIndex);
+
+                    // Unload
+                    grids.set(toUnload.index, new MapGrid(toUnload.index));
+                    System.out.println("Unloaded grid " + toUnload.index + ". Grids loaded: " + loadedGrids.size());
                 }
-                MapGrid toUnload = loadedGrids.remove(sleepyGridIndex);
-                
-                // Unload
-                grids.set(toUnload.index, new MapGrid(toUnload.index));
-                System.out.println("Unloaded grid " + toUnload.index + ". Grids loaded: " + loadedGrids.size());
             }
-            
-            MapGrid loaded = new MapGrid(gridIndex, gridVisitTimestamp,new File(MAP_BASE_DIR, gridIndex + ".grid"));
+
+            // Load grid
+            MapGrid loaded = new MapGrid(gridIndex, gridVisitTimestamp,new File(MAP_GRIDS_DIR, gridIndex + ".grid"));
             grids.set(gridIndex, loaded);
             loadedGrids.add(loaded);
-            gridLoadOperations++;
+            gridLoadsTotal++;
+            gridLoadsRoute++;
             System.out.println("Loaded grid " + gridIndex + ". Grids loaded: " + loadedGrids.size() +
-                    ". Load operations: " + gridLoadOperations +
+                    ". Load operations: " + gridLoadsTotal +
                     ". Heap-Size: " + (Runtime.getRuntime().totalMemory() / 1048576) + "Mb");
+
+            // Check if grid count is not limited yet but needs to be limited
+            if(maxGridCount == -1 &&
+                    (Runtime.getRuntime().totalMemory() / (double)Runtime.getRuntime().maxMemory()) > GRID_RAM_LIMIT) {
+                maxGridCount = loadedGrids.size();
+                System.out.println("RAM limit reached - limited grid buffer to " + maxGridCount);
+            }
+
             return loaded;
         } catch (Exception e) {
-            System.err.println("Failed to load grid");
+            System.err.println("Failed while grid loading");
             e.printStackTrace();
             return grids.get(gridIndex);
         }
@@ -358,18 +371,15 @@ public class AStarRouteSolver implements IRouteSolver {
         // Skip if edge not accessible
         return match;
     }
-    
 
-    
+
+
     // Info bits: 0,0,0,0,0,[Car],[Ped],[Oneway]
-    private byte carBitMask = 5;
-    private byte carBitValue = 4;
-    private byte pedBitMask = 2;
-    private byte pedBitValue = 2;
-    
-    // TODO Intelligent? costs for street switching?
-    
-    
+    private static final byte carBitMask = 5;
+    private static final byte carBitValue = 4;
+    private static final byte pedBitMask = 2;
+    private static final byte pedBitValue = 2;
+
     // Edge bitfilter and speed
     boolean found;
     byte edgeFilterBitMask;
@@ -418,6 +428,7 @@ public class AStarRouteSolver implements IRouteSolver {
     /**
      * Calculates a route using an improved A Star algorithm
      */
+    @SuppressLint("UseSparseArrays")
     @Override
     public synchronized void startCalculateRoute(TransportMode transportMode, RoutingMode routeMode) {
 
@@ -435,6 +446,8 @@ public class AStarRouteSolver implements IRouteSolver {
         this.routeMode = routeMode;
         this.startTime = System.currentTimeMillis();
         needsDispalyRefresh = true;
+
+        gridLoadsRoute = 0;
         
         // Edge bitfilter and speed
         allMinSpeed = PED_MAXSPEED;
@@ -501,7 +514,7 @@ public class AStarRouteSolver implements IRouteSolver {
         openList.add(startNodeGridIndex);
         
         found = false;
-        target = (long)targetNodeGridIndex;
+        target = targetNodeGridIndex;
         visitedCount = 0;
         hCalc = 0;
         hReuse = 0;
@@ -557,13 +570,16 @@ public class AStarRouteSolver implements IRouteSolver {
         System.out.println("againVisits: " + againVisits);
         System.out.println("fastFollows: " + fastFollows);
         System.out.println("MaxHeapSize: " + routeDistHeap.getSizeUsageMax());
+        System.out.println("gridLoads: " + gridLoadsRoute);
         
-        
-        // TODO Time and dist and output (as table?)
+
+        // Routing finished
         if (found) {
             // Reconstruct route
             reconstructRoute();
         } else {
+            // No route found
+            calculatedRoute.clear();
             System.err.println("No way found");
         }
         
@@ -578,6 +594,7 @@ public class AStarRouteSolver implements IRouteSolver {
         parent.onRoutingFinished();
     }
 
+    @SuppressWarnings("ConstantConditions")
     private void reconstructRoute() {
 
         calculatedRoute.clear();
@@ -586,26 +603,37 @@ public class AStarRouteSolver implements IRouteSolver {
             return;
         }
 
-
         distOfRoute = 0.0f; // Route distance in metres
         timeOfRoute = 0.0f; // Route time in hours
 
+
+        int iNodeIndex = 0;
+        MapGrid iGrid = null;
+
+        // Buffers for removed edge points in a grid to reconstruct points
+        int gridRemovedEdgeGridIndex = -1;
+        int[] gridRemovedEdgeCoordsOffsets = null;
+        float[] gridRemovedEdgeCoordsLat = null;
+        float[] gridRemovedEdgeCoordsLon = null;
 
         long i = targetNodeGridIndex;
         while (i != startNodeGridIndex) {
 
             int iGridIndex = (int)(i >> 32);
-            int iNodeIndex = (int)(long)(i);
-            MapGrid iGrid = getGrid(iGridIndex);
+            iNodeIndex = (int)(long)(i);
+            iGrid = getGrid(iGridIndex);
             MapGridRoutingBuffer iGridRB = routingGridBuffers.get(iGridIndex);
 
+            // Route point coordinates (for view)
+            LatLong coord = new LatLong(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);
+            calculatedRoute.add(coord);
 
             long pre = iGridRB.nodesPreBuffer[iNodeIndex];
             int edge = iGridRB.nodesRouteEdges[iNodeIndex];
             iGridIndex = (int)(pre >> 32);
             iNodeIndex = (int)(long)(pre);
             iGrid = getGrid(iGridIndex);
-            iGridRB = routingGridBuffers.get(iGridIndex);
+            //iGridRB = routingGridBuffers.get(iGridIndex);
 
 
             // Calculate distance and time
@@ -618,15 +646,53 @@ public class AStarRouteSolver implements IRouteSolver {
             timeOfRoute += (dist / 1000.0f) / maxSpeed;
 
 
-            // Route point coordinates (for view)
-            LatLong coord = new LatLong(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);
-            calculatedRoute.add(coord);
+            // Reconstruct deleted points on edge
+            if(gridRemovedEdgeGridIndex != iGridIndex) {
+                // Load deleted edge points
+                ObjectInputStream gridReader = null;
+                try
+                {
+                    gridReader = new ObjectInputStream(new BufferedInputStream(new FileInputStream(MAP_GRIDS_DIR + "/" + iGridIndex + ".grid2")));
+                    gridRemovedEdgeCoordsOffsets = (int[]) gridReader.readObject();
+                    gridRemovedEdgeCoordsLat = (float[]) gridReader.readObject();
+                    gridRemovedEdgeCoordsLon = (float[]) gridReader.readObject();
+                    gridReader.close();
 
+                    gridRemovedEdgeGridIndex = iGridIndex;
+                } catch(Exception exc) {
+                    exc.printStackTrace();
+                } finally {
+                    if(gridReader != null) {
+                        try {
+                            gridReader.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+
+            // Reconstruct deleted points
+            List<LatLong> coordsRem = new ArrayList<LatLong>();
+            for(int iEdgeRem = gridRemovedEdgeCoordsOffsets[edge];
+                (edge + 1 < gridRemovedEdgeCoordsOffsets.length && iEdgeRem < gridRemovedEdgeCoordsOffsets[edge + 1]) ||
+                        (edge + 1 == gridRemovedEdgeCoordsOffsets.length && iEdgeRem < gridRemovedEdgeCoordsLat.length);
+                iEdgeRem++) {
+                LatLong coordRem = new LatLong(gridRemovedEdgeCoordsLat[iEdgeRem], gridRemovedEdgeCoordsLon[iEdgeRem]);
+                coordsRem.add(coordRem);
+            }
+            Collections.reverse(coordsRem);
+            calculatedRoute.addAll(coordsRem);
+
+            // Go one step back
             i = pre;
         }
 
+        LatLong coord = new LatLong(iGrid.nodesLat[iNodeIndex], iGrid.nodesLon[iNodeIndex]);
+        calculatedRoute.add(coord);
 
-        System.out.println("Route Distance: " + ((int)distOfRoute / 1000.0f) + "km");
+
+        System.out.println("Route Distance: " + ((int) distOfRoute / 1000.0f) + "km");
         int timeHours = (int)timeOfRoute;
         int timeMinutes = (int)(60 * (timeOfRoute - timeHours));
         System.out.println("Route time: " + timeHours + ":" + timeMinutes);
@@ -696,7 +762,7 @@ public class AStarRouteSolver implements IRouteSolver {
                 }
 
                 // Get neighbor grid routing buffer
-                MapGrid nbGrid = null;
+                MapGrid nbGrid;
                 if (nbGridIndex == visGridIndex) {
                     nbGrid = visGrid;
                 } else {

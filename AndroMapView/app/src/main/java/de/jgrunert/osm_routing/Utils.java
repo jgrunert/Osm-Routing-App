@@ -94,7 +94,7 @@ public class Utils {
     
 
     static final double Pi2 = Math.PI * 2.0;
-    static final double sinCosPrecFactor = 100000;   
+    static final double sinCosPrecFactor = 1000000;
     static final int sinCosLUTSize = (int)(Pi2 * sinCosPrecFactor) + 1; // +1 probably not necessary
     static final double[] sinLUT = new double[sinCosLUTSize];
     static final double[] cosLUT = new double[sinCosLUTSize];

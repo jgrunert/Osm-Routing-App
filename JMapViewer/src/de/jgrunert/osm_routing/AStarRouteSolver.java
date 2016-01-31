@@ -639,17 +639,18 @@ public class AStarRouteSolver implements IRouteSolver {
                     exc.printStackTrace();
                 }
             }            
-            // Reconstruct deleted points
-            List<Coordinate> coordsRem = new ArrayList<Coordinate>();
-            for(int iEdgeRem = gridRemovedEdgeCoordsOffsets[edge]; 
-                    (edge + 1 < gridRemovedEdgeCoordsOffsets.length && iEdgeRem < gridRemovedEdgeCoordsOffsets[edge + 1]) || 
-                      (edge + 1 == gridRemovedEdgeCoordsOffsets.length && iEdgeRem < gridRemovedEdgeCoordsLat.length); 
-                    iEdgeRem++) {
-                Coordinate coordRem = new Coordinate(gridRemovedEdgeCoordsLat[iEdgeRem], gridRemovedEdgeCoordsLon[iEdgeRem]);            
-                coordsRem.add(coordRem);
-            }                
-            Collections.reverse(coordsRem);
-            calculatedRoute.addAll(coordsRem);
+            // Reconstruct deleted points (if reconsturcted points available) 
+            if (gridRemovedEdgeCoordsOffsets != null) {
+                List<Coordinate> coordsRem = new ArrayList<Coordinate>();
+                for (int iEdgeRem = gridRemovedEdgeCoordsOffsets[edge]; (edge + 1 < gridRemovedEdgeCoordsOffsets.length && iEdgeRem < gridRemovedEdgeCoordsOffsets[edge + 1])
+                        || (edge + 1 == gridRemovedEdgeCoordsOffsets.length && iEdgeRem < gridRemovedEdgeCoordsLat.length); iEdgeRem++) {
+                    Coordinate coordRem =
+                            new Coordinate(gridRemovedEdgeCoordsLat[iEdgeRem], gridRemovedEdgeCoordsLon[iEdgeRem]);
+                    coordsRem.add(coordRem);
+                }
+                Collections.reverse(coordsRem);
+                calculatedRoute.addAll(coordsRem);
+            }
             
             // Go one step back
             i = pre;
@@ -691,7 +692,7 @@ public class AStarRouteSolver implements IRouteSolver {
         openList.remove(visNodeGridIndex);
         visitedCount++;
 
-        if (rd.nextFloat() > routingPreviewDotPropability) {
+        if (rd.nextFloat() > 0) {
             addNewPreviewDot(getNodeCoordinates(visGrid, visNodeIndex));
         }
         
@@ -856,7 +857,9 @@ public class AStarRouteSolver implements IRouteSolver {
                         
             // Caching h or holding visited in a nodes does not make sense
             // Re-visiting rate seems to be below 1:10 and maps get very slow and memory consuming
+            //float h = Utils.calcNodeDistPrecise(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon);
             float h = Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon);
+            System.out.println(h);
             
             float MOTORWAY_BOOST_SUSPEND_RADIUS = 40000;
             float MOTORWAY_BOOST_DECREASE_RADIUS = 200000;
