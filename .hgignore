@@ -15,3 +15,5 @@ build/
 *.log
 *.lck
 *.log.*
+JMapViewer/DistCache.bin
+JMapViewer/SinCosCache.bin
