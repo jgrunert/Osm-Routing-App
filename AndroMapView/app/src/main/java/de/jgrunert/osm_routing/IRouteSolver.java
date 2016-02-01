@@ -25,6 +25,7 @@ public interface IRouteSolver {
     LatLong getTargetCoordinate();
 
     RoutingState getRoutingState();
+    float getRoutingProgress();
     List<LatLong> getCalculatedRoute();
     
     boolean getNeedsDispalyRefresh();

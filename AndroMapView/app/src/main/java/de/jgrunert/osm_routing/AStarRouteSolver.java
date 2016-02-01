@@ -115,7 +115,13 @@ public class AStarRouteSolver implements IRouteSolver {
         this.doMotorwayBoost = doMotorwayBoost;
     }
     
-    
+    float routingProgress = 0.0f;
+    float routingMaxDist = 0.0f;
+    float routingNearestDist = Float.MAX_VALUE;
+    @Override
+    public float getRoutingProgress() { return routingProgress; }
+
+
     // Grid information
     float gridRaster;
     float gridMinLat;
@@ -529,6 +535,11 @@ public class AStarRouteSolver implements IRouteSolver {
         visGridRB = startGridRB;
 
 
+        routingMaxDist = Utils.calcNodeDistFast(startLat, startLon, targetLat, targetLon);
+        routingProgress = 0.0f;
+        routingNearestDist = routingMaxDist;
+
+
         System.out.println("Start routing from " + startLat + "/" + startLon + " to " + targetLat + "/" + targetLon);
         System.out.flush();
 
@@ -882,6 +893,12 @@ public class AStarRouteSolver implements IRouteSolver {
             // Caching h or holding visited in a nodes does not make sense
             // Re-visiting rate seems to be below 1:10 and maps get very slow and memory consuming
             float h = Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon);
+
+            if(h < routingNearestDist) {
+                routingNearestDist = h;
+                routingProgress = 1.0f - (routingNearestDist / routingMaxDist);
+                System.out.println(routingProgress);
+            }
             
             float MOTORWAY_BOOST_SUSPEND_RADIUS = 40000;
             float MOTORWAY_BOOST_DECREASE_RADIUS = 200000;

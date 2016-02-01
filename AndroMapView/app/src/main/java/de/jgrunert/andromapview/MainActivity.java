@@ -4,8 +4,10 @@ import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Message;
 import android.os.PowerManager;
 import android.support.v7.app.ActionBarActivity;
 import android.text.Editable;
@@ -17,6 +19,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.common.api.GoogleApiClient;
 
 import org.mapsforge.core.graphics.Color;
 import org.mapsforge.core.graphics.Paint;
@@ -38,6 +44,8 @@ import org.mapsforge.map.util.MapViewProjection;
 
 import java.io.File;
 import java.util.List;
+import java.util.TimerTask;
+import java.util.logging.Handler;
 
 import de.jgrunert.osm_routing.AStarRouteSolver;
 import de.jgrunert.osm_routing.IRouteSolver;
@@ -69,10 +77,16 @@ public class MainActivity extends ActionBarActivity {
     private boolean doGpsFollowing = false;
 
     private static final File MAP_VIEW_FILE = new File(Environment.getExternalStorageDirectory(), "osm/mapsforge/germany.map");
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
 
-
-    /** Called when the activity is first created. */
+    /**
+     * Called when the activity is first created.
+     */
     @Override
     public void onCreate(final Bundle icicle) {
         super.onCreate(icicle);
@@ -82,7 +96,7 @@ public class MainActivity extends ActionBarActivity {
         AndroidGraphicFactory.createInstance(this.getApplication());
 
         setContentView(R.layout.activity_main);
-        setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);     //  Fixed Portrait orientation
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);     //  Fixed Portrait orientation
 
 
         /* This code together with the one in onDestroy()
@@ -93,7 +107,7 @@ public class MainActivity extends ActionBarActivity {
 
 
         // Initialize MapView
-        this.mapView = ((MapView)findViewById(R.id.mapView));
+        this.mapView = ((MapView) findViewById(R.id.mapView));
         this.mapView.setClickable(true);
         this.mapView.getMapScaleBar().setVisible(true);
         this.mapView.setBuiltInZoomControls(true);
@@ -101,7 +115,7 @@ public class MainActivity extends ActionBarActivity {
         this.mapView.getMapZoomControls().setZoomLevelMax((byte) 20);
 
         this.tileCache = AndroidUtil.createTileCache(this, "map_cache",
-                mapView.getModel().displayModel.getTileSize(),1f,
+                mapView.getModel().displayModel.getTileSize(), 1f,
                 this.mapView.getModel().frameBufferModel.getOverdrawFactor());
 
         MapDataStore mapDataStore = new MapFile(MAP_VIEW_FILE);
@@ -114,12 +128,12 @@ public class MainActivity extends ActionBarActivity {
         mapView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                if(startLocationSetting) {
+                if (startLocationSetting) {
                     LatLong touchedPos = new MapViewProjection(mapView).fromPixels(event.getX(), event.getY());
-                    onStartChanged((float)touchedPos.latitude, (float)touchedPos.longitude);
+                    onStartChanged((float) touchedPos.latitude, (float) touchedPos.longitude);
                     startLocationSetting = false;
                     findViewById(R.id.btStartSel).setEnabled(true);
-                } else if(targLocationSetting) {
+                } else if (targLocationSetting) {
                     LatLong touchedPos = new MapViewProjection(mapView).fromPixels(event.getX(), event.getY());
                     onTargetChanged((float) touchedPos.latitude, (float) touchedPos.longitude);
                     targLocationSetting = false;
@@ -137,7 +151,7 @@ public class MainActivity extends ActionBarActivity {
         boolean isGPSEnabled = locationManager
                 .isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-        if(isGPSEnabled) {
+        if (isGPSEnabled) {
             FineLocationListener locationListener = new FineLocationListener(this);
             locationManager.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
@@ -147,7 +161,6 @@ public class MainActivity extends ActionBarActivity {
             Toast.makeText(getBaseContext(),
                     "GPS not enabled - location listening disabled", Toast.LENGTH_LONG).show();
         }
-
 
 
         TextWatcher startEditWatcher = new TextWatcher() {
@@ -161,7 +174,7 @@ public class MainActivity extends ActionBarActivity {
 
             @Override
             public void afterTextChanged(Editable s) {
-                if(isSettingLocation) {
+                if (isSettingLocation) {
                     return;
                 }
 
@@ -171,8 +184,8 @@ public class MainActivity extends ActionBarActivity {
                 mapFocus(new LatLong(lat, lon));
             }
         };
-        ((EditText)findViewById(R.id.editTextLat1)).addTextChangedListener(startEditWatcher);
-        ((EditText)findViewById(R.id.editTextLon1)).addTextChangedListener(startEditWatcher);
+        ((EditText) findViewById(R.id.editTextLat1)).addTextChangedListener(startEditWatcher);
+        ((EditText) findViewById(R.id.editTextLon1)).addTextChangedListener(startEditWatcher);
 
         TextWatcher targEditWatcher = new TextWatcher() {
             @Override
@@ -185,7 +198,7 @@ public class MainActivity extends ActionBarActivity {
 
             @Override
             public void afterTextChanged(Editable s) {
-                if(isSettingLocation) {
+                if (isSettingLocation) {
                     return;
                 }
 
@@ -195,9 +208,8 @@ public class MainActivity extends ActionBarActivity {
                 mapFocus(new LatLong(lat, lon));
             }
         };
-        ((EditText)findViewById(R.id.editTextLat2)).addTextChangedListener(targEditWatcher);
-        ((EditText)findViewById(R.id.editTextLon2)).addTextChangedListener(targEditWatcher);
-
+        ((EditText) findViewById(R.id.editTextLat2)).addTextChangedListener(targEditWatcher);
+        ((EditText) findViewById(R.id.editTextLon2)).addTextChangedListener(targEditWatcher);
 
 
         Log.i(TAG, "Initialized MainActivity");
@@ -206,7 +218,7 @@ public class MainActivity extends ActionBarActivity {
         // Initial focus and start/stop
         Location initialLoc = getBestCurrentLocation();
         LatLong initialLatLong;
-        if(initialLoc != null) {
+        if (initialLoc != null) {
             initialLatLong = new LatLong(initialLoc.getLatitude(), initialLoc.getLongitude());
         } else {
             initialLatLong = new LatLong(48.78, 9.18);
@@ -221,8 +233,10 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
+
     /**
      * Tries to return the location with best accuracy from GPS or NETWORK
+     *
      * @return Best position or NULL if no location available
      */
     private Location getBestCurrentLocation() {
@@ -235,7 +249,7 @@ public class MainActivity extends ActionBarActivity {
                 null;
         System.out.println("locGps: " + locGps + " locNet: " + locNet);
 
-        if(locGps != null && (locNet == null || locGps.getAccuracy() < locNet.getAccuracy())) {
+        if (locGps != null && (locNet == null || locGps.getAccuracy() < locNet.getAccuracy())) {
             return locGps;
         } else {
             return locNet;
@@ -252,7 +266,7 @@ public class MainActivity extends ActionBarActivity {
         paintRouteLine.setStyle(Style.STROKE);
 
 
-        if(routeLine != null) {
+        if (routeLine != null) {
             mapView.getLayerManager().getLayers().remove(routeLine);
         }
 
@@ -284,19 +298,19 @@ public class MainActivity extends ActionBarActivity {
 
 
         // Remove old overlay
-        if(cStart != null) {
+        if (cStart != null) {
             mapView.getLayerManager().getLayers().remove(cStart);
         }
-        if(cTarg != null) {
+        if (cTarg != null) {
             mapView.getLayerManager().getLayers().remove(cTarg);
         }
 
         // Add new overlay
-        if(routeSolver.getStartNode() != null) {
+        if (routeSolver.getStartNode() != null) {
             cStart = new FixedPixelCircle(routeSolver.getStartCoordinate(), 5.0f, paintStartPoint, paintPointBorder);
             mapView.getLayerManager().getLayers().add(cStart);
         }
-        if(routeSolver.getTargetNode() != null) {
+        if (routeSolver.getTargetNode() != null) {
             cTarg = new FixedPixelCircle(routeSolver.getTargetCoordinate(), 5.0f, paintTargPoint, paintPointBorder);
             mapView.getLayerManager().getLayers().add(cTarg);
         }
@@ -304,7 +318,7 @@ public class MainActivity extends ActionBarActivity {
 
         // Draw current location with accuracy if available
         Location ownLoc = getBestCurrentLocation();
-        if(ownLoc != null) {
+        if (ownLoc != null) {
             LatLong ownLocLatLon = new LatLong(ownLoc.getLatitude(), ownLoc.getLongitude());
 
             Paint paintOwnPoint = AndroidGraphicFactory.INSTANCE.createPaint();
@@ -312,10 +326,10 @@ public class MainActivity extends ActionBarActivity {
             paintOwnPoint.setStyle(Style.FILL);
 
             // Remove old overlay
-            if(cCurr != null) {
+            if (cCurr != null) {
                 mapView.getLayerManager().getLayers().remove(cCurr);
             }
-            if(cCurrAccur != null) {
+            if (cCurrAccur != null) {
                 mapView.getLayerManager().getLayers().remove(cCurrAccur);
             }
 
@@ -331,7 +345,7 @@ public class MainActivity extends ActionBarActivity {
     private void onStartChanged(float lat, float lon) {
         isSettingLocation = true;
         Long node = routeSolver.findNextNode(lat, lon);
-        if(node != null) {
+        if (node != null) {
             ((EditText) findViewById(R.id.editTextLat1)).setText(Float.toString(lat));
             ((EditText) findViewById(R.id.editTextLon1)).setText(Float.toString(lon));
             routeSolver.setStartNode(node);
@@ -339,10 +353,11 @@ public class MainActivity extends ActionBarActivity {
         }
         isSettingLocation = false;
     }
+
     private void onTargetChanged(float lat, float lon) {
         isSettingLocation = true;
         Long node = routeSolver.findNextNode(lat, lon);
-        if(node != null) {
+        if (node != null) {
             ((EditText) findViewById(R.id.editTextLat2)).setText(Float.toString(lat));
             ((EditText) findViewById(R.id.editTextLon2)).setText(Float.toString(lon));
             routeSolver.setTargetNode(node);
@@ -352,7 +367,6 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
-
     private void mapFocus(LatLong focusPoint) {
         //this.mapView.getModel().mapViewPosition.setCenter(new LatLong(52.517037, 13.38886));
         this.mapView.getModel().mapViewPosition.setCenter(focusPoint);
@@ -360,7 +374,7 @@ public class MainActivity extends ActionBarActivity {
 
     private void mapFocusCurrent() {
         Location ownLoc = getBestCurrentLocation();
-        if(ownLoc != null) {
+        if (ownLoc != null) {
             LatLong ownLocLatLon = new LatLong(ownLoc.getLatitude(), ownLoc.getLongitude());
             mapFocus(ownLocLatLon);
         }
@@ -371,10 +385,9 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
-
     public void onFineLocationChanged() {
         updatePointOverlay();
-        if(doGpsFollowing) {
+        if (doGpsFollowing) {
             mapFocusCurrent();
         }
     }
@@ -403,15 +416,14 @@ public class MainActivity extends ActionBarActivity {
         int id = item.getItemId();
 
         // Main menu actuions
-        if(id == R.id.action_follow_gps) {
+        if (id == R.id.action_follow_gps) {
             item.setChecked(!item.isChecked());
             doGpsFollowing = item.isChecked();
-            if(doGpsFollowing) {
+            if (doGpsFollowing) {
                 mapFocusCurrent();
                 mapSetZoom((byte) 16);
             }
-        }
-        else if (id == R.id.action_exit) {
+        } else if (id == R.id.action_exit) {
             // Exit app
             System.exit(0);
             return true;
@@ -419,8 +431,6 @@ public class MainActivity extends ActionBarActivity {
 
         return super.onOptionsItemSelected(item);
     }
-
-
 
 
     public void btClickCenterGps(View v) {
@@ -431,11 +441,11 @@ public class MainActivity extends ActionBarActivity {
 
     public void btClickSetStartTargetGps(View v) {
         Location loc = getBestCurrentLocation();
-        if(loc != null) {
-            if(v.getId() == R.id.btStartGps) {
+        if (loc != null) {
+            if (v.getId() == R.id.btStartGps) {
                 onStartChanged((float) loc.getLatitude(), (float) loc.getLongitude());
                 mapFocus(new LatLong(loc.getLatitude(), loc.getLongitude()));
-            } else if(v.getId() == R.id.btTargGps) {
+            } else if (v.getId() == R.id.btTargGps) {
                 onTargetChanged((float) loc.getLatitude(), (float) loc.getLongitude());
                 mapFocus(new LatLong(loc.getLatitude(), loc.getLongitude()));
             }
@@ -449,12 +459,12 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void btClickSetStartTargetSel(View v) {
-        if(v.getId() == R.id.btStartSel) {
+        if (v.getId() == R.id.btStartSel) {
             startLocationSetting = true;
             targLocationSetting = false;
             findViewById(R.id.btStartSel).setEnabled(false);
             findViewById(R.id.btTargSel).setEnabled(true);
-        } else if(v.getId() == R.id.btTargSel) {
+        } else if (v.getId() == R.id.btTargSel) {
             targLocationSetting = true;
             startLocationSetting = false;
             findViewById(R.id.btTargSel).setEnabled(false);
@@ -463,32 +473,70 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
-
-
     public void btClickRouting(View v) {
 
-        if(routeSolver.getStartNode() == null) {
+        if (routeSolver.getStartNode() == null) {
             Toast.makeText(getBaseContext(),
                     "Unable route: No start selected", Toast.LENGTH_SHORT).show();
             return;
         }
-        if(routeSolver.getTargetNode() == null) {
+        if (routeSolver.getTargetNode() == null) {
             Toast.makeText(getBaseContext(),
                     "Unable route: No target selected", Toast.LENGTH_SHORT).show();
             return;
         }
-        if(routeSolver.getStartNode().equals(routeSolver.getTargetNode())) {
+        if (routeSolver.getStartNode().equals(routeSolver.getTargetNode())) {
             Toast.makeText(getBaseContext(),
                     "Unable route: Start and target identical", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if(v.getId() == R.id.btRouteCarFast) {
+        if (v.getId() == R.id.btRouteCarFast) {
             routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Fastest);
-        } else if(v.getId() == R.id.btRouteCarShort) {
+        } else if (v.getId() == R.id.btRouteCarShort) {
             routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Shortest);
-        } else if(v.getId() == R.id.btRoutePed) {
+        } else if (v.getId() == R.id.btRoutePed) {
             routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Pedestrian, IRouteSolver.RoutingMode.Shortest);
         }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app deep link URI is correct.
+                Uri.parse("android-app://de.jgrunert.andromapview/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client, viewAction);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app deep link URI is correct.
+                Uri.parse("android-app://de.jgrunert.andromapview/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
+        client.disconnect();
     }
 }
