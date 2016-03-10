@@ -217,23 +217,40 @@
                 android:layout_marginTop="4dp"
                 android:onClick="btClickCenterGps" />
 
-            <ProgressBar
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/progressBarRouting"
-                android:max="100"
-                android:progress="50"
-                android:secondaryProgress="20" />
-
         </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="Ready"
-            android:id="@+id/textViewState"
-            android:layout_marginLeft="6dp" />
+            android:weightSum="1">
+
+            <ProgressBar
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="73dp"
+                android:layout_height="fill_parent"
+                android:id="@+id/progressBar"
+                android:longClickable="false"
+                android:max="100"
+                android:progress="100"
+                android:layout_weight="0.02" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:text="Ready"
+                android:id="@+id/textViewState"
+                android:layout_marginLeft="6dp" />
+
+            <Button
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="31dp"
+                android:text="Cancel"
+                android:id="@+id/btCancel"
+                android:onClick="btClickCancel" />
+        </LinearLayout>
 
         <org.mapsforge.map.android.view.MapView
             android:layout_width="match_parent"

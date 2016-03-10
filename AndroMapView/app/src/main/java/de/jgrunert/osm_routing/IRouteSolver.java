@@ -12,7 +12,7 @@ public interface IRouteSolver {
 
     public enum TransportMode { Car, Pedestrian, Maniac }
     
-    public enum RoutingState { NotReady, Standby, Routing }
+    public enum RoutingState { NotReady, Standby, Routing, Reconstructing, Canceling }
     
     
     void setStartNode(long nodeGridIndex);
@@ -27,9 +27,6 @@ public interface IRouteSolver {
     RoutingState getRoutingState();
     float getRoutingProgress();
     List<LatLong> getCalculatedRoute();
-    
-    boolean getNeedsDispalyRefresh();
-    void resetNeedsDispalyRefresh();
 
     Long findNextNode(float lat, float lon);
     Long findNextNode(float lat, float lon, byte filterBitMask, byte filterBitValue);
@@ -41,4 +38,7 @@ public interface IRouteSolver {
     
     boolean isDoMotorwayBoost();
     void setDoMotorwayBoost(boolean doMotorwayBoost);
+
+
+    void requestCancelRouting();
 }

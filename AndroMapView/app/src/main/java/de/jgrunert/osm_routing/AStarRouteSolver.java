@@ -47,10 +47,10 @@ public class AStarRouteSolver implements IRouteSolver {
     // Start and end for route
     private Long startNodeGridIndex = null;
     @Override
-    public void setStartNode(long nodeGridIndex) { startNodeGridIndex = nodeGridIndex; needsDispalyRefresh = true; }
+    public void setStartNode(long nodeGridIndex) { startNodeGridIndex = nodeGridIndex;  }
     private Long targetNodeGridIndex = null;
     @Override
-    public void setTargetNode(long nodeGridIndex) { targetNodeGridIndex = nodeGridIndex; needsDispalyRefresh = true; }
+    public void setTargetNode(long nodeGridIndex) { targetNodeGridIndex = nodeGridIndex;  }
 
     @Override
     public Long getStartNode(){
@@ -72,13 +72,6 @@ public class AStarRouteSolver implements IRouteSolver {
         return getNodeCoordinates(targetNodeGridIndex); 
     }
 
-    
-    private volatile boolean needsDispalyRefresh = false;
-    @Override
-    public boolean getNeedsDispalyRefresh() { return needsDispalyRefresh; }
-    @Override
-    public void resetNeedsDispalyRefresh() { needsDispalyRefresh = false; }
-    
     // Final route
     private List<LatLong> calculatedRoute = new LinkedList<LatLong>();
     @Override
@@ -114,8 +107,8 @@ public class AStarRouteSolver implements IRouteSolver {
     public void setDoMotorwayBoost(boolean doMotorwayBoost) {
         this.doMotorwayBoost = doMotorwayBoost;
     }
-    
-    float routingProgress = 0.0f;
+
+    private volatile float routingProgress = 0.0f;
     float routingMaxDist = 0.0f;
     float routingNearestDist = Float.MAX_VALUE;
     @Override
@@ -166,7 +159,7 @@ public class AStarRouteSolver implements IRouteSolver {
         //targetNodeGridIndex = findNextNode(49.15f, 9.22f, (byte)0, (byte)0);
         
         state = RoutingState.Standby;
-        needsDispalyRefresh = true;
+        routingProgress = 1.0f;
     }
     
 
@@ -450,8 +443,12 @@ public class AStarRouteSolver implements IRouteSolver {
         
         this.state = RoutingState.Routing;
         this.routeMode = routeMode;
+        routingMaxDist = Utils.calcNodeDistFast(startLat, startLon, targetLat, targetLon);
+        routingProgress = 0.0f;
+        routingNearestDist = routingMaxDist;
+        parent.updateDisplay();
+
         this.startTime = System.currentTimeMillis();
-        needsDispalyRefresh = true;
 
         gridLoadsRoute = 0;
         
@@ -535,11 +532,6 @@ public class AStarRouteSolver implements IRouteSolver {
         visGridRB = startGridRB;
 
 
-        routingMaxDist = Utils.calcNodeDistFast(startLat, startLon, targetLat, targetLon);
-        routingProgress = 0.0f;
-        routingNearestDist = routingMaxDist;
-
-
         System.out.println("Start routing from " + startLat + "/" + startLon + " to " + targetLat + "/" + targetLon);
         System.out.flush();
 
@@ -560,7 +552,12 @@ public class AStarRouteSolver implements IRouteSolver {
     private void doRouting() {
         
         // Find route with A*
-        while (!routeDistHeap.isEmpty()) {
+        while (!routeDistHeap.isEmpty()) {<
+            if(state == RoutingState.Canceling) {
+                canceledRouting();
+                return;
+            }
+
             // Remove and get index
             visNodeGridIndex = routeDistHeap.removeFirst();
         
@@ -599,7 +596,9 @@ public class AStarRouteSolver implements IRouteSolver {
         routingGridBuffers = null;
         openList = null;
         this.state = RoutingState.Standby;
-        needsDispalyRefresh = true;
+        routingProgress = 1.0f;
+        parent.updateDisplay();
+
         System.out.println("Finished routing after " + (System.currentTimeMillis() - startTime) + "ms");
 
         parent.onRoutingFinished();
@@ -607,6 +606,9 @@ public class AStarRouteSolver implements IRouteSolver {
 
     @SuppressWarnings("ConstantConditions")
     private void reconstructRoute() {
+
+        this.state = RoutingState.Reconstructing;
+        parent.updateDisplay();
 
         calculatedRoute.clear();
 
@@ -629,6 +631,11 @@ public class AStarRouteSolver implements IRouteSolver {
 
         long i = targetNodeGridIndex;
         while (i != startNodeGridIndex) {
+
+            if(state == RoutingState.Canceling) {
+                canceledRouting();
+                return;
+            }
 
             int iGridIndex = (int)(i >> 32);
             iNodeIndex = (int)(long)(i);
@@ -897,7 +904,6 @@ public class AStarRouteSolver implements IRouteSolver {
             if(h < routingNearestDist) {
                 routingNearestDist = h;
                 routingProgress = 1.0f - (routingNearestDist / routingMaxDist);
-                System.out.println(routingProgress);
             }
             
             float MOTORWAY_BOOST_SUSPEND_RADIUS = 40000;
@@ -968,5 +974,17 @@ public class AStarRouteSolver implements IRouteSolver {
         } else {
             throw new RuntimeException("Unsupported routing mode: " + routeMode);
         }
+    }
+
+
+
+    public void requestCancelRouting() {
+        state = RoutingState.Canceling;
+    }
+
+    private void canceledRouting() {
+        state = RoutingState.Standby;
+        calculatedRoute.clear();
+        parent.updateDisplay();
     }
 }

@@ -18,11 +18,9 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.android.gms.appindexing.Action;
-import com.google.android.gms.appindexing.AppIndex;
-import com.google.android.gms.common.api.GoogleApiClient;
 
 import org.mapsforge.core.graphics.Color;
 import org.mapsforge.core.graphics.Paint;
@@ -54,6 +52,8 @@ public class MainActivity extends ActionBarActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
+    private static final int UI_UPDATE_INTERVAL = 500;
+
     IRouteSolver routeSolver;
     protected PowerManager.WakeLock mWakeLock;
 
@@ -77,11 +77,6 @@ public class MainActivity extends ActionBarActivity {
     private boolean doGpsFollowing = false;
 
     private static final File MAP_VIEW_FILE = new File(Environment.getExternalStorageDirectory(), "osm/mapsforge/germany.map");
-    /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
-    private GoogleApiClient client;
 
 
     /**
@@ -212,6 +207,9 @@ public class MainActivity extends ActionBarActivity {
         ((EditText) findViewById(R.id.editTextLon2)).addTextChangedListener(targEditWatcher);
 
 
+        findViewById(R.id.progressBar).setScaleY(3f);
+        ((ProgressBar) findViewById(R.id.progressBar)).setProgress(0);
+
         Log.i(TAG, "Initialized MainActivity");
 
 
@@ -229,7 +227,34 @@ public class MainActivity extends ActionBarActivity {
         mapSetZoom((byte) 16);
         mapFocus(initialLatLong);
 
+
         updateRouteOverlay();
+        updateDisplay();
+
+
+        // UI Update thread
+        Thread uiUpdateThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Log.i(TAG, "UiUpdateThread running");
+
+                while (!Thread.interrupted()) {
+                    updateDisplay();
+                    try {
+                        Thread.sleep(UI_UPDATE_INTERVAL);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        return;
+                    }
+                }
+
+                Log.i(TAG, "UiUpdateThread finished");
+            }
+        });
+        uiUpdateThread.setName("UiUpdateThread");
+        uiUpdateThread.setDaemon(true);
+        uiUpdateThread.start();
+        Log.i(TAG, "Started UiUpdateThread");
     }
 
 
@@ -254,6 +279,43 @@ public class MainActivity extends ActionBarActivity {
         } else {
             return locNet;
         }
+    }
+
+
+    public void updateDisplay() {
+        MainActivity.this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                switch(routeSolver.getRoutingState()) {
+                    case NotReady:
+                        ((TextView) findViewById(R.id.textViewState)).setText("Not ready");
+                        ((ProgressBar) findViewById(R.id.progressBar)).setProgress(0);
+                        findViewById(R.id.btCancel).setVisibility(View.INVISIBLE);
+                        break;
+                    case Standby:
+                        ((TextView) findViewById(R.id.textViewState)).setText("Ready");
+                        ((ProgressBar) findViewById(R.id.progressBar)).setProgress(100);
+                        findViewById(R.id.btCancel).setVisibility(View.INVISIBLE);
+                        break;
+                    case Routing:
+                        int routingProgress = (int)(99 * routeSolver.getRoutingProgress());
+                        ((TextView) findViewById(R.id.textViewState)).setText("Routing " + Integer.toString(routingProgress) + "%");
+                        ((ProgressBar) findViewById(R.id.progressBar)).setProgress(routingProgress);
+                        findViewById(R.id.btCancel).setVisibility(View.VISIBLE);
+                        break;
+                    case Reconstructing:
+                        ((TextView) findViewById(R.id.textViewState)).setText("Route construction");
+                        ((ProgressBar) findViewById(R.id.progressBar)).setProgress(99);
+                        findViewById(R.id.btCancel).setVisibility(View.VISIBLE);
+                        break;
+                }
+
+                boolean standbyState = routeSolver.getRoutingState() == IRouteSolver.RoutingState.Standby;
+                findViewById(R.id.btRouteCarFast).setEnabled(standbyState);
+                findViewById(R.id.btRouteCarShort).setEnabled(standbyState);
+                findViewById(R.id.btRoutePed).setEnabled(standbyState);
+            }
+        });
     }
 
 
@@ -500,43 +562,9 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
 
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        client.connect();
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app deep link URI is correct.
-                Uri.parse("android-app://de.jgrunert.andromapview/http/host/path")
-        );
-        AppIndex.AppIndexApi.start(client, viewAction);
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app deep link URI is correct.
-                Uri.parse("android-app://de.jgrunert.andromapview/http/host/path")
-        );
-        AppIndex.AppIndexApi.end(client, viewAction);
-        client.disconnect();
+    public void btClickCancel(View v) {
+        routeSolver.requestCancelRouting();
+        updateDisplay();
     }
 }
