@@ -1,5 +1,6 @@
 package jgrunert.osm_routing_app;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
@@ -60,7 +61,7 @@ public class OsmAppPreprocessorPass4B {
 			OsmAppPreprocessor.LOG.info("Start reading nodes");
 			ObjectInputStream nodeReader = new ObjectInputStream(
 					new FileInputStream(
-							outDir + "\\pass4-nodes.bin"));
+							outDir + File.separator + "pass4-nodes.bin"));
 
 			nodeCount = (Integer) nodeReader.readObject();
 			nodesLat = (float[]) nodeReader.readObject();
@@ -75,7 +76,7 @@ public class OsmAppPreprocessorPass4B {
 			OsmAppPreprocessor.LOG.info("Start reading edges");
 			ObjectInputStream edgeReader = new ObjectInputStream(
 					new FileInputStream(
-							outDir + "\\pass4-edges.bin"));
+							outDir + File.separator + "pass4-edges.bin"));
 			edgeCount = (Integer) edgeReader.readObject();
 			edgesTarget = (int[]) edgeReader.readObject();
 			edgesInfobits = (byte[]) edgeReader.readObject();
@@ -325,7 +326,7 @@ public class OsmAppPreprocessorPass4B {
 		{
 		// Save nodes
         OsmAppPreprocessor.LOG.info("Start serializing nodes");    
-        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\pass4B-nodes.bin"));
+        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + File.separator + "pass4B-nodes.bin"));
         os.writeObject(nodesKeptCount);
         os.writeObject(nodesLatKept);   
         os.writeObject(nodesLonKept);        
@@ -340,7 +341,7 @@ public class OsmAppPreprocessorPass4B {
 
 		OsmAppPreprocessor.LOG.info("Start serializing edges");
 		ObjectOutputStream os = new ObjectOutputStream(
-				new FileOutputStream(outDir + "\\pass4B-edges.bin"));
+				new FileOutputStream(outDir + File.separator + "pass4B-edges.bin"));
 		os.writeObject(edgesKeptCount);
 		os.writeObject(edgesTargetKept);
 		os.writeObject(edgesInfobitsKept);

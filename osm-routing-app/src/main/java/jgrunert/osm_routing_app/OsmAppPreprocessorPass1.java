@@ -67,7 +67,7 @@ public class OsmAppPreprocessorPass1 {
 	public static void doPass(String inFile, String outDir) throws Exception {
 		
 		
-		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File(outDir + "\\highways-processed-all.csv"));
+		//PrintWriter highwayCsvAllWriter = new PrintWriter(new File(outDir + File.seperator + "highways-processed-all.csv"));
 
 		long startTime = System.currentTimeMillis();
 		
@@ -83,7 +83,7 @@ public class OsmAppPreprocessorPass1 {
 		{
 		OsmAppPreprocessor.LOG.info("Starting Pass 1");
 		
-		//PrintWriter highwayCsvWriter = new PrintWriter(new File(outDir + "\\highways-processed.csv"));
+		//PrintWriter highwayCsvWriter = new PrintWriter(new File(outDir + File.seperator + "highways-processed.csv"));
 		
 		Sink sinkImplementation = new Sink() {
 
@@ -241,12 +241,12 @@ public class OsmAppPreprocessorPass1 {
 				
 		// Save waypointIdsSet	
 		OsmAppPreprocessor.LOG.info("Start saving waypointIdsSet");
-		//DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass1-waynodeIds.bin"));
+		//DataOutputStream waypointIdsWriter = new DataOutputStream(new FileOutputStream(outDir + File.seperator + "pass1-waynodeIds.bin"));
 		//waypointIdsWriter.writeInt(waypointIdsSet.size());
 		int percTmp10 = waypointIdsSet.size() / 10;
 		int percTmp100 = waypointIdsSet.size() / 100;
 		int percCounter = 0;
-		for(long id : waypointIdsSet) {
+		for(@SuppressWarnings("unused") long id : waypointIdsSet) {
 			//waypointIdsWriter.writeLong(id);
 			percCounter++;
 			if(percCounter % percTmp10 == 0) {
@@ -260,8 +260,8 @@ public class OsmAppPreprocessorPass1 {
 		
 		// Evaluate and save waypoint highway relations
 		// List of Lists for each node with indices of all ways he is involved in
-		//DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass1-highways.bin"));	
-		//highwayBinWriter.writeInt(highways.size());
+		DataOutputStream highwayBinWriter = new DataOutputStream(new FileOutputStream(outDir + File.separator + "pass1-highways.bin"));	
+		highwayBinWriter.writeInt(highways.size());
 		
 		OsmAppPreprocessor.LOG.info("Start finding waysOfNodes");
 		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waypointIdsSet.size());
@@ -272,19 +272,19 @@ public class OsmAppPreprocessorPass1 {
 		for(int i = 0; i < highways.size(); i++) {
 			HighwayInfos hw = highways.get(i);
 
-			//highwayBinWriter.writeByte(hw.InfoBits);
-			//highwayBinWriter.writeBoolean(hw.Oneway);
-			//highwayBinWriter.writeByte((byte)hw.MaxSpeed);
-			//highwayBinWriter.writeInt(hw.wayNodes.size());
+			highwayBinWriter.writeByte(hw.InfoBits);
+			highwayBinWriter.writeBoolean(hw.Oneway);
+			highwayBinWriter.writeByte((byte)hw.MaxSpeed);
+			highwayBinWriter.writeInt(hw.wayNodes.size());
 			
 			for(WayNode wnode : hw.wayNodes) {
 				int nodeIndex = Collections.binarySearch(waypointIdsSet, wnode.getNodeId());
 				if(nodeIndex > 0) {
-					//highwayBinWriter.writeInt(nodeIndex);
+					highwayBinWriter.writeInt(nodeIndex);
 					waysOfNodes.get(nodeIndex).add(i);
 				} else {
 					// Cannot find node with this ID
-					//highwayBinWriter.writeInt(-1);					
+					highwayBinWriter.writeInt(-1);					
 				}
 			}
 			highways.set(i, null);
@@ -292,7 +292,7 @@ public class OsmAppPreprocessorPass1 {
 				OsmAppPreprocessor.LOG.info((i / percAmnt) + "%  finding waysOfNodes");
 			}
 		}
-		//highwayBinWriter.close();
+		highwayBinWriter.close();
 		OsmAppPreprocessor.LOG.info("Finished finding waysOfNodes");
 		OsmAppPreprocessor.LOG.info("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
 
@@ -306,7 +306,7 @@ public class OsmAppPreprocessorPass1 {
 		
 		// Save waysOfNodes
 		OsmAppPreprocessor.LOG.info("Start saving waysOfNodes");
-		ObjectOutputStream waysOfNodesWriter = new ObjectOutputStream(new FileOutputStream(outDir + "\\pass1-waysOfNodes.bin"));
+		ObjectOutputStream waysOfNodesWriter = new ObjectOutputStream(new FileOutputStream(outDir + File.separator + "pass1-waysOfNodes.bin"));
 		waysOfNodesWriter.writeInt(waysOfNodes.size());
 		percTmp100 = waysOfNodes.size() / 100;
 		for(int i = 0; i < waysOfNodes.size(); i++) {

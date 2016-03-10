@@ -1,5 +1,6 @@
 package jgrunert.osm_routing_app;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
@@ -51,7 +52,7 @@ public class OsmAppPreprocessorPass5 {
 			OsmAppPreprocessor.LOG.info("Start reading nodes");
 			ObjectInputStream nodeReader = new ObjectInputStream(
 					new FileInputStream(
-							outDir + "\\pass4B-nodes.bin"));
+							outDir + File.separator + "pass4B-nodes.bin"));
 
 			nodeCount = (Integer) nodeReader.readObject();
 			nodesLat = (float[]) nodeReader.readObject();
@@ -66,7 +67,7 @@ public class OsmAppPreprocessorPass5 {
 			OsmAppPreprocessor.LOG.info("Start reading edges");
 			ObjectInputStream edgeReader = new ObjectInputStream(
 					new FileInputStream(
-							outDir + "\\pass4B-edges.bin"));
+							outDir + File.separator + "pass4B-edges.bin"));
 			edgeCount = (Integer) edgeReader.readObject();
 			edgesTarget = (int[]) edgeReader.readObject();
 			edgesInfobits = (byte[]) edgeReader.readObject();
@@ -253,7 +254,7 @@ public class OsmAppPreprocessorPass5 {
 //		{
 //			OsmAppPreprocessor.LOG.info("Start writing grid");
 //			ObjectOutputStream os = new ObjectOutputStream(
-//					new FileOutputStream(outDir + "\\grid-final.bin"));
+//					new FileOutputStream(outDir + File.separator + "grid-final.bin"));
 //			os.writeFloat(gridRaster);
 //			os.writeFloat(minLat);
 //			os.writeFloat(minLon);
@@ -269,7 +270,7 @@ public class OsmAppPreprocessorPass5 {
 		{
 			OsmAppPreprocessor.LOG.info("Start writing grid2");
 			ObjectOutputStream os = new ObjectOutputStream(
-					new FileOutputStream(outDir + "\\grids\\grids.index"));
+					new FileOutputStream(outDir + File.separator + "grids\\grids.index"));
 			os.writeFloat(gridRaster);
 			os.writeFloat(minLat);
 			os.writeFloat(minLon);
@@ -281,7 +282,7 @@ public class OsmAppPreprocessorPass5 {
 		
 //		{
 //	        OsmAppPreprocessor.LOG.info("Start serializing nodes");    
-//	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\nodes-final.bin"));
+//	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + File.separator + "nodes-final.bin"));
 //	        os.writeObject(nodeCount);
 //	        os.writeObject(nodesLat);   
 //	        os.writeObject(nodesLon);        
@@ -292,7 +293,7 @@ public class OsmAppPreprocessorPass5 {
 //		
 //		{
 //	        OsmAppPreprocessor.LOG.info("Start serializing edges");    
-//	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\edges-final.bin"));
+//	        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + File.separator + "edges-final.bin"));
 //	        os.writeObject(edgeCount);
 //	        os.writeObject(edgesTarget);   
 //	        os.writeObject(edgesInfobits);        
@@ -424,7 +425,7 @@ public class OsmAppPreprocessorPass5 {
 			        
 					{
 					// Write output
-			        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\grids\\" + gridIndex + ".grid"));
+			        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + File.separator + "grids\\" + gridIndex + ".grid"));
 			        os.writeInt(gridNodeCount); // Node count
 			        os.writeInt(gridEdgeCount); // Edge count
 			        // Nodes
@@ -441,7 +442,7 @@ public class OsmAppPreprocessorPass5 {
 
 					{
 					// Write output
-			        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + "\\grids\\" + gridIndex + ".grid2"));
+			        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + File.separator + "grids\\" + gridIndex + ".grid2"));
 			        // Removed Edges
 			        os.writeObject(gridRemovedEdgeCoordsOffsets);
 			        os.writeObject(gridRemovedEdgeCoordsLat);

@@ -552,7 +552,7 @@ public class AStarRouteSolver implements IRouteSolver {
     private void doRouting() {
         
         // Find route with A*
-        while (!routeDistHeap.isEmpty()) {<
+        while (!routeDistHeap.isEmpty()) {
             if(state == RoutingState.Canceling) {
                 canceledRouting();
                 return;

@@ -16,7 +16,6 @@ import java.util.logging.Level;
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.domain.v0_6.Entity;
 import org.openstreetmap.osmosis.core.domain.v0_6.Node;
-import org.openstreetmap.osmosis.core.domain.v0_6.WayNode;
 import org.openstreetmap.osmosis.core.task.v0_6.RunnableSource;
 import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 
@@ -41,7 +40,7 @@ public class OsmAppPreprocessorPass2 {
 	static int BUFFER_MAX_WAYNODES = 100000000;
 	static int BUFFER_MAX_WAYSPERNODE = 20;
 
-	static List<HighwayInfos> highways = new ArrayList<>();
+	//static List<HighwayInfos> highways = new ArrayList<>();
 	static List<Long> waypointIds = new ArrayList<>();
 	
 	static boolean showedNodeIndexError = false;
@@ -75,7 +74,7 @@ public class OsmAppPreprocessorPass2 {
 		
 
 		OsmAppPreprocessor.LOG.info("Start processing nodes");
-		DataInputStream waynodeIdReader = new DataInputStream(new FileInputStream(outDir + "\\pass1-waynodeIds.bin"));
+		DataInputStream waynodeIdReader = new DataInputStream(new FileInputStream(outDir + File.separator + "pass1-waynodeIds.bin"));
 		int waypointCount = waynodeIdReader.readInt();
 		List<Long> waypointIdsSet = new ArrayList<>(waypointCount);
 		int percTmp100 = waypointCount / 100;
@@ -94,7 +93,7 @@ public class OsmAppPreprocessorPass2 {
 			OsmAppPreprocessor.LOG.info("Starting Pass 2");
 			
 			
-			DataOutputStream connectionWriter = new DataOutputStream(new FileOutputStream(outDir + "\\pass2-waynodes.bin"));
+			DataOutputStream connectionWriter = new DataOutputStream(new FileOutputStream(outDir + File.separator + "pass2-waynodes.bin"));
 			connectionWriter.writeInt(waypointIdsSet.size());
 						
 			Sink sinkImplementation = new Sink() {
@@ -147,6 +146,8 @@ public class OsmAppPreprocessorPass2 {
 				}
 			};
 
+			connectionWriter.close();
+
 			RunnableSource reader;
 			try {
 				reader = new crosby.binary.osmosis.OsmosisReader(
@@ -180,8 +181,6 @@ public class OsmAppPreprocessorPass2 {
 			}
 			
 			OsmAppPreprocessor.LOG.info("Pass 2 finished");
-
-			connectionWriter.close();
 		}
 		
 		
@@ -196,28 +195,28 @@ public class OsmAppPreprocessorPass2 {
 	}
 	
 	
-	
-	private static class HighwayInfos {
-		/** Info bits, bit0: Pedestrian, bit1: Car **/
-		public final byte InfoBits;
-		public final boolean Oneway;
-		public final short MaxSpeed; // TODO Byte
-		public List<WayNode> wayNodes;
-		
-		
-		public HighwayInfos(boolean car, boolean pedestrian, boolean oneway, short maxSpeed) {
-			byte infoBitsTmp = car ? (byte)1 : (byte)0;
-			infoBitsTmp = (byte)(infoBitsTmp << 1);
-			infoBitsTmp += pedestrian ? (byte)1 : (byte)0;
-			this.InfoBits = infoBitsTmp;			
-			this.Oneway = oneway;
-			this.MaxSpeed = maxSpeed;
-		}
-		
-		
-//		public String getCsvString() {
-//			return InfoBits + ";" + Oneway + ";" + MaxSpeed + ";";
+//	
+//	private static class HighwayInfos {
+//		/** Info bits, bit0: Pedestrian, bit1: Car **/
+//		public final byte InfoBits;
+//		public final boolean Oneway;
+//		public final short MaxSpeed; // TODO Byte
+//		public List<WayNode> wayNodes;
+//		
+//		
+//		public HighwayInfos(boolean car, boolean pedestrian, boolean oneway, short maxSpeed) {
+//			byte infoBitsTmp = car ? (byte)1 : (byte)0;
+//			infoBitsTmp = (byte)(infoBitsTmp << 1);
+//			infoBitsTmp += pedestrian ? (byte)1 : (byte)0;
+//			this.InfoBits = infoBitsTmp;			
+//			this.Oneway = oneway;
+//			this.MaxSpeed = maxSpeed;
 //		}
-	}
+//		
+//		
+////		public String getCsvString() {
+////			return InfoBits + ";" + Oneway + ";" + MaxSpeed + ";";
+////		}
+//	}
 	
 }
