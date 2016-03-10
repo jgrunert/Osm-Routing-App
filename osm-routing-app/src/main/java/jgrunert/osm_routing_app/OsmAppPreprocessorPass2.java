@@ -1,5 +1,7 @@
 package jgrunert.osm_routing_app;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -74,7 +76,7 @@ public class OsmAppPreprocessorPass2 {
 		
 
 		OsmAppPreprocessor.LOG.info("Start processing nodes");
-		DataInputStream waynodeIdReader = new DataInputStream(new FileInputStream(outDir + File.separator + "pass1-waynodeIds.bin"));
+		DataInputStream waynodeIdReader = new DataInputStream(new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass1-waynodeIds.bin")));
 		int waypointCount = waynodeIdReader.readInt();
 		List<Long> waypointIdsSet = new ArrayList<>(waypointCount);
 		int percTmp100 = waypointCount / 100;
@@ -93,7 +95,8 @@ public class OsmAppPreprocessorPass2 {
 			OsmAppPreprocessor.LOG.info("Starting Pass 2");
 			
 			
-			DataOutputStream connectionWriter = new DataOutputStream(new FileOutputStream(outDir + File.separator + "pass2-waynodes.bin"));
+			DataOutputStream connectionWriter = new DataOutputStream(new BufferedOutputStream(
+					new FileOutputStream(outDir + File.separator + "pass2-waynodes.bin")));
 			connectionWriter.writeInt(waypointIdsSet.size());
 						
 			Sink sinkImplementation = new Sink() {
@@ -127,7 +130,7 @@ public class OsmAppPreprocessorPass2 {
 					} 
 					
 					elementsPass2++;
-					if ((elementsPass2 % 100000) == 0) {
+					if ((elementsPass2 % 1000000) == 0) {
 						OsmAppPreprocessor.LOG.info("Loaded " + elementsPass2 + " elements ("
 										+ (int) (((float) elementsPass2 / totalElements) * 100) + "%)");
 						OsmAppPreprocessor.LOG.info("" + relevantWayNodeCounter);
@@ -146,14 +149,13 @@ public class OsmAppPreprocessorPass2 {
 				}
 			};
 
-			connectionWriter.close();
-
 			RunnableSource reader;
 			try {
 				reader = new crosby.binary.osmosis.OsmosisReader(
-						new FileInputStream(new File(inFile)));
+						new BufferedInputStream(new FileInputStream(new File(inFile))));
 			} catch (FileNotFoundException e1) {
 				e1.printStackTrace();
+				connectionWriter.close();
 				return;
 			}
 			reader.setSink(sinkImplementation);
@@ -166,6 +168,7 @@ public class OsmAppPreprocessorPass2 {
 					readerThread.join();
 				} catch (InterruptedException e) {
 					OsmAppPreprocessor.LOG.log(Level.SEVERE, "Exception", e);	
+					connectionWriter.close();
 					return;
 				}
 			}			
@@ -180,7 +183,8 @@ public class OsmAppPreprocessorPass2 {
 						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
 			}
 			
-			OsmAppPreprocessor.LOG.info("Pass 2 finished");
+			OsmAppPreprocessor.LOG.info("Pass 2 processing finished");
+			connectionWriter.close();
 		}
 		
 		

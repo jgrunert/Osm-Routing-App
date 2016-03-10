@@ -57,10 +57,11 @@ public class OsmAppPreprocessor {
 			// Start preprocessing
 			LOG.info("Starting preprocessing passes");
 			
-			//OsmAppPreprocessorPass1.doPass(inFile, outDir);
+			OsmAppPreprocessorPass1.doPass(inFilePath, outDirPath);
 			OsmAppPreprocessorPass2.doPass(inFilePath, outDirPath);
 			OsmAppPreprocessorPass3.doPass(outDirPath);
 			OsmAppPreprocessorPass4.doPass(outDirPath);
+			OsmAppPreprocessorPass4B.doPass(outDirPath);
 			OsmAppPreprocessorPass5.doPass(outDirPath);
 		} catch (Exception e) {
 			LOG.severe("Failure at main");

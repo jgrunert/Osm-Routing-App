@@ -1,5 +1,7 @@
 package jgrunert.osm_routing_app;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -39,7 +41,7 @@ public class OsmAppPreprocessorPass3 {
 		
 		
 		// Load highways
-		DataInputStream highwayReader = new DataInputStream(new FileInputStream(outDir + File.separator + "pass1-highways.bin"));	
+		DataInputStream highwayReader = new DataInputStream(new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass1-highways.bin")));	
 		int highwayCount = highwayReader.readInt();
 		List<HighwayInfos2> highways = new ArrayList<>(highwayCount);
 		
@@ -75,7 +77,7 @@ public class OsmAppPreprocessorPass3 {
 		{
 			OsmAppPreprocessor.LOG.info("Start loading node coords");
 			DataInputStream nodeReader = new DataInputStream(
-					new FileInputStream(outDir + File.separator + "pass2-waynodes.bin"));
+					new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass2-waynodes.bin")));
 			int nodeCount = nodeReader.readInt();
 
 			// TODO Faster, serialize
@@ -107,7 +109,7 @@ public class OsmAppPreprocessorPass3 {
 		
 		
 		// Load waysOfNodes
-		ObjectInputStream waysOfNodesReader = new ObjectInputStream(new FileInputStream(outDir + File.separator + "pass1-waysOfNodes.bin"));
+		ObjectInputStream waysOfNodesReader = new ObjectInputStream(new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass1-waysOfNodes.bin")));
 		int waynodeCount = waysOfNodesReader.readInt();
 		OsmAppPreprocessor.LOG.info("Start reading waysOfNodes: " + waynodeCount);
 		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waynodeCount);
@@ -132,15 +134,15 @@ public class OsmAppPreprocessorPass3 {
 
 		// Load and process waynodes
 		OsmAppPreprocessor.LOG.info("Start processing nodes");
-		DataInputStream nodeReader = new DataInputStream(new FileInputStream(outDir + File.separator + "pass2-waynodes.bin"));
+		DataInputStream nodeReader = new DataInputStream(new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass2-waynodes.bin")));
 		int nodeCount = nodeReader.readInt();
 		
 		if(nodeCount != waysOfNodes.size()) {
 			OsmAppPreprocessor.LOG.severe("nodeCount != waysOfNodes.size(): " + nodeCount + " and " + waysOfNodes.size());
 		}
 		
-		DataOutputStream edgeWriter = new DataOutputStream(new FileOutputStream(outDir + File.separator + "pass3-edges.bin"));
-		DataOutputStream nodeWriter = new DataOutputStream(new FileOutputStream(outDir + File.separator + "pass3-nodes.bin"));
+		DataOutputStream edgeWriter = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(outDir + File.separator + "pass3-edges.bin")));
+		DataOutputStream nodeWriter = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(outDir + File.separator + "pass3-nodes.bin")));
 				
 		int edgeCounter = 0;
 		nodeWriter.writeInt(nodeCount);
@@ -228,7 +230,7 @@ public class OsmAppPreprocessorPass3 {
 		
 		// Write edges again to file with number of edges at beginning (TODO Better way?)
 		OsmAppPreprocessor.LOG.info("Start writing edges to final file");
-		DataOutputStream edgeWriter2 = new DataOutputStream(new FileOutputStream(outDir + File.separator + "pass3-edges-count.bin"));
+		DataOutputStream edgeWriter2 = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(outDir + File.separator + "pass3-edges-count.bin")));
 		edgeWriter2.writeInt(edgeCounter);
 		edgeWriter2.close();
 		OsmAppPreprocessor.LOG.info("Finished writing edges to final file");

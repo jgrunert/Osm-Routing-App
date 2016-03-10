@@ -1,5 +1,7 @@
 package jgrunert.osm_routing_app;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,7 +28,7 @@ public class OsmAppPreprocessorPass4 {
 	public static void doPass(String outDir) throws Exception {
 	{
 		OsmAppPreprocessor.LOG.info("Start reading nodes");
-        DataInputStream nodeReader = new DataInputStream(new FileInputStream(outDir + File.separator + "pass3-nodes.bin"));
+        DataInputStream nodeReader = new DataInputStream(new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass3-nodes.bin")));
         
         int nodeCount = nodeReader.readInt();
         float[] nodesLat = new float[nodeCount];
@@ -48,7 +50,7 @@ public class OsmAppPreprocessorPass4 {
         
 
         OsmAppPreprocessor.LOG.info("Start serializing nodes");    
-        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(outDir + File.separator + "pass4-nodes.bin"));
+        ObjectOutputStream os = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(outDir + File.separator + "pass4-nodes.bin")));
         os.writeObject(nodeCount);
         os.writeObject(nodesLat);   
         os.writeObject(nodesLon);        
@@ -61,14 +63,14 @@ public class OsmAppPreprocessorPass4 {
 		{
 			// Read edge count from seperate file
 			DataInputStream edgeCountReader = new DataInputStream(
-					new FileInputStream(outDir + File.separator + "pass3-edges-count.bin"));
+					new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass3-edges-count.bin")));
 			int edgeCount = edgeCountReader.readInt();
 			edgeCountReader.close();
 
 			// Read edges
 			OsmAppPreprocessor.LOG.info("Start reading edges");
 			DataInputStream edgeReader = new DataInputStream(
-					new FileInputStream(outDir + File.separator + "pass3-edges.bin"));
+					new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass3-edges.bin")));
 			int[] edgesTarget = new int[edgeCount];
 			byte[] edgesInfobits = new byte[edgeCount];
 			float[] edgeLengths = new float[edgeCount];
@@ -93,8 +95,8 @@ public class OsmAppPreprocessorPass4 {
 			OsmAppPreprocessor.LOG.info("Finished reading edges");
 
 			OsmAppPreprocessor.LOG.info("Start serializing edges");
-			ObjectOutputStream os = new ObjectOutputStream(
-					new FileOutputStream(outDir + File.separator + "pass4-edges.bin"));
+			ObjectOutputStream os = new ObjectOutputStream(new BufferedOutputStream(
+					new FileOutputStream(outDir + File.separator + "pass4-edges.bin")));
 			os.writeObject(edgeCount);
 			os.writeObject(edgesTarget);
 			os.writeObject(edgesInfobits);
