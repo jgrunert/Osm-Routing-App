@@ -6,6 +6,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
+
+/**
+ * Utility to convert osm.pbf file into routing graph for AndroMapView
+ *
+ * @author Jonas Grunert
+ *
+ */
 public class OsmAppPreprocessor {
 
 	public static final Logger LOG = Logger.getLogger("OsmAppPreprocessor");
