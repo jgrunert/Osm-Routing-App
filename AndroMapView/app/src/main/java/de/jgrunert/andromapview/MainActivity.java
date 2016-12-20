@@ -76,7 +76,7 @@ public class MainActivity extends ActionBarActivity {
 
     private boolean doGpsFollowing = false;
 
-    private static final File MAP_VIEW_FILE = new File(Environment.getExternalStorageDirectory(), "osm/mapsforge/germany.map");
+    private static final File MAP_VIEW_FILE = new File(Environment.getExternalStorageDirectory(), "osm/mapsforge/display.map");
 
 
     /**

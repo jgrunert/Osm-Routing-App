@@ -32,7 +32,7 @@ public class AStarRouteSolver implements IRouteSolver {
     
     // General constants
     private static final File OSM_BASE_DIR = new File(Environment.getExternalStorageDirectory(), "osm");
-    private static final File MAP_GRIDS_DIR = new File(OSM_BASE_DIR, "germany_grids");
+    private static final File MAP_GRIDS_DIR = new File(OSM_BASE_DIR, "routing_grids");
     
     
     // Routing constants
