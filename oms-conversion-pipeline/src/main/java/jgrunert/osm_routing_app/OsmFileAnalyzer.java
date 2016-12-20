@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.domain.v0_6.Entity;
@@ -18,10 +19,14 @@ import org.openstreetmap.osmosis.core.task.v0_6.RunnableSource;
 import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 
 /**
- * Hello world!
+ * Utility to analyze osm.pbf files
+ *
+ * @author Jonas Grunert
  *
  */
-public class OfOsmAppPreAnalyzer {
+public class OsmFileAnalyzer {
+
+	public static final Logger LOG = Logger.getLogger("OsmFileAnalyzer");
 
 	static int nodes = 0;
 	static int ways = 0;
@@ -51,11 +56,16 @@ public class OfOsmAppPreAnalyzer {
 
 
 	public static void main(String[] args) throws Exception {
-		File file = new File(
-				"C:\\Users\\Jonas\\Projekte\\ConcurrentGraph_Data2\\original\\baden-wuerttemberg-latest.osm.pbf");
-		String convertOutDir = "C:\\Users\\Jonas\\Projekte\\ConcurrentGraph_Data2\\converted";
+		if (args.length != 2) {
+			LOG.info("Invalid number of arguments");
+			printHelp();
+			return;
+		}
 
-		String suffix = "_bawue.csv";
+		File file = new File(args[0]);
+		String convertOutDir = args[1];
+
+		String suffix = "_" + file.getName() + ".csv";
 
 		PrintWriter nodeTagKeys = new PrintWriter(new File(convertOutDir + "\\NodeTagKeys" + suffix));
 		PrintWriter wayTagKeys = new PrintWriter(new File(convertOutDir + "\\WayTagKey" + suffix));
@@ -236,5 +246,11 @@ public class OfOsmAppPreAnalyzer {
 		nodeTags.close();
 		wayTags.close();
 		relTags.close();
+	}
+
+
+	private static void printHelp() {
+		System.out.println("Utility to analyze osm.pbf files");
+		System.out.println("Usage: [InputFile] [Output Directory]");
 	}
 }
