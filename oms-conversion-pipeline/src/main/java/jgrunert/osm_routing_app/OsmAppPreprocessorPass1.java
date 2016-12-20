@@ -11,6 +11,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -243,35 +244,38 @@ public class OsmAppPreprocessorPass1 {
 				
 		// Create sorted waypointIdsSet. It maps old to new indices: newIndex == waypointIdsSet.indexOf(oldIndex)
 		OsmAppPreprocessor.LOG.info("Start creating waypointIdsSet");
-		List<Long> waypointIdsSet = new ArrayList<>();
+		// Find out number of unique waypoints
+		int waypointIdCount = 1;
 		long lastIndex = waypointIds.get(0);
-		waypointIdsSet.add(lastIndex);
 		for(int i = 1; i < waypointIds.size(); i++) {
 			if(waypointIds.get(i) != lastIndex) {
 				lastIndex = waypointIds.get(i);
-				waypointIdsSet.add(lastIndex);
+				waypointIdCount++;
 			}
 		}
-		OsmAppPreprocessor.LOG.info("Finished creating waypointIdsSet with size " + waypointIdsSet.size());
+		
+		long[] waypointIdsSetArray = new long[waypointIdCount];
+		lastIndex = waypointIds.get(0);
+		waypointIdsSetArray[0] = lastIndex;
+		int waypointIdIndex = 1;
+		for(int i = 1; i < waypointIds.size(); i++) {
+			if(waypointIds.get(i) != lastIndex) {
+				lastIndex = waypointIds.get(i);
+				waypointIdsSetArray[waypointIdIndex] = lastIndex;
+				waypointIdIndex++;
+			}
+		}
+		OsmAppPreprocessor.LOG.info("Finished creating waypointIdsSet with size " + waypointIdsSetArray.length);
 		OsmAppPreprocessor.LOG.info("Time elapsed: " + (System.currentTimeMillis() - startTime) + "ms");
 		
 		// Idea: Sort by location? Sort by ways (in next step)? Are ways sorted?
 				
 		// Save waypointIdsSet	
 		OsmAppPreprocessor.LOG.info("Start saving waypointIdsSet");
-		DataOutputStream waypointIdsWriter = new DataOutputStream(new BufferedOutputStream(
+		ObjectOutputStream waypointIdsWriter = new ObjectOutputStream(new BufferedOutputStream(
 				new FileOutputStream(outDir + File.separator + "pass1-waynodeIds.bin")));
-		waypointIdsWriter.writeInt(waypointIdsSet.size());
-		int percTmp10 = waypointIdsSet.size() / 10;
-		int percTmp100 = waypointIdsSet.size() / 100;
-		int percCounter = 0;
-		for(long id : waypointIdsSet) {
-			waypointIdsWriter.writeLong(id);
-			percCounter++;
-			if(percCounter % percTmp10 == 0) {
-				OsmAppPreprocessor.LOG.info(percCounter / percTmp100 + "% save waypointIdsSet");
-			}
-		}
+		waypointIdsWriter.writeObject(waypointIdsSetArray);
+		int percTmp100 = waypointIdsSetArray.length / 100;
 		waypointIdsWriter.close();
 		OsmAppPreprocessor.LOG.info("Finished saving waypointIdsSet");
 		
@@ -287,8 +291,8 @@ public class OsmAppPreprocessorPass1 {
 		highwayBinWriter.writeInt(highwayCount);
 		
 		OsmAppPreprocessor.LOG.info("Start finding waysOfNodes");
-		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waypointIdsSet.size());
-		for(int i = 0; i < waypointIdsSet.size(); i++) {
+		List<List<Integer>> waysOfNodes = new ArrayList<List<Integer>>(waypointIdsSetArray.length);
+		for(int i = 0; i < waypointIdsSetArray.length; i++) {
 			waysOfNodes.add(new LinkedList<Integer>());
 		}		
 		int percAmnt = highwayCount / 100;
@@ -302,7 +306,7 @@ public class OsmAppPreprocessorPass1 {
 			
 			for(int iWn = 0; iWn < hw.wayNodeIds.length; iWn++) {
 				long wnode = hw.wayNodeIds[iWn];
-				int nodeIndex = Collections.binarySearch(waypointIdsSet, wnode);
+				int nodeIndex = Arrays.binarySearch(waypointIdsSetArray, wnode);
 				if(nodeIndex > 0) {
 					highwayBinWriter.writeInt(nodeIndex);
 					waysOfNodes.get(nodeIndex).add(i);

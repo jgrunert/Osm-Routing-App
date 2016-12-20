@@ -2,15 +2,15 @@ package jgrunert.osm_routing_app;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -76,16 +76,8 @@ public class OsmAppPreprocessorPass2 {
 		
 
 		OsmAppPreprocessor.LOG.info("Start processing nodes");
-		DataInputStream waynodeIdReader = new DataInputStream(new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass1-waynodeIds.bin")));
-		int waypointCount = waynodeIdReader.readInt();
-		List<Long> waypointIdsSet = new ArrayList<>(waypointCount);
-		int percTmp100 = waypointCount / 100;
-		for(int i = 0; i < waypointCount; i++) {
-			waypointIdsSet.add(waynodeIdReader.readLong());
-			if(i % percTmp100 == 0) {
-				OsmAppPreprocessor.LOG.info(i / percTmp100 + "% load waypointIdsSet");
-			}
-		}
+		ObjectInputStream waynodeIdReader = new ObjectInputStream(new BufferedInputStream(new FileInputStream(outDir + File.separator + "pass1-waynodeIds.bin")));
+		long[] waypointIdsSet = (long[])waynodeIdReader.readObject();
 		waynodeIdReader.close();
 		
 		
@@ -97,7 +89,7 @@ public class OsmAppPreprocessorPass2 {
 			
 			DataOutputStream connectionWriter = new DataOutputStream(new BufferedOutputStream(
 					new FileOutputStream(outDir + File.separator + "pass2-waynodes.bin")));
-			connectionWriter.writeInt(waypointIdsSet.size());
+			connectionWriter.writeInt(waypointIdsSet.length);
 						
 			Sink sinkImplementation = new Sink() {
 
@@ -107,7 +99,7 @@ public class OsmAppPreprocessorPass2 {
 					if (entity instanceof Node) {
 						Node node = (Node) entity;
 
-						int nodeIndex = Collections.binarySearch(waypointIdsSet, node.getId());
+						int nodeIndex = Arrays.binarySearch(waypointIdsSet, node.getId());
 						
 						if(nodeIndex >= 0) {
 							if(nodeIndex != relevantWayNodeCounter && !showedNodeIndexError) {
@@ -174,13 +166,13 @@ public class OsmAppPreprocessorPass2 {
 			}			
 			
 			
-			if(relevantWayNodeCounter < waypointIdsSet.size()) {
+			if(relevantWayNodeCounter < waypointIdsSet.length) {
 				OsmAppPreprocessor.LOG.severe("Not all relevantWayNodes have nodes in file: " + 
-						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
+						relevantWayNodeCounter + " insead of " + waypointIdsSet.length);
 			}
-			if(relevantWayNodeCounter > waypointIdsSet.size()) {
+			if(relevantWayNodeCounter > waypointIdsSet.length) {
 				OsmAppPreprocessor.LOG.severe("Duplicate nodes for relevantWayNodes in file: " + 
-						relevantWayNodeCounter + " insead of " + waypointIdsSet.size());
+						relevantWayNodeCounter + " insead of " + waypointIdsSet.length);
 			}
 			
 			OsmAppPreprocessor.LOG.info("Pass 2 processing finished");

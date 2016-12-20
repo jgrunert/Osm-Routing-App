@@ -25,7 +25,7 @@ import org.openstreetmap.gui.jmapviewer.Coordinate;
 public class AStarRouteSolver implements IRouteSolver {
     
     // General constants
-    private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\germany\\germany_grids";
+    private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\test\\grids";
     //private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\germany\\grids_020_old";
     //private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\bawue\\grids";
     //private static final String MAP_GRIDS_DIR = "D:\\Jonas\\OSM\\hamburg\\grids";

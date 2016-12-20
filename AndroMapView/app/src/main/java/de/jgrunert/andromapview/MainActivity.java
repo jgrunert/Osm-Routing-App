@@ -312,6 +312,7 @@ public class MainActivity extends ActionBarActivity {
 
                 boolean standbyState = routeSolver.getRoutingState() == IRouteSolver.RoutingState.Standby;
                 findViewById(R.id.btRouteCarFast).setEnabled(standbyState);
+                findViewById(R.id.btRouteCarFastPrec).setEnabled(standbyState);
                 findViewById(R.id.btRouteCarShort).setEnabled(standbyState);
                 findViewById(R.id.btRoutePed).setEnabled(standbyState);
             }
@@ -553,7 +554,12 @@ public class MainActivity extends ActionBarActivity {
             return;
         }
 
+
         if (v.getId() == R.id.btRouteCarFast) {
+            routeSolver.setDoMotorwayBoost(true);
+            routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Fastest);
+        } if (v.getId() == R.id.btRouteCarFastPrec) {
+            routeSolver.setDoMotorwayBoost(false);
             routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Fastest);
         } else if (v.getId() == R.id.btRouteCarShort) {
             routeSolver.startCalculateRoute(IRouteSolver.TransportMode.Car, IRouteSolver.RoutingMode.Shortest);

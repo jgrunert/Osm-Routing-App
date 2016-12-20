@@ -179,7 +179,7 @@
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Car Fast"
+                android:text="Car Fst"
                 android:id="@+id/btRouteCarFast"
                 android:layout_centerVertical="true"
                 android:layout_toLeftOf="@+id/linearLayout2"
@@ -190,9 +190,22 @@
                 android:onClick="btClickRouting" />
 
             <Button
+                style="?android:attr/buttonStyleSmall"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Car Short"
+                android:text="C. FstPr"
+                android:id="@+id/btRouteCarFastPrec"
+                android:layout_centerVertical="true"
+                android:layout_toLeftOf="@+id/linearLayout2"
+                android:layout_toStartOf="@+id/linearLayout2"
+                android:textStyle="bold"
+                android:longClickable="false"
+                android:onClick="btClickRouting" />
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Car Sht."
                 android:id="@+id/btRouteCarShort"
                 style="?android:attr/buttonStyleSmall"
                 android:textStyle="bold"
@@ -201,7 +214,7 @@
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Pedest."
+                android:text="Ped."
                 android:id="@+id/btRoutePed"
                 style="?android:attr/buttonStyleSmall"
                 android:textStyle="bold"

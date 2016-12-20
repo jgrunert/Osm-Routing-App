@@ -338,7 +338,7 @@ public class AStarRouteSolver implements IRouteSolver {
                 continue;
             }
                         
-           float dist = Utils.calcNodeDistPrecise(lat, lon, grid.nodesLat[iN], grid.nodesLon[iN]);
+           float dist = MathUtils.calcNodeDistPrecise(lat, lon, grid.nodesLat[iN], grid.nodesLon[iN]);
             if(dist < smallestDist) {
                 smallestDist = dist;
                 nextIndex = iN;
@@ -443,7 +443,7 @@ public class AStarRouteSolver implements IRouteSolver {
         
         this.state = RoutingState.Routing;
         this.routeMode = routeMode;
-        routingMaxDist = Utils.calcNodeDistFast(startLat, startLon, targetLat, targetLon);
+        routingMaxDist = MathUtils.calcNodeDistFast(startLat, startLon, targetLat, targetLon);
         routingProgress = 0.0f;
         routingNearestDist = routingMaxDist;
         parent.updateDisplay();
@@ -899,7 +899,7 @@ public class AStarRouteSolver implements IRouteSolver {
                         
             // Caching h or holding visited in a nodes does not make sense
             // Re-visiting rate seems to be below 1:10 and maps get very slow and memory consuming
-            float h = Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon);
+            float h = MathUtils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex], targetLat, targetLon);
 
             if(h < routingNearestDist) {
                 routingNearestDist = h;
@@ -914,7 +914,7 @@ public class AStarRouteSolver implements IRouteSolver {
                 if (doMotorwayBoost && h > MOTORWAY_BOOST_SUSPEND_RADIUS) {
                     // Do motorway boost (non-motorway overestimate) if enabled and not near start or target
                     float distToStart =
-                            Utils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex],
+                            MathUtils.calcNodeDistFast(nbGrid.nodesLat[nbNodeIndex], nbGrid.nodesLon[nbNodeIndex],
                                     startLat, startLon);
                     if (distToStart > MOTORWAY_BOOST_SUSPEND_RADIUS) {
                         float distsMax = Math.min(h, distToStart);
